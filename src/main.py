@@ -67,3 +67,20 @@ async def user_veto_property(
         return {"vetoed": property.dict()}
     else:
         return {"error": f'property "{name}" not found'}
+
+
+@app.get("/list/properties")
+async def list_properties(*, session: Session = Depends(get_session)):
+    statement = select(SVProperty)
+    results = session.exec(statement)
+    properties = results.all()
+
+    return {
+        "properties": sorted(
+            [
+                {"name": property.name, "vetoed": len(property.vetoed_by) > 0}
+                for property in properties
+            ],
+            key=lambda x: x["vetoed"],
+        )
+    }
