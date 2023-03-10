@@ -45,7 +45,6 @@ async def user_create_property(
 
     session.refresh(property)
     # TODO error handling
-    # return {"created": {"name": name}}
     return {"created": property.dict()}
 
 
@@ -59,11 +58,12 @@ async def user_veto_property(
     property = results.one()
 
     if property:
-        property.vetoed_by = property.vetoed_by + [user]
-        session.commit()
+        if user not in property.vetoed_by:
+            property.vetoed_by = property.vetoed_by + [user]
 
+        session.commit()
         session.refresh(property)
-        # return {"vetoed": {"name": name}}
+
         return {"vetoed": property.dict()}
     else:
-        return {"error": "property not found"}
+        return {"error": f'property "{name}" not found'}
