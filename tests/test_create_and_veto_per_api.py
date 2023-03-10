@@ -39,7 +39,7 @@ def test_create_property(client: TestClient, timestamp_str: str):
 
 
 def test_two_vetos(client: TestClient, timestamp_str: str):
-    prop_name = f"test_prop_controversial_{timestamp_str}"
+    prop_name = f"test_prop_controversial_two_{timestamp_str}"
 
     response = client.get(f"/user/test_user_pro/create/property/{prop_name}")
     assert response.status_code == 200
@@ -55,3 +55,23 @@ def test_two_vetos(client: TestClient, timestamp_str: str):
     assert response.status_code == 200
     print(f"{response.json()=}")
     # TODO check response content
+
+
+def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
+    prop_name = f"test_prop_controversial_same_{timestamp_str}"
+
+    response = client.get(f"/user/test_user_pro/create/property/{prop_name}")
+    assert response.status_code == 200
+    print(f"{response.json()=}")
+    # TODO check response content
+
+    response = client.get(f"/user/test_user_contra/veto/property/{prop_name}")
+    assert response.status_code == 200
+    print(f"{response.json()=}")
+    # TODO check response content
+
+    response = client.get(f"/user/test_user_contra/veto/property/{prop_name}")
+    assert response.status_code == 200
+    response_json = response.json()
+    print(f"{response_json=}")
+    assert len(response_json["vetoed"]["vetoed_by"]) == 1
