@@ -1,6 +1,11 @@
 from typing import Optional
-from sqlmodel import Field  # type: ignore
-from sqlmodel import SQLModel
+
+from sqlmodel import (
+    JSON,
+    Column,
+    Field,  # type: ignore
+    SQLModel,
+)
 
 # later
 # class SVUser(SQLModel, table=True):
@@ -20,6 +25,13 @@ class SVProperty(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     created_by: Optional[str] = None  # use SVUser later
+
+    # to have a list of users who vetoed this property that works with sqlite
+    vetoed_by: list[str] = Field(default=[], sa_column=Column(JSON))
+
+    # Needed for Column(JSON)
+    class Config:  # type: ignore
+        arbitrary_types_allowed = True
 
 
 # Use later for multiple objects (pizzas) with their own toppings
