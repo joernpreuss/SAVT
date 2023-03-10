@@ -12,7 +12,7 @@ async def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/create/propery/{name}")
+@app.get("/create/property/{name}")
 async def create_property_anonymously(name: str):
     property = SVProperty(name=name)
     with Session(engine) as session:
@@ -21,7 +21,7 @@ async def create_property_anonymously(name: str):
     return {"created": {"name": name}}
 
 
-@app.get("/user/{user}/create/propery/{name}")
+@app.get("/user/{user}/create/property/{name}")
 async def user_create_property(user: str, name: str):
     property = SVProperty(name=name, created_by=user)
     with Session(engine) as session:
