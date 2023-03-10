@@ -19,13 +19,13 @@ def get_session():
         yield session
 
 
-@app.get("/")
-async def read_root():
+@app.get("/api/")
+async def api_root():
     return {"Hello": "World"}
 
 
-@app.get("/create/property/{name}")
-async def create_property_anonymously(
+@app.get("/api/create/property/{name}")
+async def api_create_property_anonymously(
     *, session: Session = Depends(get_session), name: str
 ):
     property = SVProperty(name=name)
@@ -34,8 +34,8 @@ async def create_property_anonymously(
     return {"created": {"name": name}}
 
 
-@app.get("/user/{user}/create/property/{name}")
-async def user_create_property(
+@app.get("/api/user/{user}/create/property/{name}")
+async def api_user_create_property(
     *, session: Session = Depends(get_session), user: str, name: str
 ):
     property = SVProperty(name=name, created_by=user)
@@ -48,8 +48,8 @@ async def user_create_property(
     return {"created": property.dict()}
 
 
-@app.get("/user/{user}/veto/property/{name}")
-async def user_veto_property(
+@app.get("/api/user/{user}/veto/property/{name}")
+async def api_user_veto_property(
     *, session: Session = Depends(get_session), user: str, name: str
 ):
 
@@ -69,8 +69,8 @@ async def user_veto_property(
         return {"error": f'property "{name}" not found'}
 
 
-@app.get("/list/properties")
-async def list_properties(*, session: Session = Depends(get_session)):
+@app.get("/api/list/properties")
+async def api_list_properties(*, session: Session = Depends(get_session)):
     statement = select(SVProperty)
     results = session.exec(statement)
     properties = results.all()
@@ -78,7 +78,10 @@ async def list_properties(*, session: Session = Depends(get_session)):
     return {
         "properties": sorted(
             [
-                {"name": property.name, "vetoed": len(property.vetoed_by) > 0}
+                {
+                    "name": property.name,
+                    "vetoed": len(property.vetoed_by) > 0,
+                }
                 for property in properties
             ],
             key=lambda x: x["vetoed"],
