@@ -1,10 +1,9 @@
-import json
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from main import app, get_session
+from database import get_session
+from main import app
 
 
 @pytest.fixture(name="client")

@@ -1,5 +1,5 @@
 from sqlalchemy.future import Engine  # for the type hint
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 
 # from sqlmodel.pool import StaticPool
 
@@ -17,3 +17,14 @@ def get_engine(db_name: str):
 
 def init_db(engine: Engine):
     SQLModel.metadata.create_all(engine)
+
+
+def get_main_engine():
+    engine = get_engine(db_name="prod")
+    init_db(engine)
+    return engine
+
+
+def get_session():
+    with Session(get_main_engine()) as session:
+        yield session
