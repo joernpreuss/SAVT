@@ -1,16 +1,12 @@
 from typing import Final
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Depends
 from sqlmodel import select  # type: ignore
 from sqlmodel import Session
 
 from database import get_session
 from models import SVProperty
-from service import create_property, veto_property
-
-templates = Jinja2Templates(directory="templates/")
+from service import create_property, get_properties, veto_property
 
 api_router: Final = APIRouter()
 
@@ -32,7 +28,7 @@ async def api_user_create_property(
     user: str,
     name: str,
 ):
-    property = create_property(session, SVProperty(name=name, created_by=user))
+    property: Final = create_property(session, SVProperty(name=name, created_by=user))
 
     # TODO error handling
     if property:
@@ -48,7 +44,7 @@ async def api_user_veto_property(
     user: str,
     name: str,
 ):
-    property = veto_property(session, user, name)
+    property: Final = veto_property(session, user, name)
 
     if property:
         return {"vetoed": property.dict()}
@@ -62,9 +58,7 @@ async def api_list_properties(
     *,
     session: Session = Depends(get_session),
 ):
-    statement = select(SVProperty)
-    results = session.exec(statement)
-    properties = results.all()
+    properties = get_properties(session)
 
     return {
         "properties": sorted(
@@ -78,30 +72,3 @@ async def api_list_properties(
             key=lambda x: x["vetoed"],  # sort by "vetoed"
         )
     }
-
-
-@api_router.get("/", response_class=HTMLResponse)
-async def list_properties_html(
-    *,
-    session: Session = Depends(get_session),
-    request: Request,
-):
-    statement = select(SVProperty)
-    results = session.exec(statement)
-    properties = results.all()
-
-    response = templates.TemplateResponse(  # type: ignore
-        "properties.html",
-        {
-            "properties": [
-                {
-                    "name": property.name,
-                    "vetoed": len(property.vetoed_by) > 0,
-                }
-                for property in properties
-            ],
-            "request": request,
-        },
-    )
-
-    return response

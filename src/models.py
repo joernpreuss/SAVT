@@ -33,7 +33,6 @@ class SVProperty(SQLModel, table=True):
     def as_form(
         cls,
         name: str = Form(...),
-        # any_other_param: int = Form(1)
     ) -> "SVProperty":
         return cls(name=name)
 
