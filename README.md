@@ -5,7 +5,7 @@ Suggestion And Veto Tool
 - Create venv (code is developed and tested using Python 3.11.2)
 
 ### Run tests
-- Install requirements from requirements-test.txt
+- Install requirements from requirements/dev.txt
 - Run pytest
 
 ### Run test server
