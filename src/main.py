@@ -1,15 +1,22 @@
+import sys
+from pathlib import Path
+
 from fastapi import Depends, FastAPI
+from fastapi.responses import HTMLResponse
+from jinja2 import Environment
 from sqlmodel import select  # type: ignore
 from sqlmodel import Session
 
+sys.path.append(str(Path(__file__).parent))
 from database import get_engine, init_db
 from models import SVProperty
 
 app = FastAPI()
+environment = Environment()
 
 
 def get_main_engine():
-    engine = get_engine("production")
+    engine = get_engine(db_name="pytest")
     init_db(engine)
     return engine
 
@@ -87,3 +94,31 @@ async def api_list_properties(*, session: Session = Depends(get_session)):
             key=lambda x: x["vetoed"],
         )
     }
+
+
+@app.get("/", response_class=HTMLResponse)
+async def list_properties_html(*, session: Session = Depends(get_session)):
+    statement = select(SVProperty)
+    results = session.exec(statement)
+    properties = results.all()
+
+    title = "Properties"
+
+    html = r"""
+        <html>
+            <head>
+                <title>{{title}}</title>
+            </head>
+            <body>
+                <h1>{{title}}</h1>
+                {% for property in properties %}
+                    <p>{{property.name}}</p>
+                {% endfor %}.
+            </body>
+        </html>
+    """
+
+    return environment.from_string(html).render(
+        title=title,
+        properties=properties,
+    )

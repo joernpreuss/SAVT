@@ -2,7 +2,8 @@ from datetime import datetime
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
+
+# from sqlmodel.pool import StaticPool
 
 
 @pytest.fixture(scope="function")
@@ -15,7 +16,7 @@ def session_fixture():
     engine = create_engine(
         "sqlite:///./pytest.db",
         connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+        # poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
