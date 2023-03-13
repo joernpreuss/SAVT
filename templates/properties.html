@@ -3,13 +3,37 @@
     <title>Properties</title>
   </head>
   <body>
-    <h1>Properties</h1>
-    Click to veto
+    <h1>View</h1>
+    Click on property names to veto
+    <h2>Objects</h2>
+    <ul>
+      {% for object in objects %}
+      <li>
+        {{object.name}}
+        <ul>
+          {% for property in object.properties %}
+
+          <li>
+            {% if property.vetoed_by|length >0 %}
+            <s>{{property.name}}</s> (vetoed) {% else %}
+            <a
+              href="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
+              >{{property.name}}</a
+            >
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <h3>Properties without Objects</h3>
     <ul>
       {% for property in properties %}
       <li>
-        {% if property.vetoed == True %} <s>{{property.name}}</s> (vetoed) {%
-        else %}
+        {% if property.vetoed_by|length >0 %} <s>{{property.name}}</s> (vetoed)
+        {% else %}
         <a href="/user/anonymous/veto/property/{{property.name}}"
           >{{property.name}}</a
         >
@@ -18,23 +42,41 @@
       {% endfor %}
     </ul>
 
-    <h2>Create a Property</h2>
-    <form method="POST" action="/create/property/">
-      <!--div class="mb-3"-->
+    <h1>Create</h1>
+
+    <h2>Object</h2>
+    <form method="POST" action="/create/object/">
       <input
         type="text"
         required
-        class="form-control"
         name="name"
-        id="name"
+        id="obj_name"
+        value="{{name}}"
+        placeholder="Object name here"
+      />
+      <button type="submit">Submit</button>
+    </form>
+
+    <h2>Property</h2>
+    <form method="POST" action="/create/property/">
+      <input
+        type="text"
+        required
+        name="name"
+        id="prop_name"
         value="{{name}}"
         placeholder="Property name here"
       />
-      <!--/div-->
-      <button type="submit" class="btn btn-primary">Submit</button>
+      <select name="object_id">
+        <option value=""></option>
+        {% for object in objects %}
+        <option value="{{object.id}}">{{object.name}}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Submit</button>
     </form>
   </body>
   <script>
-    document.getElementById("name").focus();
+    document.getElementById("prop_name").focus();
   </script>
 </html>

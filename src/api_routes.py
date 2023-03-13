@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from database import get_session
 from models import SVProperty
-from service import create_property, get_properties, veto_property
+from service import create_property, get_properties, veto_property_without_object
 
 api_router: Final = APIRouter()
 
@@ -31,7 +31,7 @@ async def api_user_create_property(
 
     # TODO error handling
     if property:
-        return {"created": property.dict()}
+        return {"created": dict(property)}
     else:
         return {"error": f'property "{name}" already exists'}
 
@@ -43,7 +43,7 @@ async def api_user_veto_property(
     user: str,
     name: str,
 ):
-    property: Final = veto_property(session, user, name)
+    property: Final = veto_property_without_object(session, user, name)
 
     if property:
         return {"vetoed": property.dict()}

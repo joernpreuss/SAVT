@@ -8,7 +8,7 @@ def get_engine(db_name: str):
     sqlite_url = f"sqlite:///./{db_name}.db"
     engine = create_engine(
         sqlite_url,
-        echo=True,
+        # echo=True,
         connect_args={"check_same_thread": False},  # TODO remove in production
         # poolclass=StaticPool,
     )

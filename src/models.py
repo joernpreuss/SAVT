@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import Form
 from sqlmodel import Field  # type: ignore
@@ -25,7 +25,14 @@ class SVObject(SQLModel, table=True):
     name: str
     created_by: Optional[str] = None  # use SVUser later
 
-    properties: List["SVProperty"] = Relationship(back_populates="svobject")
+    properties: List["SVProperty"] = Relationship(back_populates="object")
+
+    @classmethod
+    def as_form(
+        cls,
+        name: str = Form(...),
+    ) -> "SVObject":
+        return cls(name=name)
 
 
 class SVProperty(SQLModel, table=True):
@@ -37,8 +44,8 @@ class SVProperty(SQLModel, table=True):
     name: str
     created_by: Optional[str] = None  # use SVUser later
 
-    svobject_id: Optional[int] = Field(default=None, foreign_key="svobject.id")
-    svobject: Optional[SVObject] = Relationship(back_populates="properties")
+    object_id: Optional[int] = Field(default=None, foreign_key="svobject.id")
+    object: Optional[SVObject] = Relationship(back_populates="properties")
 
     # to have a list of users who vetoed this property that works with sqlite
     vetoed_by: list[str] = Field(default=[], sa_column=Column(JSON))
@@ -51,5 +58,9 @@ class SVProperty(SQLModel, table=True):
     def as_form(
         cls,
         name: str = Form(...),
+        object_id: Optional[Union[int, str]] = Form(None),
     ) -> "SVProperty":
-        return cls(name=name)
+        if not object_id or not isinstance(object_id, int):
+            return cls(name=name, object_id=None)
+        else:
+            return cls(name=name, object_id=object_id)
