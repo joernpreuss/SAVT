@@ -3,9 +3,10 @@
     <title>Properties</title>
   </head>
   <body>
-    <h1>View</h1>
+    <h1>Suggestion And Veto Tool</h1>
+    <h2>View</h2>
     Click on property names to veto
-    <h2>Objects</h2>
+    <h3>Objects</h3>
     <ul>
       {% for object in objects %}
       <li>
@@ -15,7 +16,11 @@
 
           <li>
             {% if property.vetoed_by|length >0 %}
-            <s>{{property.name}}</s> (vetoed) {% else %}
+            <s>{{property.name}}</s> (vetoed
+            <a
+              href="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
+              >undo</a
+            >) {% else %}
             <a
               href="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
               >{{property.name}}</a
@@ -28,7 +33,7 @@
       {% endfor %}
     </ul>
 
-    <h3>Properties without Objects</h3>
+    <h4>Properties without Objects</h4>
     <ul>
       {% for property in properties %}
       <li>
@@ -42,36 +47,41 @@
       {% endfor %}
     </ul>
 
-    <h1>Create</h1>
+    <h2>Create</h2>
 
-    <h2>Object</h2>
+    <h3>Object</h3>
     <form method="POST" action="/create/object/">
+      Create
       <input
         type="text"
         required
         name="name"
         id="obj_name"
         value="{{name}}"
-        placeholder="Object name here"
+        placeholder="Object"
       />
       <button type="submit">Submit</button>
     </form>
 
-    <h2>Property</h2>
+    <h3>Property</h3>
     <form method="POST" action="/create/property/">
+      Create
       <input
         type="text"
         required
         name="name"
         id="prop_name"
         value="{{name}}"
-        placeholder="Property name here"
+        placeholder="Property"
       />
+      in
       <select name="object_id">
-        <option value=""></option>
-        {% for object in objects %}
+        <option value="">Object</option>
+        {% for object in objects %} {% if object.id == object_id %}
+        <option value="{{object.id}}" selected>{{object.name}}</option>
+        {% else %}
         <option value="{{object.id}}">{{object.name}}</option>
-        {% endfor %}
+        {% endif %} {% endfor %}
       </select>
       <button type="submit">Submit</button>
     </form>

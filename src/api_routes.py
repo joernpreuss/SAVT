@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from database import get_session
 from models import SVProperty
-from service import create_property, get_properties, veto_property_without_object
+from service import create_property, get_properties, veto_object_property
 
 api_router: Final = APIRouter()
 
@@ -43,10 +43,10 @@ async def api_user_veto_property(
     user: str,
     name: str,
 ):
-    property: Final = veto_property_without_object(session, user, name)
+    property: Final = veto_object_property(session, user, name)
 
     if property:
-        return {"vetoed": property.dict()}
+        return {"vetoed": dict(property)}
 
     else:
         return {"error": f'property "{name}" not found'}
