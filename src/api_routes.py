@@ -1,7 +1,6 @@
 from typing import Final
 
 from fastapi import APIRouter, Depends
-from sqlmodel import select  # type: ignore
 from sqlmodel import Session
 
 from database import get_session
