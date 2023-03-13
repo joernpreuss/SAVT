@@ -8,7 +8,8 @@
     <ul>
       {% for property in properties %}
       <li>
-        {% if property.vetoed == True %} <s>{{property.name}}</s> {% else %}
+        {% if property.vetoed == True %} <s>{{property.name}}</s> (vetoed) {%
+        else %}
         <a href="/user/anonymous/veto/property/{{property.name}}"
           >{{property.name}}</a
         >
@@ -25,6 +26,7 @@
         required
         class="form-control"
         name="name"
+        id="name"
         value="{{name}}"
         placeholder="Property name here"
       />
@@ -32,4 +34,7 @@
       <button type="submit" class="btn btn-primary">Submit</button>
     </form>
   </body>
+  <script>
+    document.getElementById("name").focus();
+  </script>
 </html>
