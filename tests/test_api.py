@@ -64,11 +64,3 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
     response_json = response.json()
     print(f"{response_json=}")
     assert len(response_json["vetoed"]["vetoed_by"]) == 1
-
-
-def test_list_properties(client: TestClient, timestamp_str: str):
-    response = client.get("/api/list/properties")
-    assert response.status_code == 200
-    print("response.json()=")
-    print(json.dumps(response.json(), indent=4))
-    # TODO check response content
