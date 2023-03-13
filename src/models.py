@@ -1,11 +1,8 @@
 from typing import Optional
 
-from sqlmodel import (
-    JSON,
-    Column,
-    Field,  # type: ignore
-    SQLModel,
-)
+from fastapi import Form
+from sqlmodel import Field  # type: ignore
+from sqlmodel import JSON, Column, SQLModel
 
 # later
 # class SVUser(SQLModel, table=True):
@@ -16,7 +13,6 @@ from sqlmodel import (
 #     name: str
 
 
-# use later
 class SVProperty(SQLModel, table=True):
     """A property of an object. Can be a topping of a pizza."""
 
@@ -32,6 +28,14 @@ class SVProperty(SQLModel, table=True):
     # Needed for Column(JSON)
     class Config:  # type: ignore
         arbitrary_types_allowed = True
+
+    @classmethod
+    def as_form(
+        cls,
+        name: str = Form(...),
+        # any_other_param: int = Form(1)
+    ) -> "SVProperty":
+        return cls(name=name)
 
 
 # Use later for multiple objects (pizzas) with their own toppings
