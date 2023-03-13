@@ -25,7 +25,7 @@ templates = Jinja2Templates(directory="templates/")
 
 
 def get_main_engine():
-    engine = get_engine(db_name="pytest")
+    engine = get_engine(db_name="prod")
     init_db(engine)
     return engine
 
@@ -70,7 +70,11 @@ async def api_user_create_property(
     return {"created": property.dict()}
 
 
-def veto(session: Session, user: str, name: str):
+def veto(
+    session: Session,
+    user: str,
+    name: str,
+):
     statement = select(SVProperty).where(SVProperty.name == name)
     results = session.exec(statement)
     property = results.one()
