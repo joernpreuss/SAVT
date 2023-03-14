@@ -37,8 +37,9 @@
     <ul>
       {% for property in properties %}
       <li>
-        {% if property.vetoed_by|length >0 %} <s>{{property.name}}</s> (vetoed)
-        {% else %}
+        {% if property.vetoed_by|length >0 %} <s>{{property.name}}</s> (vetoed
+        <a href="/user/anonymous/unveto/property/{{property.name}}">undo</a>) {%
+        else %}
         <a href="/user/anonymous/veto/property/{{property.name}}"
           >{{property.name}}</a
         >

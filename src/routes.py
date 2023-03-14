@@ -1,6 +1,6 @@
-from typing import Final
+from typing import Final, Optional
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
@@ -21,11 +21,18 @@ templates: Final = Jinja2Templates(directory="templates/")
 
 
 @router.get("/", response_class=HTMLResponse)
-async def list_properties(*, session: Session = Depends(get_session), request: Request):
+async def list_properties(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    object_id: Optional[str] = Cookie(default=None),
+):
 
     properties: Final = get_properties(session)
     objects: Final = get_objects(session)
-    object_id = request.query_params.get("object_id")
+    # object_id = request.query_params.get("object_id")
+
+    logger.info(f"### {object_id=}")
 
     response = templates.TemplateResponse(  # type: ignore
         "properties.html",
@@ -44,12 +51,17 @@ async def list_properties(*, session: Session = Depends(get_session), request: R
 
 @router.post("/create/object/")
 async def route_create_object(
+    *,
     session: Session = Depends(get_session),
-    object: SVObject = Depends(SVObject.as_form),
+    obj: SVObject = Depends(SVObject.as_form),
+    response: Response,
 ):
-    logger.info(f"### {object=}")
+    logger.debug(f"### {obj=}")
 
-    create_object(session, object)
+    object_id = obj.id
+    response.set_cookie(key="object_id", value=str(object_id))
+
+    create_object(session, obj)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -59,33 +71,33 @@ async def route_create_property(
     session: Session = Depends(get_session),
     property: SVProperty = Depends(SVProperty.as_form),
 ):
-    print(f"### {property=}")
-
+    logger.debug(f"### {property=}")
     create_property(session, property)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/user/{user}/veto/property/{name}")
-async def route_veto_property(
-    *, session: Session = Depends(get_session), user: str, name: str
-):
-    veto_object_property(session, user, name)
-
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-
-
 @router.get("/user/{user}/veto/object/{obj}/property/{name}")
 async def route_veto_object_property(
-    *, session: Session = Depends(get_session), user: str, obj: str, name: str
+    *,
+    session: Session = Depends(get_session),
+    user: str,
+    obj: Optional[str] = None,
+    name: str,
 ):
     veto_object_property(session, user, name, obj)
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@router.get("/user/{user}/unveto/property/{name}")
 @router.get("/user/{user}/unveto/object/{obj}/property/{name}")
 async def route_unveto_object_property(
-    *, session: Session = Depends(get_session), user: str, obj: str, name: str
+    *,
+    session: Session = Depends(get_session),
+    user: str,
+    obj: Optional[str] = None,
+    name: str,
 ):
     veto_object_property(session, user, name, obj, veto=False)
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
