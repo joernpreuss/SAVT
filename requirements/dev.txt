@@ -2,4 +2,4 @@
 pytest 
 httpx
 uvicorn
-# fastapi-debug-toolbar
+fastapi-debug-toolbar
