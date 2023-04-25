@@ -9,7 +9,9 @@ def get_engine(db_name: str):
     engine = create_engine(
         sqlite_url,
         # echo=True,
-        connect_args={"check_same_thread": False},  # TODO remove in production
+        connect_args={
+            "check_same_thread": False,  # TODO remove in production
+        },
         # poolclass=StaticPool,
     )
     return engine
@@ -20,7 +22,7 @@ def init_db(engine: Engine):
 
 
 def get_main_engine():
-    engine = get_engine(db_name="prod")
+    engine = get_engine(db_name="prod2")
     init_db(engine)
     return engine
 
