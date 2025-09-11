@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 
 from fastapi import Form
+from pydantic import ConfigDict
 from sqlmodel import Field  # type: ignore
 from sqlmodel import Relationship  # type: ignore
 from sqlmodel import JSON, Column, SQLModel
@@ -46,8 +47,7 @@ class SVProperty(SQLModel, table=True):
     object: Optional[SVObject] = Relationship(back_populates="properties")
 
     # Needed for Column(JSON)
-    class Config:  # type: ignore
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     def as_form(
