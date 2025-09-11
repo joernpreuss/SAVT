@@ -27,6 +27,11 @@ class Settings(BaseSettings):
         description="Secret key for security features",
     )
 
+    # Logging configuration
+    log_to_file: bool = Field(
+        default=False, description="Force logging to file even in debug mode"
+    )
+
     # Pydantic Settings configuration
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"

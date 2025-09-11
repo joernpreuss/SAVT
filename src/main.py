@@ -1,26 +1,35 @@
 from contextlib import asynccontextmanager
+import socket
 
-# import logging
 from fastapi import FastAPI
 
 from .api_routes import api_router
 from .config import settings
 from .database import get_main_engine, init_db
+from .logging_config import setup_logging, get_logger
+from .logging_utils import log_system_info
+from .middleware import log_requests_middleware
 from .routes import router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
+    # Setup logging first
+    setup_logging()
+    logger = get_logger(__name__)
+
     # Initialize database schema once at startup
     init_db(get_main_engine())
-    # Print hostname and IP once on startup (also runs under TestClient)
-    import socket
+    logger.info("Database initialized successfully")
 
+    # Log system info instead of print statements
     hostname = socket.gethostname()
     ip_addr = socket.gethostbyname(hostname)
-    print("Your Computer Name is: " + hostname)
-    print("Your Computer IP Address is: " + ip_addr)
+    log_system_info(hostname, ip_addr, settings.debug)
+
     yield
+
+    logger.info("Application shutdown completed")
 
 
 app = FastAPI(
@@ -29,10 +38,10 @@ app = FastAPI(
     debug=settings.debug,
     lifespan=lifespan,
 )
+
+# Add request logging middleware
+app.middleware("http")(log_requests_middleware)
+
+# Include routers
 app.include_router(api_router)
 app.include_router(router)
-
-# logger = logging.getLogger(__name__)
-# logger.addHandler(logging.StreamHandler(sys.stdout))
-# logger.setLevel(logging.DEBUG)
-# logger.info("test asdfg")

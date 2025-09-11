@@ -6,7 +6,7 @@ from .config import settings
 # from sqlmodel.pool import StaticPool
 
 
-def get_engine(db_name: str):
+def get_engine(_: str):
     # Use effective_database_url which handles both DATABASE_URL and DB_NAME
     sqlite_url = settings.effective_database_url
     engine = create_engine(
@@ -30,7 +30,7 @@ _engine: Engine | None = None
 def get_main_engine():
     global _engine
     if _engine is None:
-        _engine = get_engine(db_name=settings.db_name)
+        _engine = get_engine(settings.db_name)
     return _engine
 
 
