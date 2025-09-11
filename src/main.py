@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 sys.path.append(str(Path(__file__).parent))
 from api_routes import api_router
+from config import settings
 from database import get_main_engine, init_db
 from routes import router
 
@@ -25,7 +26,12 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(debug=True, lifespan=lifespan)
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.VERSION,
+    debug=settings.DEBUG,
+    lifespan=lifespan,
+)
 app.include_router(api_router)
 app.include_router(router)
 

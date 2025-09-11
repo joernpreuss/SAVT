@@ -7,6 +7,12 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=sqlite:///./data/savt.db
+    env_file:
+      - .env  # Optional: load from .env file
     volumes:
       # Mount data directory for SQLite persistence
       - ./data:/app/data

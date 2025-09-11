@@ -1,11 +1,17 @@
 from sqlalchemy.future import Engine  # for the type hint
 from sqlmodel import Session, SQLModel, create_engine
 
+from config import settings
+
 # from sqlmodel.pool import StaticPool
 
 
 def get_engine(db_name: str):
-    sqlite_url = f"sqlite:///./{db_name}.db"
+    # Use DATABASE_URL from settings if it's not the default SQLite pattern
+    if "sqlite:///" in settings.DATABASE_URL and db_name in settings.DATABASE_URL:
+        sqlite_url = settings.DATABASE_URL
+    else:
+        sqlite_url = f"sqlite:///./{db_name}.db"
     engine = create_engine(
         sqlite_url,
         # echo=True,
