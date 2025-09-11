@@ -1,5 +1,4 @@
 from fastapi import Form
-from pydantic import ConfigDict
 from sqlmodel import (
     JSON,
     Column,
