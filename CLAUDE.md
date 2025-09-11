@@ -13,9 +13,13 @@ This file contains information for AI assistants and developers working on the S
 - **Typecheck**: `uv tool run mypy src/`
 - **All checks**: `./scripts/check.sh` (installs tools: `uv tool install ruff mypy`)
 
+### Configuration
+- **Environment file**: Copy `.env.example` to `.env` and customize
+- **Key variables**: `DEBUG`, `DATABASE_URL`, `HOST`, `PORT`, `SECRET_KEY`
+
 ### Deployment
 - **Docker build**: `docker build -t savt .`
-- **Docker run**: `docker run -p 8000:8000 savt`
+- **Docker run**: `docker run -p 8000:8000 --env-file .env savt`
 - **Docker Compose**: `docker-compose up --build`
 
 ### Project Structure
