@@ -1,4 +1,4 @@
-from typing import Final, Optional
+from typing import Final
 
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -25,9 +25,8 @@ async def list_properties(
     *,
     session: Session = Depends(get_session),
     request: Request,
-    object_id: Optional[str] = Cookie(default=None),
+    object_id: str | None = Cookie(default=None),
 ):
-
     properties: Final = get_properties(session)
     objects: Final = get_objects(session)
     # object_id = request.query_params.get("object_id")
@@ -68,7 +67,7 @@ async def route_create_object(
     if "HX-Request" in request.headers:
         properties: Final = get_properties(session)
         objects: Final = get_objects(session)
-        
+
         return templates.TemplateResponse(
             "properties.html",
             {
@@ -98,13 +97,11 @@ async def route_create_property(
     if "HX-Request" in request.headers:
         properties: Final = get_properties(session)
         objects: Final = get_objects(session)
-        
+
         return templates.TemplateResponse(
             "properties.html",
             {
-                "properties": [
-                    prop for prop in properties if prop.object_id is None
-                ],
+                "properties": [prop for prop in properties if prop.object_id is None],
                 "objects": objects,
                 "object_id": property.object_id,
                 "request": request,
@@ -121,16 +118,16 @@ async def route_veto_object_property(
     session: Session = Depends(get_session),
     request: Request,
     user: str,
-    obj: Optional[str] = None,
+    obj: str | None = None,
     name: str,
 ):
     veto_object_property(session, user, name, obj)
-    
+
     # If HTMX request, return updated fragment
     if "HX-Request" in request.headers:
         properties: Final = get_properties(session)
         objects: Final = get_objects(session)
-        
+
         if obj:  # Object property veto
             return templates.TemplateResponse(
                 "fragments/objects_list.html",
@@ -144,12 +141,14 @@ async def route_veto_object_property(
                 "fragments/standalone_properties.html",
                 {
                     "properties": [
-                        property for property in properties if property.object_id is None
+                        property
+                        for property in properties
+                        if property.object_id is None
                     ],
                     "request": request,
                 },
             )
-    
+
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -160,16 +159,16 @@ async def route_unveto_object_property(
     session: Session = Depends(get_session),
     request: Request,
     user: str,
-    obj: Optional[str] = None,
+    obj: str | None = None,
     name: str,
 ):
     veto_object_property(session, user, name, obj, veto=False)
-    
+
     # If HTMX request, return updated fragment
     if "HX-Request" in request.headers:
         properties: Final = get_properties(session)
         objects: Final = get_objects(session)
-        
+
         if obj:  # Object property unveto
             return templates.TemplateResponse(
                 "fragments/objects_list.html",
@@ -183,10 +182,12 @@ async def route_unveto_object_property(
                 "fragments/standalone_properties.html",
                 {
                     "properties": [
-                        property for property in properties if property.object_id is None
+                        property
+                        for property in properties
+                        if property.object_id is None
                     ],
                     "request": request,
                 },
             )
-    
+
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

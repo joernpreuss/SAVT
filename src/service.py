@@ -1,7 +1,9 @@
-from typing import Final, Optional
+from typing import Final
 
-from sqlmodel import select  # type: ignore
-from sqlmodel import Session
+from sqlmodel import (
+    Session,
+    select,  # type: ignore
+)
 
 from models import SVObject, SVProperty
 from utils import logger
@@ -40,7 +42,7 @@ def get_properties(session: Session):
     return properties
 
 
-def get_property(session: Session, name: str, obj_id: Optional[int] = None):
+def get_property(session: Session, name: str, obj_id: int | None = None):
     statement: Final = select(SVProperty).where(
         SVProperty.name == name, SVProperty.object_id == obj_id
     )
@@ -67,10 +69,9 @@ def veto_object_property(
     session: Session,
     user: str,
     name: str,
-    object_name: Optional[str] = None,
+    object_name: str | None = None,
     veto: bool = True,
 ):
-
     logger.info(f"veto_object_property {user=}, {object_name=}, {name=}")
 
     if object_name:
