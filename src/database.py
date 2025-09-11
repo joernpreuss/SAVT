@@ -30,7 +30,7 @@ _engine: Engine | None = None
 def get_main_engine():
     global _engine
     if _engine is None:
-        _engine = get_engine(db_name="prod2")
+        _engine = get_engine(db_name=settings.db_name)
     return _engine
 
 
