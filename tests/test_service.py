@@ -26,7 +26,6 @@ def test_create_property_without_object(
     session: Session,
     timestamp_str: str,
 ):
-
     property = SVProperty(
         name=f"test_property_{timestamp_str}",
     )
