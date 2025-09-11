@@ -7,11 +7,8 @@ from config import settings
 
 
 def get_engine(db_name: str):
-    # Use DATABASE_URL from settings if it's not the default SQLite pattern
-    if "sqlite:///" in settings.DATABASE_URL and db_name in settings.DATABASE_URL:
-        sqlite_url = settings.DATABASE_URL
-    else:
-        sqlite_url = f"sqlite:///./{db_name}.db"
+    # Use effective_database_url which handles both DATABASE_URL and DB_NAME
+    sqlite_url = settings.effective_database_url
     engine = create_engine(
         sqlite_url,
         # echo=True,
