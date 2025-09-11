@@ -53,6 +53,7 @@ async def list_properties(
 async def route_create_object(
     *,
     session: Session = Depends(get_session),
+    request: Request,
     obj: SVObject = Depends(SVObject.as_form),
     response: Response,
 ):
@@ -63,16 +64,52 @@ async def route_create_object(
 
     create_object(session, obj)
 
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        properties: Final = get_properties(session)
+        objects: Final = get_objects(session)
+        
+        return templates.TemplateResponse(
+            "properties.html",
+            {
+                "properties": [
+                    property for property in properties if property.object_id is None
+                ],
+                "objects": objects,
+                "object_id": object_id,
+                "request": request,
+            },
+        )
+
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/create/property/")
 async def route_create_property(
+    *,
     session: Session = Depends(get_session),
+    request: Request,
     property: SVProperty = Depends(SVProperty.as_form),
 ):
     logger.debug(f"### {property=}")
     create_property(session, property)
+
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        properties: Final = get_properties(session)
+        objects: Final = get_objects(session)
+        
+        return templates.TemplateResponse(
+            "properties.html",
+            {
+                "properties": [
+                    prop for prop in properties if prop.object_id is None
+                ],
+                "objects": objects,
+                "object_id": property.object_id,
+                "request": request,
+            },
+        )
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -82,11 +119,37 @@ async def route_create_property(
 async def route_veto_object_property(
     *,
     session: Session = Depends(get_session),
+    request: Request,
     user: str,
     obj: Optional[str] = None,
     name: str,
 ):
     veto_object_property(session, user, name, obj)
+    
+    # If HTMX request, return updated fragment
+    if "HX-Request" in request.headers:
+        properties: Final = get_properties(session)
+        objects: Final = get_objects(session)
+        
+        if obj:  # Object property veto
+            return templates.TemplateResponse(
+                "fragments/objects_list.html",
+                {
+                    "objects": objects,
+                    "request": request,
+                },
+            )
+        else:  # Standalone property veto
+            return templates.TemplateResponse(
+                "fragments/standalone_properties.html",
+                {
+                    "properties": [
+                        property for property in properties if property.object_id is None
+                    ],
+                    "request": request,
+                },
+            )
+    
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -95,9 +158,35 @@ async def route_veto_object_property(
 async def route_unveto_object_property(
     *,
     session: Session = Depends(get_session),
+    request: Request,
     user: str,
     obj: Optional[str] = None,
     name: str,
 ):
     veto_object_property(session, user, name, obj, veto=False)
+    
+    # If HTMX request, return updated fragment
+    if "HX-Request" in request.headers:
+        properties: Final = get_properties(session)
+        objects: Final = get_objects(session)
+        
+        if obj:  # Object property unveto
+            return templates.TemplateResponse(
+                "fragments/objects_list.html",
+                {
+                    "objects": objects,
+                    "request": request,
+                },
+            )
+        else:  # Standalone property unveto
+            return templates.TemplateResponse(
+                "fragments/standalone_properties.html",
+                {
+                    "properties": [
+                        property for property in properties if property.object_id is None
+                    ],
+                    "request": request,
+                },
+            )
+    
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

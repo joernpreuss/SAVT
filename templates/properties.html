@@ -1,28 +1,39 @@
 <html>
   <head>
     <title>Properties</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <style>
+      .htmx-request { opacity: 0.5; }
+      .fade-out { opacity: 0; transition: opacity 0.5s; }
+    </style>
   </head>
   <body>
     <h1>Suggestion And Veto Tool</h1>
     <h2>View</h2>
     Click on property names to veto
     <h3>Objects</h3>
-    <ul>
+    <ul id="objects-list">
       {% for object in objects %}
       <li>
         {{object.name}}
         <ul>
           {% for property in object.properties %}
 
-          <li>
+          <li id="property-{{property.id}}">
             {% if property.vetoed_by|length >0 %}
             <s>{{property.name}}</s> (vetoed
             <a
               href="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
+              hx-get="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
+              hx-target="#objects-list"
+              hx-swap="outerHTML"
               >undo</a
             >) {% else %}
             <a
               href="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
+              hx-get="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
+              hx-target="#objects-list"
+              hx-swap="outerHTML"
               >{{property.name}}</a
             >
             {% endif %}
@@ -34,13 +45,22 @@
     </ul>
 
     <h4>Properties without Objects</h4>
-    <ul>
+    <ul id="standalone-properties">
       {% for property in properties %}
       <li>
         {% if property.vetoed_by|length >0 %} <s>{{property.name}}</s> (vetoed
-        <a href="/user/anonymous/unveto/property/{{property.name}}">undo</a>) {%
+        <a 
+          href="/user/anonymous/unveto/property/{{property.name}}"
+          hx-get="/user/anonymous/unveto/property/{{property.name}}"
+          hx-target="#standalone-properties"
+          hx-swap="outerHTML"
+          >undo</a>) {%
         else %}
-        <a href="/user/anonymous/veto/property/{{property.name}}"
+        <a 
+          href="/user/anonymous/veto/property/{{property.name}}"
+          hx-get="/user/anonymous/veto/property/{{property.name}}"
+          hx-target="#standalone-properties"
+          hx-swap="outerHTML"
           >{{property.name}}</a
         >
         {% endif %}
@@ -51,7 +71,13 @@
     <h2>Create</h2>
 
     <h3>Object</h3>
-    <form method="POST" action="/create/object/">
+    <form 
+      method="POST" 
+      action="/create/object/"
+      hx-post="/create/object/"
+      hx-target="body"
+      hx-swap="outerHTML"
+      >
       Create
       <input
         type="text"
@@ -65,7 +91,13 @@
     </form>
 
     <h3>Property</h3>
-    <form method="POST" action="/create/property/">
+    <form 
+      method="POST" 
+      action="/create/property/"
+      hx-post="/create/property/"
+      hx-target="body"
+      hx-swap="outerHTML"
+      >
       Create
       <input
         type="text"

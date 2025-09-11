@@ -1,0 +1,31 @@
+<ul id="objects-list">
+  {% for object in objects %}
+  <li>
+    {{object.name}}
+    <ul>
+      {% for property in object.properties %}
+
+      <li id="property-{{property.id}}">
+        {% if property.vetoed_by|length >0 %}
+        <s>{{property.name}}</s> (vetoed
+        <a
+          href="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
+          hx-get="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
+          hx-target="#objects-list"
+          hx-swap="outerHTML"
+          >undo</a
+        >) {% else %}
+        <a
+          href="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
+          hx-get="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
+          hx-target="#objects-list"
+          hx-swap="outerHTML"
+          >{{property.name}}</a
+        >
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </li>
+  {% endfor %}
+</ul>
