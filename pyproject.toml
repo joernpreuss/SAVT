@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "savt"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = "~=3.12.0"
+dependencies = [
+    "fastapi==0.115.0",
+    "jinja2==3.1.4",
+    "python-multipart==0.0.12",
+    "sqlmodel==0.0.22",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "fastapi-debug-toolbar==0.6.3",
+    "httpx==0.27.2",
+    "pytest==8.3.3",
+    "uvicorn==0.31.0",
+]
