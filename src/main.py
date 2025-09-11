@@ -27,9 +27,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.VERSION,
-    debug=settings.DEBUG,
+    title=settings.app_name,
+    version=settings.version,
+    debug=settings.debug,
     lifespan=lifespan,
 )
 app.include_router(api_router)

@@ -15,7 +15,9 @@ This file contains information for AI assistants and developers working on the S
 
 ### Configuration
 - **Environment file**: Copy `.env.example` to `.env` and customize
+- **Pydantic Settings**: Type-safe config with validation and .env support
 - **Key variables**: `DEBUG`, `DATABASE_URL`, `HOST`, `PORT`, `SECRET_KEY`
+- **Validation**: Built-in validation (e.g., port range 1-65535, secret key min length)
 
 ### Deployment
 - **Docker build**: `docker build -t savt .`
@@ -51,6 +53,7 @@ tests/                       # Test files
 - **SQLModel** - Type-safe database models
 - **Jinja2** - Server-side templating
 - **HTMX** - Dynamic frontend without JavaScript
+- **Pydantic Settings** - Type-safe configuration management
 - **uv** - Fast Python package management
 
 ### Key Design Decisions
