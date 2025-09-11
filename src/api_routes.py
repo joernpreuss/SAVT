@@ -31,7 +31,8 @@ async def api_user_create_property(
 
     # TODO error handling
     if property:
-        return {"created": dict(property)}
+        # SQLModel/Pydantic v2
+        return {"created": property.model_dump()}
     else:
         return {"error": f'property "{name}" already exists'}
 
@@ -46,7 +47,7 @@ async def api_user_veto_property(
     property: Final = veto_object_property(session, user, name)
 
     if property:
-        return {"vetoed": dict(property)}
+        return {"vetoed": property.model_dump()}
 
     else:
         return {"error": f'property "{name}" not found'}
@@ -59,6 +60,7 @@ async def api_list_properties(
 ):
     properties = get_properties(session)
 
+    # Sort by vetoed flag then by name for stable order
     return {
         "properties": sorted(
             [
@@ -68,6 +70,6 @@ async def api_list_properties(
                 }
                 for property in properties
             ],
-            key=lambda x: x["vetoed"],  # sort by "vetoed"
+            key=lambda x: (x["vetoed"], x["name"].lower()),
         )
     }

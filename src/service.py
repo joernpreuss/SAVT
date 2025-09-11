@@ -32,7 +32,7 @@ def create_object(session: Session, obj: SVObject):
         session.refresh(obj)
         return obj
     else:
-        return {"error": "Property already exists"}
+        return {"error": "Object already exists"}
 
 
 def get_properties(session: Session):

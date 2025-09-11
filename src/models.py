@@ -43,19 +43,20 @@ class SVProperty(SQLModel, table=True):  # type: ignore[call-arg]
     created_by: str | None = None  # use SVUser later
 
     # to have a list of users who vetoed this property that works with sqlite
-    vetoed_by: list[str] = Field(default=[], sa_column=Column(JSON))
+    vetoed_by: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
     object_id: int | None = Field(default=None, foreign_key="svobject.id")
     object: SVObject | None = Relationship(back_populates="properties")
 
-    # Needed for Column(JSON)
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    # JSON Column works without special config in current setup
 
     @classmethod
     def as_form(
         cls, name: str = Form(...), object_id: int | str | None = Form(None)
     ) -> "SVProperty":
-        if not object_id or not isinstance(object_id, int):
-            return cls(name=name, object_id=None)
-        else:
-            return cls(name=name, object_id=object_id)
+        # Form values arrive as strings; convert to int if possible
+        if isinstance(object_id, str):
+            object_id = int(object_id) if object_id.isdigit() else None
+        return cls(
+            name=name, object_id=object_id if isinstance(object_id, int) else None
+        )
