@@ -1,15 +1,12 @@
-import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 # import logging
 from fastapi import FastAPI
 
-sys.path.append(str(Path(__file__).parent))
-from api_routes import api_router
-from config import settings
-from database import get_main_engine, init_db
-from routes import router
+from .api_routes import api_router
+from .config import settings
+from .database import get_main_engine, init_db
+from .routes import router
 
 
 @asynccontextmanager

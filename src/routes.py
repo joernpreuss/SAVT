@@ -1,20 +1,22 @@
 from typing import Final
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
 
-from database import get_session
-from models import SVObject, SVProperty
-from service import (
+from .database import get_session
+from .models import SVObject, SVProperty
+from .service import (
+    ObjectAlreadyExistsError,
+    PropertyAlreadyExistsError,
     create_object,
     create_property,
     get_objects,
     get_properties,
     veto_object_property,
 )
-from utils import logger
+from .utils import logger
 
 router: Final = APIRouter()
 templates: Final = Jinja2Templates(directory="templates/")
@@ -36,9 +38,7 @@ async def list_properties(
     response = templates.TemplateResponse(  # type: ignore
         "properties.html",
         {
-            "properties": [
-                property for property in properties if property.object_id is None
-            ],
+            "properties": [prop for prop in properties if prop.object_id is None],
             "objects": objects,
             "object_id": object_id,
             "request": request,
@@ -61,7 +61,10 @@ async def route_create_object(
     object_id = obj.id
     response.set_cookie(key="object_id", value=str(object_id))
 
-    create_object(session, obj)
+    try:
+        create_object(session, obj)
+    except ObjectAlreadyExistsError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
@@ -71,9 +74,7 @@ async def route_create_object(
         return templates.TemplateResponse(
             "properties.html",
             {
-                "properties": [
-                    property for property in properties if property.object_id is None
-                ],
+                "properties": [prop for prop in properties if prop.object_id is None],
                 "objects": objects,
                 "object_id": object_id,
                 "request": request,
@@ -88,10 +89,13 @@ async def route_create_property(
     *,
     session: Session = Depends(get_session),
     request: Request,
-    property: SVProperty = Depends(SVProperty.as_form),
+    prop: SVProperty = Depends(SVProperty.as_form),
 ):
-    logger.debug(f"### {property=}")
-    create_property(session, property)
+    logger.debug(f"### {prop=}")
+    try:
+        create_property(session, prop)
+    except PropertyAlreadyExistsError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
@@ -101,9 +105,9 @@ async def route_create_property(
         return templates.TemplateResponse(
             "properties.html",
             {
-                "properties": [prop for prop in properties if prop.object_id is None],
+                "properties": [p for p in properties if p.object_id is None],
                 "objects": objects,
-                "object_id": property.object_id,
+                "object_id": prop.object_id,
                 "request": request,
             },
         )
@@ -111,8 +115,8 @@ async def route_create_property(
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@router.get("/user/{user}/veto/property/{name}")
-@router.get("/user/{user}/veto/object/{obj}/property/{name}")
+@router.post("/user/{user}/veto/property/{name}")
+@router.post("/user/{user}/veto/object/{obj}/property/{name}")
 async def route_veto_object_property(
     *,
     session: Session = Depends(get_session),
@@ -141,9 +145,7 @@ async def route_veto_object_property(
                 "fragments/standalone_properties.html",
                 {
                     "properties": [
-                        property
-                        for property in properties
-                        if property.object_id is None
+                        prop for prop in properties if prop.object_id is None
                     ],
                     "request": request,
                 },
@@ -152,8 +154,8 @@ async def route_veto_object_property(
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@router.get("/user/{user}/unveto/property/{name}")
-@router.get("/user/{user}/unveto/object/{obj}/property/{name}")
+@router.post("/user/{user}/unveto/property/{name}")
+@router.post("/user/{user}/unveto/object/{obj}/property/{name}")
 async def route_unveto_object_property(
     *,
     session: Session = Depends(get_session),
@@ -182,9 +184,7 @@ async def route_unveto_object_property(
                 "fragments/standalone_properties.html",
                 {
                     "properties": [
-                        property
-                        for property in properties
-                        if property.object_id is None
+                        prop for prop in properties if prop.object_id is None
                     ],
                     "request": request,
                 },

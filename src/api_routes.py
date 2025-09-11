@@ -1,74 +1,94 @@
-from typing import Final
+from typing import Final, TypedDict
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session
 
-from database import get_session
-from models import SVProperty
-from service import create_property, get_properties, veto_object_property
+from .database import get_session
+from .models import SVProperty
+from .service import (
+    PropertyAlreadyExistsError,
+    create_property,
+    get_properties,
+    veto_object_property,
+)
 
-api_router: Final = APIRouter()
+api_router: Final = APIRouter(prefix="/api")
 
 
-@api_router.get("/api/create/property/{name}")
-async def api_create_property_anonymously(
-    *,
-    session: Session = Depends(get_session),
-    name: str,
+class PropertyName(BaseModel):
+    name: str
+
+
+@api_router.post("/properties")
+async def api_create_property(
+    *, session: Session = Depends(get_session), prop_name: PropertyName
 ):
-    create_property(session, SVProperty(name=name))
-    return {"created": {"name": name}}
+    try:
+        prop = create_property(session, SVProperty(name=prop_name.name))
+        return {"created": prop.model_dump()}
+    except PropertyAlreadyExistsError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 
-@api_router.get("/api/user/{user}/create/property/{name}")
+@api_router.post("/users/{user}/properties")
 async def api_user_create_property(
-    *,
-    session: Session = Depends(get_session),
-    user: str,
-    name: str,
+    *, session: Session = Depends(get_session), user: str, prop_name: PropertyName
 ):
-    property: Final = create_property(session, SVProperty(name=name, created_by=user))
+    try:
+        prop = create_property(
+            session, SVProperty(name=prop_name.name, created_by=user)
+        )
+        return {"created": prop.model_dump()}
+    except PropertyAlreadyExistsError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
-    # TODO error handling
-    if property:
-        # SQLModel/Pydantic v2
-        return {"created": property.model_dump()}
-    else:
-        return {"error": f'property "{name}" already exists'}
 
-
-@api_router.get("/api/user/{user}/veto/property/{name}")
+@api_router.post("/users/{user}/properties/{name}/veto")
 async def api_user_veto_property(
-    *,
-    session: Session = Depends(get_session),
-    user: str,
-    name: str,
+    *, session: Session = Depends(get_session), user: str, name: str
 ):
-    property: Final = veto_object_property(session, user, name)
+    prop = veto_object_property(session, user, name, veto=True)
 
-    if property:
-        return {"vetoed": property.model_dump()}
-
+    if prop:
+        return {"vetoed": prop.model_dump()}
     else:
-        return {"error": f'property "{name}" not found'}
+        raise HTTPException(status_code=404, detail=f'Property "{name}" not found')
 
 
-@api_router.get("/api/list/properties")
+@api_router.post("/users/{user}/properties/{name}/unveto")
+async def api_user_unveto_property(
+    *, session: Session = Depends(get_session), user: str, name: str
+):
+    prop = veto_object_property(session, user, name, veto=False)
+
+    if prop:
+        return {"unvetoed": prop.model_dump()}
+    else:
+        raise HTTPException(status_code=404, detail=f'Property "{name}" not found')
+
+
+@api_router.get("/properties")
 async def api_list_properties(
     *,
     session: Session = Depends(get_session),
 ):
     properties = get_properties(session)
 
+    # Define TypedDict for property structure
+    class PropertyDict(TypedDict):
+        name: str
+        vetoed: bool
+
     # Sort by vetoed flag then by name for stable order
     return {
         "properties": sorted(
             [
-                {
-                    "name": property.name,
-                    "vetoed": len(property.vetoed_by) > 0,
-                }
-                for property in properties
+                PropertyDict(
+                    name=prop.name,
+                    vetoed=len(prop.vetoed_by) > 0,
+                )
+                for prop in properties
             ],
             key=lambda x: (x["vetoed"], x["name"].lower()),
         )

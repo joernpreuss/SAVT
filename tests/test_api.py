@@ -8,8 +8,8 @@ from rich.logging import RichHandler
 from rich.syntax import Syntax
 from sqlmodel import Session
 
-from database import get_session
-from main import app
+from src.database import get_session
+from src.main import app
 
 
 @pytest.fixture(name="client")
@@ -46,8 +46,9 @@ def _setup_logging_once() -> None:
 
 def test_create_property(client: TestClient, timestamp_str: str):
     _setup_logging_once()
-    response = client.get(
-        f"/api/user/test_user/create/property/test_prop_per_api_{timestamp_str}"
+    response = client.post(
+        "/api/users/test_user/properties",
+        json={"name": f"test_prop_per_api_{timestamp_str}"},
     )
     assert response.status_code == 200
     logging.info(f"create_property status: {response.status_code}")
@@ -61,19 +62,21 @@ def test_two_vetos(client: TestClient, timestamp_str: str):
     _setup_logging_once()
     prop_name = f"test_prop_controversial_two_{timestamp_str}"
 
-    response = client.get(f"/api/user/test_user_pro/create/property/{prop_name}")
+    response = client.post(
+        "/api/users/test_user_pro/properties", json={"name": prop_name}
+    )
     assert response.status_code == 200
     logging.info(f"create property status: {response.status_code}")
     _log_response_json("create property", response.json())
     # TODO check response content
 
-    response = client.get(f"/api/user/test_user_contra_1/veto/property/{prop_name}")
+    response = client.post(f"/api/users/test_user_contra_1/properties/{prop_name}/veto")
     assert response.status_code == 200
     logging.info(f"veto 1 status: {response.status_code}")
     _log_response_json("veto 1", response.json())
     # TODO check response content
 
-    response = client.get(f"/api/user/test_user_contra_2/veto/property/{prop_name}")
+    response = client.post(f"/api/users/test_user_contra_2/properties/{prop_name}/veto")
     assert response.status_code == 200
     logging.info(f"veto 2 status: {response.status_code}")
     _log_response_json("veto 2", response.json())
@@ -84,19 +87,21 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
     _setup_logging_once()
     prop_name = f"test_prop_controversial_same_{timestamp_str}"
 
-    response = client.get(f"/api/user/test_user_pro/create/property/{prop_name}")
+    response = client.post(
+        "/api/users/test_user_pro/properties", json={"name": prop_name}
+    )
     assert response.status_code == 200
     logging.info(f"create property status: {response.status_code}")
     _log_response_json("create property", response.json())
     # TODO check response content
 
-    response = client.get(f"/api/user/test_user_contra/veto/property/{prop_name}")
+    response = client.post(f"/api/users/test_user_contra/properties/{prop_name}/veto")
     assert response.status_code == 200
     logging.info(f"veto 1 status: {response.status_code}")
     _log_response_json("veto 1", response.json())
     # TODO check response content
 
-    response = client.get(f"/api/user/test_user_contra/veto/property/{prop_name}")
+    response = client.post(f"/api/users/test_user_contra/properties/{prop_name}/veto")
     assert response.status_code == 200
     response_json = response.json()
     _log_response_json("veto 2 (same user)", response_json)
