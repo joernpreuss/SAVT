@@ -1,7 +1,7 @@
 from sqlalchemy.future import Engine  # for the type hint
 from sqlmodel import Session, SQLModel, create_engine
 
-from config import settings
+from .config import settings
 
 # from sqlmodel.pool import StaticPool
 
