@@ -22,8 +22,11 @@ def test_create_property(client: TestClient, timestamp_str: str):
         f"/api/user/test_user/create/property/test_prop_per_api_{timestamp_str}"
     )
     assert response.status_code == 200
-    print(f"{response.json()=}")
-    # TODO check response content
+    print(f"create_property status: {response.status_code}")
+    data = response.json()
+    print(f"create_property response: {data}")
+    assert "created" in data
+    assert data["created"]["name"].startswith("test_prop_per_api_")
 
 
 def test_two_vetos(client: TestClient, timestamp_str: str):
@@ -31,17 +34,20 @@ def test_two_vetos(client: TestClient, timestamp_str: str):
 
     response = client.get(f"/api/user/test_user_pro/create/property/{prop_name}")
     assert response.status_code == 200
-    print(f"{response.json()=}")
+    print(f"create property status: {response.status_code}")
+    print(f"create property: {response.json()}")
     # TODO check response content
 
     response = client.get(f"/api/user/test_user_contra_1/veto/property/{prop_name}")
     assert response.status_code == 200
-    print(f"{response.json()=}")
+    print(f"veto 1 status: {response.status_code}")
+    print(f"veto 1: {response.json()}")
     # TODO check response content
 
     response = client.get(f"/api/user/test_user_contra_2/veto/property/{prop_name}")
     assert response.status_code == 200
-    print(f"{response.json()=}")
+    print(f"veto 2 status: {response.status_code}")
+    print(f"veto 2: {response.json()}")
     # TODO check response content
 
 
@@ -50,12 +56,14 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
 
     response = client.get(f"/api/user/test_user_pro/create/property/{prop_name}")
     assert response.status_code == 200
-    print(f"{response.json()=}")
+    print(f"create property status: {response.status_code}")
+    print(f"create property: {response.json()}")
     # TODO check response content
 
     response = client.get(f"/api/user/test_user_contra/veto/property/{prop_name}")
     assert response.status_code == 200
-    print(f"{response.json()=}")
+    print(f"veto 1 status: {response.status_code}")
+    print(f"veto 1: {response.json()}")
     # TODO check response content
 
     response = client.get(f"/api/user/test_user_contra/veto/property/{prop_name}")

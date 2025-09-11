@@ -21,10 +21,14 @@ def init_db(engine: Engine):
     SQLModel.metadata.create_all(engine)
 
 
+_engine: Engine | None = None
+
+
 def get_main_engine():
-    engine = get_engine(db_name="prod2")
-    init_db(engine)
-    return engine
+    global _engine
+    if _engine is None:
+        _engine = get_engine(db_name="prod2")
+    return _engine
 
 
 def get_session():

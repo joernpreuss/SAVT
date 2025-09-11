@@ -1,4 +1,5 @@
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # import logging
@@ -6,9 +7,25 @@ from fastapi import FastAPI
 
 sys.path.append(str(Path(__file__).parent))
 from api_routes import api_router
+from database import get_main_engine, init_db
 from routes import router
 
-app = FastAPI(debug=True)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize database schema once at startup
+    init_db(get_main_engine())
+    # Print hostname and IP once on startup (also runs under TestClient)
+    import socket
+
+    hostname = socket.gethostname()
+    ip_addr = socket.gethostbyname(hostname)
+    print("Your Computer Name is: " + hostname)
+    print("Your Computer IP Address is: " + ip_addr)
+    yield
+
+
+app = FastAPI(debug=True, lifespan=lifespan)
 app.include_router(api_router)
 app.include_router(router)
 
@@ -16,15 +33,3 @@ app.include_router(router)
 # logger.addHandler(logging.StreamHandler(sys.stdout))
 # logger.setLevel(logging.DEBUG)
 # logger.info("test asdfg")
-
-
-def show_local_ip():
-    import socket
-
-    hostname = socket.gethostname()
-    ip_addr = socket.gethostbyname(hostname)
-    print("Your Computer Name is: " + hostname)
-    print("Your Computer IP Address is: " + ip_addr)
-
-
-show_local_ip()
