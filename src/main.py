@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 
 # import logging
-from debug_toolbar.middleware import DebugToolbarMiddleware
 from fastapi import FastAPI
 
 sys.path.append(str(Path(__file__).parent))
@@ -12,10 +11,6 @@ from routes import router
 app = FastAPI(debug=True)
 app.include_router(api_router)
 app.include_router(router)
-app.add_middleware(
-    DebugToolbarMiddleware,
-    panels=["debug_toolbar.panels.sqlalchemy.SQLAlchemyPanel"],
-)
 
 # logger = logging.getLogger(__name__)
 # logger.addHandler(logging.StreamHandler(sys.stdout))
