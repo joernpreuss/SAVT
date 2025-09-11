@@ -13,6 +13,11 @@ This file contains information for AI assistants and developers working on the S
 - **Typecheck**: `uv tool run mypy src/`
 - **All checks**: `./scripts/check.sh` (installs tools: `uv tool install ruff mypy`)
 
+### Deployment
+- **Docker build**: `docker build -t savt .`
+- **Docker run**: `docker run -p 8000:8000 savt`
+- **Docker Compose**: `docker-compose up --build`
+
 ### Project Structure
 
 ```text
@@ -80,6 +85,25 @@ tests/                       # Test files
 - Use FastAPI's automatic `/docs` endpoint for API testing
 - HTMX requests include `HX-Request` header for detection
 
+## CI/CD Pipeline
+
+### GitHub Actions
+- **CI Pipeline** (`.github/workflows/ci.yml`):
+  - Runs on push/PR to main branch
+  - Linting, formatting, type checking
+  - Test execution and server startup verification
+  - Matrix testing across Python versions
+
+- **Deployment Pipeline** (`.github/workflows/deploy.yml`):
+  - Triggers on main branch pushes
+  - Builds and deploys application
+  - Health checks and notifications
+
+### Docker Support
+- **Dockerfile**: Multi-stage build with uv and non-root user
+- **docker-compose.yml**: Local development setup
+- **Health checks**: Built-in container health monitoring
+
 ## Development History
 
 - Started as pizza ordering proof of concept
@@ -87,3 +111,4 @@ tests/                       # Test files
 - Added HTMX for dynamic interactions
 - Removed problematic debug toolbar middleware
 - Updated Pydantic config from deprecated class-based to ConfigDict
+- Added comprehensive CI/CD pipeline with Docker support
