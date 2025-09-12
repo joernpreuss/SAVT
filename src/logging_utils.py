@@ -55,7 +55,7 @@ def log_api_request(
     }
 
     if process_time_ms is not None:
-        log_data["process_time_ms"] = round(process_time_ms, 2)
+        log_data["process_time_ms"] = str(round(process_time_ms, 2))
 
     # Different log levels based on status code
     if response_status >= 500:

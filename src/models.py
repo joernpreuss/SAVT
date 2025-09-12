@@ -2,8 +2,8 @@ from fastapi import Form
 from sqlmodel import (
     JSON,
     Column,
-    Field,  # type: ignore
-    Relationship,  # type: ignore
+    Field,
+    Relationship,
     SQLModel,
 )
 

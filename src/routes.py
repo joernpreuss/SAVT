@@ -37,13 +37,16 @@ async def list_properties(
 
     logger.info(f"### {object_id=}")
 
-    response = templates.TemplateResponse(  # type: ignore
+    # Create filtered properties list with explicit type
+    standalone_properties = [prop for prop in properties if prop.object_id is None]
+
+    response = templates.TemplateResponse(
+        request,
         "properties.html",
         {
-            "properties": [prop for prop in properties if prop.object_id is None],
-            "objects": objects,
+            "properties": standalone_properties,
+            "objects": list(objects),
             "object_id": object_id,
-            "request": request,
         },
     )
 
@@ -69,19 +72,25 @@ async def route_create_object(
     except ObjectAlreadyExistsError as e:
         logger.warning(f"Object creation failed via web form: {str(e)}")
         raise HTTPException(status_code=409, detail=str(e)) from e
+    except ValueError as e:
+        logger.warning(f"Object creation failed via web form: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
         properties: Final = get_properties(session)
         objects: Final = get_objects(session)
+        
+        # Create filtered properties list
+        standalone_properties = [prop for prop in properties if prop.object_id is None]
 
         return templates.TemplateResponse(
+            request,
             "properties.html",
             {
-                "properties": [prop for prop in properties if prop.object_id is None],
-                "objects": objects,
+                "properties": standalone_properties,
+                "objects": list(objects),
                 "object_id": object_id,
-                "request": request,
             },
         )
 
@@ -109,20 +118,25 @@ async def route_create_property(
     if "HX-Request" in request.headers:
         properties: Final = get_properties(session)
         objects: Final = get_objects(session)
+        
+        # Create filtered properties list
+        standalone_properties = [p for p in properties if p.object_id is None]
 
         return templates.TemplateResponse(
+            request,
             "properties.html",
             {
-                "properties": [p for p in properties if p.object_id is None],
-                "objects": objects,
+                "properties": standalone_properties,
+                "objects": list(objects),
                 "object_id": prop.object_id,
-                "request": request,
             },
         )
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@router.get("/user/{user}/veto/property/{name}")
+@router.get("/user/{user}/veto/object/{obj}/property/{name}")
 @router.post("/user/{user}/veto/property/{name}")
 @router.post("/user/{user}/veto/object/{obj}/property/{name}")
 async def route_veto_object_property(
@@ -150,26 +164,30 @@ async def route_veto_object_property(
 
         if obj:  # Object property veto
             return templates.TemplateResponse(
+                request,
                 "fragments/objects_list.html",
                 {
-                    "objects": objects,
-                    "request": request,
+                    "objects": list(objects),
                 },
             )
         else:  # Standalone property veto
+            # Create filtered properties list
+            standalone_properties = [
+                prop for prop in properties if prop.object_id is None
+            ]
             return templates.TemplateResponse(
+                request,
                 "fragments/standalone_properties.html",
                 {
-                    "properties": [
-                        prop for prop in properties if prop.object_id is None
-                    ],
-                    "request": request,
+                    "properties": standalone_properties,
                 },
             )
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@router.get("/user/{user}/unveto/property/{name}")
+@router.get("/user/{user}/unveto/object/{obj}/property/{name}")
 @router.post("/user/{user}/unveto/property/{name}")
 @router.post("/user/{user}/unveto/object/{obj}/property/{name}")
 async def route_unveto_object_property(
@@ -199,20 +217,22 @@ async def route_unveto_object_property(
 
         if obj:  # Object property unveto
             return templates.TemplateResponse(
+                request,
                 "fragments/objects_list.html",
                 {
-                    "objects": objects,
-                    "request": request,
+                    "objects": list(objects),
                 },
             )
         else:  # Standalone property unveto
+            # Create filtered properties list
+            standalone_properties = [
+                prop for prop in properties if prop.object_id is None
+            ]
             return templates.TemplateResponse(
+                request,
                 "fragments/standalone_properties.html",
                 {
-                    "properties": [
-                        prop for prop in properties if prop.object_id is None
-                    ],
-                    "request": request,
+                    "properties": standalone_properties,
                 },
             )
 

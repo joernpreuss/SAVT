@@ -1,9 +1,11 @@
 from typing import Final
+from collections.abc import Sequence
 
 from sqlmodel import (
     Session,
-    select,  # type: ignore
+    select,
 )
+from sqlalchemy.orm import selectinload
 
 from .logging_config import get_logger
 from .logging_utils import log_database_operation, log_user_action
@@ -20,22 +22,28 @@ class PropertyAlreadyExistsError(ValueError):
     pass
 
 
-def get_objects(session: Session):
-    statement: Final = select(SVObject)
+def get_objects(session: Session) -> Sequence[SVObject]:
+    statement: Final = select(SVObject).options(selectinload(SVObject.properties))
     results: Final = session.exec(statement)
     objects: Final = results.all()
-    return objects
+    return objects  # type: ignore[no-any-return]
 
 
-def get_object(session: Session, name: str):
+def get_object(session: Session, name: str) -> SVObject | None:
     statement: Final = select(SVObject).where(SVObject.name == name)
     results: Final = session.exec(statement)
     obj: Final = results.first()
-    return obj
+    return obj  # type: ignore[no-any-return]
 
 
-def create_object(session: Session, obj: SVObject):
+def create_object(session: Session, obj: SVObject) -> SVObject:
     logger.debug(f"Creating object: {obj.name}")
+    
+    # Validate that name is not empty
+    if not obj.name or not obj.name.strip():
+        logger.warning("Object creation failed - empty name provided")
+        raise ValueError("Object name cannot be empty")
+    
     same_name_object: Final = get_object(session, obj.name)
 
     if not same_name_object:
@@ -57,23 +65,23 @@ def create_object(session: Session, obj: SVObject):
         raise ObjectAlreadyExistsError(f"Object with name '{obj.name}' already exists")
 
 
-def get_properties(session: Session):
+def get_properties(session: Session) -> Sequence[SVProperty]:
     statement: Final = select(SVProperty)
     results: Final = session.exec(statement)
     properties: Final = results.all()
-    return properties
+    return properties  # type: ignore[no-any-return]
 
 
-def get_property(session: Session, name: str, obj_id: int | None = None):
+def get_property(session: Session, name: str, obj_id: int | None = None) -> SVProperty | None:
     statement: Final = select(SVProperty).where(
         SVProperty.name == name, SVProperty.object_id == obj_id
     )
     results: Final = session.exec(statement)
     prop: Final = results.first()
-    return prop
+    return prop  # type: ignore[no-any-return]
 
 
-def create_property(session: Session, prop: SVProperty):
+def create_property(session: Session, prop: SVProperty) -> SVProperty:
     logger.debug(f"Creating property: {prop.name} (created_by: {prop.created_by})")
     same_name_property: Final = get_property(session, prop.name)
 
@@ -115,7 +123,7 @@ def veto_object_property(
     name: str,
     object_name: str | None = None,
     veto: bool = True,
-):
+) -> SVProperty | None:
     action = "veto" if veto else "unveto"
     logger.debug(
         f"Processing {action} for user={user}, property={name}, object={object_name}"
