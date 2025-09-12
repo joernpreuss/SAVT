@@ -45,6 +45,8 @@ uv tool install ruff mypy
 
 - **Start server**: `uv run uvicorn src.main:app --reload --host 0.0.0.0`
 - **Run tests**: `uv run pytest`
+- **Requirements coverage**: `uv run pytest -v` (shows FR/BR coverage in verbose mode)
+- **Requirements only**: `uv run pytest --requirements-report -q` (coverage without running tests)
 - **All checks**: `./scripts/check.sh` (or `./scripts/check.sh --fix` to auto-fix)
 - **Individual tools**: `uv tool run ruff check src/`, `uv tool run mypy src/`
 

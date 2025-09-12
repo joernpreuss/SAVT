@@ -46,7 +46,7 @@ def _setup_logging_once() -> None:
 
 def test_create_property(client: TestClient, timestamp_str: str):
     """Test property creation via API endpoint.
-    
+
     Covers:
     - FR-2.1: Users can create properties with names
     - API responds with 200 status and created property data
@@ -91,7 +91,7 @@ def test_two_vetos(client: TestClient, timestamp_str: str):
 
 def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
     """Test that multiple veto attempts by same user are idempotent via API.
-    
+
     Covers:
     - FR-3.2: Users can only veto once per property (idempotent operation)
     - API properly handles duplicate veto attempts
@@ -122,7 +122,7 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
 
 def test_create_property_conflict(client: TestClient, timestamp_str: str):
     """Test property name uniqueness enforcement via API.
-    
+
     Covers:
     - FR-2.3: Property names must be unique within their scope
     - FR-2.4: System prevents duplicate property creation (returns 409 error)
@@ -137,7 +137,7 @@ def test_create_property_conflict(client: TestClient, timestamp_str: str):
 
 def test_veto_then_unveto_property(client: TestClient, timestamp_str: str):
     """Test veto/unveto cycle via API.
-    
+
     Covers:
     - FR-3.1: Any user can veto any property
     - FR-3.3: Users can unveto their own vetoes
