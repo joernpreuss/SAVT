@@ -299,7 +299,7 @@ class TestUIConsistency:
             if property_list:
                 property_items = property_list.find_all("li")
                 for prop_item in property_items:
-                    # Each property should have either a link (non-vetoed) or struck text (vetoed)
+                    # Each property should have either a link or struck text
                     prop_link = prop_item.find("a")
                     struck_text = prop_item.find("s")
 
@@ -368,12 +368,12 @@ class TestErrorHandling:
         assert response2.status_code in [200, 400, 422]
 
     def test_very_long_names(self, client):
-        """Test handling of very long names."""
-        long_name = "x" * 1000  # Very long name
+        """Test that very long names are rejected with appropriate error."""
+        long_name = "x" * 150  # Name longer than 100 character limit
 
         response = client.post("/create/object/", data={"name": long_name})
-        # Should handle gracefully
-        assert response.status_code in [200, 400, 413]
+        # Should reject with 400 Bad Request
+        assert response.status_code == 400
 
 
 class TestBrowserCompatibility:

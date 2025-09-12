@@ -49,9 +49,7 @@ def log_api_request(
         "path": request.url.path,
         "status_code": response_status,
         "client_ip": request.client.host if request.client else None,
-        "user_agent": request.headers.get("user-agent", "Unknown")[
-            :100
-        ],  # Truncate long user agents
+        "user_agent": request.headers.get("user-agent", "Unknown")[:100],
     }
 
     if process_time_ms is not None:
