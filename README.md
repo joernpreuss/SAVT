@@ -53,6 +53,12 @@ Python version is pinned to 3.12 via `.python-version` to ensure consistent beha
 
 **Configuration:** Line length set to 88 characters (Black/PEP 8 standard, configurable in `pyproject.toml`)
 
+**Modern Python Typing:** This project uses Python 3.12+ modern typing syntax:
+- Use `dict[str, int]` instead of `Dict[str, int]`
+- Use `list[str]` instead of `List[str]`
+- Use `tuple[int, ...]` instead of `Tuple[int, ...]`
+- No need to `from typing import Dict, List, Tuple` etc.
+
 **Install tools:** `uv tool install ruff mypy`
 
 ### Project Structure
