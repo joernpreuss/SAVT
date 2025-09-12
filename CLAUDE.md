@@ -14,12 +14,14 @@ This file contains information for AI assistants and developers working on the S
 - **All checks**: `./scripts/check.sh` (installs tools: `uv tool install ruff mypy`)
 
 ### Configuration
+
 - **Environment file**: Copy `.env.example` to `.env` and customize
 - **Pydantic Settings**: Type-safe config with validation and .env support
 - **Key variables**: `DEBUG`, `DATABASE_URL`, `HOST`, `PORT`, `SECRET_KEY`
 - **Validation**: Built-in validation (e.g., port range 1-65535, secret key min length)
 
 ### Deployment
+
 - **Docker build**: `docker build -t savt .`
 - **Docker run**: `docker run -p 8000:8000 --env-file .env savt`
 - **Docker Compose**: `docker-compose up --build`
@@ -95,7 +97,9 @@ tests/                       # Test files
 ## CI/CD Pipeline
 
 ### GitHub Actions
+
 - **CI Pipeline** (`.github/workflows/ci.yml`):
+
   - Runs on push/PR to main branch
   - Linting, formatting, type checking
   - Test execution and server startup verification
@@ -107,6 +111,7 @@ tests/                       # Test files
   - Health checks and notifications
 
 ### Docker Support
+
 - **Dockerfile**: Multi-stage build with uv and non-root user
 - **docker-compose.yml**: Local development setup
 - **Health checks**: Built-in container health monitoring
