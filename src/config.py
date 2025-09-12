@@ -20,6 +20,23 @@ class Settings(BaseSettings):
     app_name: str = Field(default="SAVT", description="Application name")
     version: str = Field(default="0.1.0", description="Application version")
 
+    # Terminology configuration
+    object_name_singular: str = Field(
+        default="object",
+        description="Singular term for objects (e.g., 'pizza', 'item')",
+    )
+    object_name_plural: str | None = Field(
+        default=None, description="Plural term for objects (defaults to singular + 's')"
+    )
+    property_name_singular: str = Field(
+        default="property",
+        description="Singular term for properties (e.g., 'topping', 'feature')",
+    )
+    property_name_plural: str | None = Field(
+        default=None,
+        description="Plural term for properties (defaults to singular + 's')",
+    )
+
     # Security configuration
     secret_key: str = Field(
         default="dev-secret-key-change-in-production",
@@ -48,6 +65,18 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Check if running in production mode."""
         return not self.debug
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def object_name_plural_computed(self) -> str:
+        """Get the plural form of object name, defaulting to singular + 's'."""
+        return self.object_name_plural or f"{self.object_name_singular}s"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def property_name_plural_computed(self) -> str:
+        """Get the plural form of property name, defaulting to singular + 's'."""
+        return self.property_name_plural or f"{self.property_name_singular}s"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

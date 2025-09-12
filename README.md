@@ -50,6 +50,7 @@ Python version is pinned to 3.12 via `.python-version` to ensure consistent beha
 - **Format**: `uv tool run ruff format src/ tests/`
 - **Typecheck**: `uv tool run mypy src/`
 - **All checks**: `./scripts/check.sh`
+- **All checks + auto-fix**: `./scripts/check.sh --fix`
 
 **Configuration:** Line length set to 88 characters (Black/PEP 8 standard, configurable in `pyproject.toml`)
 
@@ -60,6 +61,39 @@ Python version is pinned to 3.12 via `.python-version` to ensure consistent beha
 - No need to `from typing import Dict, List, Tuple` etc.
 
 **Install tools:** `uv tool install ruff mypy`
+
+### Configurable Terminology
+
+The app terminology is fully configurable for different use cases. **Plural forms are automatically generated** by adding "s" to singular forms, so you usually only need to set the singular terms:
+
+**Pizza Ordering Example:**
+```bash
+cp .env.pizza .env  # Use pizza/toppings terminology
+```
+
+**Simple Configuration (Auto-Pluralization):**
+```bash
+# In your .env file:
+APP_NAME="My Voting Tool"
+OBJECT_NAME_SINGULAR="item"        # Automatically becomes "items"
+PROPERTY_NAME_SINGULAR="feature"   # Automatically becomes "features"
+```
+
+**Override for Irregular Plurals:**
+```bash
+# When the simple "add s" rule doesn't work:
+OBJECT_NAME_SINGULAR="category"
+OBJECT_NAME_PLURAL="categories"    # Override automatic "categorys"
+PROPERTY_NAME_SINGULAR="child"
+PROPERTY_NAME_PLURAL="children"    # Override automatic "childs"
+```
+
+**Example Configurations:**
+- **Pizza ordering**: `pizza` → `pizzas`, `topping` → `toppings`
+- **Feature voting**: `feature` → `features`, `aspect` → `aspects` 
+- **Event planning**: `event` → `events`, `option` → `options`
+- **Product design**: `product` → `products`, `component` → `components`
+- **Library system**: `book` → `books`, `category` → `categories` (override needed)
 
 ### Project Structure
 

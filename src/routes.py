@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
 
+from .config import settings
 from .database import get_session
 from .logging_config import get_logger
 from .models import SVObject, SVProperty
@@ -47,6 +48,7 @@ async def list_properties(
             "properties": standalone_properties,
             "objects": list(objects),
             "object_id": object_id,
+            "settings": settings,
         },
     )
 
@@ -99,6 +101,7 @@ async def route_create_object(
                 "properties": standalone_properties,
                 "objects": list(objects),
                 "object_id": object_id,
+                "settings": settings,
             },
         )
 
@@ -148,6 +151,7 @@ async def route_create_property(
                 "properties": standalone_properties,
                 "objects": list(objects),
                 "object_id": prop.object_id,
+                "settings": settings,
             },
         )
 
@@ -197,6 +201,7 @@ async def route_veto_object_property(
                 "fragments/objects_list.html",
                 {
                     "objects": list(objects),
+                    "settings": settings,
                 },
             )
         else:  # Standalone property veto
@@ -209,6 +214,7 @@ async def route_veto_object_property(
                 "fragments/standalone_properties.html",
                 {
                     "properties": standalone_properties,
+                    "settings": settings,
                 },
             )
 
@@ -252,6 +258,7 @@ async def route_unveto_object_property(
                 "fragments/objects_list.html",
                 {
                     "objects": list(objects),
+                    "settings": settings,
                 },
             )
         else:  # Standalone property unveto
@@ -264,6 +271,7 @@ async def route_unveto_object_property(
                 "fragments/standalone_properties.html",
                 {
                     "properties": standalone_properties,
+                    "settings": settings,
                 },
             )
 
