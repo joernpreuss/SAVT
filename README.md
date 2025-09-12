@@ -14,53 +14,41 @@ While initially built for pizza ordering, the flexible object-property model mak
 
 ## Technical Approach
 
-SAVT is built with **pure Python** to avoid the complexity of JavaScript/TypeScript frameworks. The interactive features are powered by:
-
-- **FastAPI** - Modern Python web framework for the backend API
-- **Jinja2** - Server-side HTML templating
-- **HTMX** - Adds dynamic interactivity without writing JavaScript
-- **SQLModel** - Python-first database interactions
-
-This approach provides a responsive, interactive web experience while keeping all logic in Python. HTMX enables instant updates for veto/unveto actions and smooth form submissions without page reloads.
+SAVT is built with **pure Python** to avoid JavaScript/TypeScript complexity, using server-side rendering with HTMX for dynamic interactions without page reloads.
 
 ## Development
 
 ### Prerequisites
 
-If you don't have `uv` installed:
+**System Requirements:**
+- Python 3.12+ (pinned via `.python-version`)
+- `uv` package manager: `pip install uv`
+
+**Key Technologies:**
+- **FastAPI** + **SQLModel** - Modern Python web framework with type-safe database
+- **Jinja2** + **HTMX** - Server-side templating with dynamic interactions  
+- **pytest** + **structlog** - Testing and structured logging
+
+Dependencies are managed via `pyproject.toml` with exact version pinning for reproducibility.
+
+### Development Setup
+
 ```bash
-pip install uv
+# Install dependencies and sync environment
+uv sync
+
+# Install development tools
+uv tool install ruff mypy
 ```
 
-### Package Management
-
-**Always use `uv` instead of `pip` for this project:**
-- Install dependencies: `uv add package-name`
-- Install dev dependencies: `uv add --dev package-name`  
-- Run commands: `uv run command`
-- Sync environment: `uv sync`
-
-Python version is pinned to 3.12 via `.python-version` to ensure consistent behavior.
-
-### Quick Commands
+### Development Commands
 
 - **Start server**: `uv run uvicorn src.main:app --reload --host 0.0.0.0`
 - **Run tests**: `uv run pytest`
-- **Lint**: `uv tool run ruff check src/ tests/`
-- **Format**: `uv tool run ruff format src/ tests/`
-- **Typecheck**: `uv tool run mypy src/`
-- **All checks**: `./scripts/check.sh`
-- **All checks + auto-fix**: `./scripts/check.sh --fix`
+- **All checks**: `./scripts/check.sh` (or `./scripts/check.sh --fix` to auto-fix)
+- **Individual tools**: `uv tool run ruff check src/`, `uv tool run mypy src/`
 
-**Configuration:** Line length set to 88 characters (Black/PEP 8 standard, configurable in `pyproject.toml`)
-
-**Modern Python Typing:** This project uses Python 3.12+ modern typing syntax:
-- Use `dict[str, int]` instead of `Dict[str, int]`
-- Use `list[str]` instead of `List[str]`
-- Use `tuple[int, ...]` instead of `Tuple[int, ...]`
-- No need to `from typing import Dict, List, Tuple` etc.
-
-**Install tools:** `uv tool install ruff mypy`
+**Code Style:** 88-character lines, Python 3.12+ modern typing (`dict[str, int]` not `Dict[str, int]`)
 
 ### Configurable Terminology
 
