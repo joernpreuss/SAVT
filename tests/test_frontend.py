@@ -251,7 +251,9 @@ class TestFormSubmission:
 
     def test_create_object_form_submission(self, client):
         """Test object creation form submission."""
-        response = client.post("/create/object/", data={"name": "Test Object"}, follow_redirects=True)
+        response = client.post(
+            "/create/object/", data={"name": "Test Object"}, follow_redirects=True
+        )
         assert response.status_code == 200
 
         # Check new object appears in response
@@ -260,7 +262,13 @@ class TestFormSubmission:
 
         # Should find the new object
         object_items = objects_list.find_all("li", recursive=False)
-        object_names = [next((line.strip() for line in item.get_text().split("\n") if line.strip()), "") for item in object_items]
+        object_names = [
+            next(
+                (line.strip() for line in item.get_text().split("\n") if line.strip()),
+                "",
+            )
+            for item in object_items
+        ]
         assert "Test Object" in object_names
 
     def test_create_property_form_submission(self, client, sample_data):
