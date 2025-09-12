@@ -16,6 +16,13 @@ def test_create_object_with_property(
     session: Session,
     timestamp_str: str,
 ):
+    """Test object and property creation.
+    
+    Covers:
+    - FR-1.1: Users can create objects with unique names
+    - FR-2.1: Users can create properties with names  
+    - FR-2.2: Properties can be associated with objects
+    """
     obj = SVObject(
         name=f"test_object_{timestamp_str}",
     )
@@ -34,6 +41,12 @@ def test_create_property_without_object(
     session: Session,
     timestamp_str: str,
 ):
+    """Test standalone property creation.
+    
+    Covers:
+    - FR-2.1: Users can create properties with names
+    - FR-2.2: Properties can be standalone (not tied to objects)
+    """
     prop = SVProperty(
         name=f"test_property_{timestamp_str}",
     )
@@ -42,6 +55,12 @@ def test_create_property_without_object(
 
 
 def test_create_object_conflict(session: Session, timestamp_str: str):
+    """Test object name uniqueness enforcement.
+    
+    Covers:
+    - FR-1.2: Object names must be unique within the system
+    - FR-1.5: System prevents duplicate object creation (returns 409 error)
+    """
     name = f"obj_{timestamp_str}"
     create_object(session, SVObject(name=name))
     with pytest.raises(ObjectAlreadyExistsError):
@@ -49,6 +68,12 @@ def test_create_object_conflict(session: Session, timestamp_str: str):
 
 
 def test_create_property_conflict(session: Session, timestamp_str: str):
+    """Test property name uniqueness enforcement.
+    
+    Covers:
+    - FR-2.3: Property names must be unique within their scope
+    - FR-2.4: System prevents duplicate property creation (returns 409 error)
+    """
     name = f"prop_{timestamp_str}"
     create_property(session, SVProperty(name=name))
     with pytest.raises(PropertyAlreadyExistsError):
@@ -56,6 +81,12 @@ def test_create_property_conflict(session: Session, timestamp_str: str):
 
 
 def test_veto_idempotency(session: Session, timestamp_str: str):
+    """Test that multiple veto operations by same user are idempotent.
+    
+    Covers:
+    - FR-3.2: Users can only veto once per property (idempotent operation)
+    - BR-3.3: Atomic operations - Veto/unveto operations are transactional
+    """
     name = f"idem_{timestamp_str}"
     create_property(session, SVProperty(name=name))
     p1 = veto_object_property(session, user="alice", name=name, veto=True)
@@ -65,6 +96,13 @@ def test_veto_idempotency(session: Session, timestamp_str: str):
 
 
 def test_unveto_idempotency(session: Session, timestamp_str: str):
+    """Test that multiple unveto operations by same user are idempotent.
+    
+    Covers:
+    - FR-3.3: Users can unveto their own vetoes
+    - FR-3.6: Veto/unveto operations are immediate and persistent
+    - BR-3.3: Atomic operations - Veto/unveto operations are transactional
+    """
     name = f"unidem_{timestamp_str}"
     create_property(session, SVProperty(name=name))
     veto_object_property(session, user="alice", name=name, veto=True)
@@ -75,6 +113,13 @@ def test_unveto_idempotency(session: Session, timestamp_str: str):
 
 
 def test_object_scoped_veto(session: Session, timestamp_str: str):
+    """Test that vetoes are scoped correctly between standalone and object properties.
+    
+    Covers:
+    - FR-3.1: Any user can veto any property
+    - FR-3.5: System tracks which users vetoed each property
+    - FR-2.2: Properties can be standalone or associated with objects
+    """
     obj = SVObject(name=f"o_{timestamp_str}")
     create_object(session, obj)
 
