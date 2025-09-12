@@ -48,6 +48,12 @@ requirements_collector = RequirementsCollector()
 def pytest_runtest_setup(item):
     """Hook called before each test runs - collect requirements."""
     requirements_collector.collect_test_requirements(item)
+    
+    # Show docstring if flag is set
+    if item.config.getoption("--show-docstrings") and item.function.__doc__:
+        item.config.hook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
+        print(f"\n{item.function.__doc__.strip()}")
+        print("-" * 40)
 
 
 @pytest.hookimpl(trylast=True)
@@ -98,6 +104,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Show only requirements coverage, skip test execution",
+    )
+    parser.addoption(
+        "--show-docstrings",
+        action="store_true",
+        default=False,
+        help="Show test docstrings during test execution",
     )
 
 

@@ -45,6 +45,7 @@ uv tool install ruff mypy
 
 - **Start server**: `uv run uvicorn src.main:app --reload --host 0.0.0.0`
 - **Run tests**: `uv run pytest`
+- **Test with docstrings**: `uv run pytest --show-docstrings` (displays test requirements during execution)
 - **Requirements coverage**: `uv run pytest -v` (shows FR/BR coverage in verbose mode)
 - **Requirements only**: `uv run pytest --requirements-report -q` (coverage without running tests)
 - **All checks**: `./scripts/check.sh` (or `./scripts/check.sh --fix` to auto-fix)
@@ -85,6 +86,67 @@ PROPERTY_NAME_PLURAL="children"    # Override automatic "childs"
 - **Product design**: `product` → `products`, `component` → `components`
 - **Library system**: `book` → `books`, `category` → `categories` (override needed)
 
+## Requirements Traceability System
+
+SAVT includes a **novel requirements traceability system** that automatically extracts functional requirements (FR) and business rules (BR) from test docstrings and generates coverage reports. This bridges the gap between formal requirements management and agile development.
+
+### How It Works
+
+Tests reference requirements in their docstrings using a simple pattern:
+
+```python
+def test_create_property_conflict(session: Session, timestamp_str: str):
+    """Test property name uniqueness enforcement.
+    
+    Covers:
+    - FR-2.3: Property names must be unique within their scope
+    - FR-2.4: System prevents duplicate property creation (returns 409 error)
+    """
+    # Test implementation...
+```
+
+### Coverage Features
+
+- **Automatic extraction** from docstrings using regex patterns (`FR-X.Y`, `BR-X.Y`)
+- **Real-time reporting** during test execution
+- **Coverage analysis** showing which requirements are tested
+- **Git-friendly** - no external databases, all embedded in code
+- **Developer-friendly** - integrates seamlessly with existing pytest workflows
+
+### Usage Examples
+
+```bash
+# Show test docstrings with requirements during execution
+uv run pytest --show-docstrings
+
+# Generate requirements coverage report
+uv run pytest -v
+
+# Coverage analysis without running tests
+uv run pytest --requirements-report -q
+
+# Requirements-only mode (skip test execution)
+uv run pytest --requirements-only
+```
+
+**Sample Output:**
+```
+Requirements Coverage
+  FR-1.1:
+    ✓ test_create_object_with_property
+  FR-2.3:
+    ✓ test_create_property_conflict
+  BR-3.3:
+    ✓ test_veto_idempotency
+    ✓ test_unveto_idempotency
+
+Requirements Coverage Summary:
+  Tests with requirements: 12
+  Requirements covered: 15
+```
+
+This system makes requirements traceability practical for everyday development, unlike heavy enterprise tools or manual spreadsheets that teams typically abandon.
+
 ### Project Structure
 
 ```
@@ -101,7 +163,9 @@ templates/
 ├── properties.html           # Main page template
 └── fragments/               # HTMX partial templates
 
-tests/                       # Test files
+tests/                       # Test files with requirements traceability
+├── pytest_requirements.py  # Custom pytest plugin for FR/BR extraction
+└── test_*.py               # Test files with FR/BR references in docstrings
 ```
 
 ### Deployment
