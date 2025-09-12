@@ -48,10 +48,12 @@ requirements_collector = RequirementsCollector()
 def pytest_runtest_setup(item):
     """Hook called before each test runs - collect requirements."""
     requirements_collector.collect_test_requirements(item)
-    
+
     # Show docstring if flag is set
     if item.config.getoption("--show-docstrings") and item.function.__doc__:
-        item.config.hook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
+        item.config.hook.pytest_runtest_logstart(
+            nodeid=item.nodeid, location=item.location
+        )
         print(f"\n{item.function.__doc__.strip()}")
         print("-" * 40)
 
