@@ -76,6 +76,39 @@ tests/                       # Test files
 - **Docker run**: `docker run -p 8000:8000 --env-file .env savt`
 - **Docker Compose**: `docker-compose up --build`
 
+## Logging System
+
+SAVT includes a comprehensive structured logging system with different loggers for different concerns:
+
+### Log Types
+
+- **API Requests**: `GET /api/endpoint - 200 (15.2ms)` 
+- **User Actions**: `User action: veto_property by anonymous`
+- **Database Operations**: `Database create on SVObject succeeded`
+- **System Events**: `Application startup` with hostname/IP
+- **Validation Errors**: `Validation failed for field 'name': too short`
+
+### Configuration
+
+- **Development**: Rich console output with syntax highlighting
+- **Production**: File logging to `logs/savt.log` + console
+- **Security**: Sensitive fields (passwords, tokens) automatically redacted as `[REDACTED]`
+- **Performance**: Third-party loggers (SQLAlchemy, Uvicorn) are filtered to reduce noise
+
+### Usage in Code
+
+```python
+from src.logging_config import get_logger
+from src.logging_utils import log_user_action, log_database_operation
+
+logger = get_logger(__name__)
+logger.info("Something happened")
+
+# Specialized loggers
+log_user_action("create_property", user="anonymous", object_name="Pizza")
+log_database_operation("create", "SVObject", success=True, object_id=123)
+```
+
 ## Development Details
 
 For comprehensive development guidance, configuration details, and project history, see [CLAUDE.md](./CLAUDE.md).
