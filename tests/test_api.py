@@ -45,6 +45,12 @@ def _setup_logging_once() -> None:
 
 
 def test_create_property(client: TestClient, timestamp_str: str):
+    """Test property creation via API endpoint.
+    
+    Covers:
+    - FR-2.1: Users can create properties with names
+    - API responds with 200 status and created property data
+    """
     _setup_logging_once()
     response = client.post(
         "/api/users/test_user/properties",
@@ -84,6 +90,12 @@ def test_two_vetos(client: TestClient, timestamp_str: str):
 
 
 def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
+    """Test that multiple veto attempts by same user are idempotent via API.
+    
+    Covers:
+    - FR-3.2: Users can only veto once per property (idempotent operation)
+    - API properly handles duplicate veto attempts
+    """
     _setup_logging_once()
     prop_name = f"test_prop_controversial_same_{timestamp_str}"
 
@@ -109,6 +121,12 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
 
 
 def test_create_property_conflict(client: TestClient, timestamp_str: str):
+    """Test property name uniqueness enforcement via API.
+    
+    Covers:
+    - FR-2.3: Property names must be unique within their scope
+    - FR-2.4: System prevents duplicate property creation (returns 409 error)
+    """
     name = f"dup_prop_{timestamp_str}"
     r1 = client.post("/api/users/alice/properties", json={"name": name})
     assert r1.status_code == 200
@@ -118,6 +136,14 @@ def test_create_property_conflict(client: TestClient, timestamp_str: str):
 
 
 def test_veto_then_unveto_property(client: TestClient, timestamp_str: str):
+    """Test veto/unveto cycle via API.
+    
+    Covers:
+    - FR-3.1: Any user can veto any property
+    - FR-3.3: Users can unveto their own vetoes
+    - FR-3.5: System tracks which users vetoed each property
+    - FR-3.6: Veto/unveto operations are immediate and persistent
+    """
     name = f"veto_toggle_{timestamp_str}"
     r = client.post("/api/users/alice/properties", json={"name": name})
     assert r.status_code == 200
