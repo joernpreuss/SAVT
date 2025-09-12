@@ -51,6 +51,10 @@ Python version is pinned to 3.12 via `.python-version` to ensure consistent beha
 - **Typecheck**: `uv tool run mypy src/`
 - **All checks**: `./scripts/check.sh`
 
+**Configuration:** Line length set to 88 characters (Black/PEP 8 standard, configurable in `pyproject.toml`)
+
+**Install tools:** `uv tool install ruff mypy`
+
 ### Project Structure
 
 ```
@@ -102,11 +106,25 @@ from src.logging_config import get_logger
 from src.logging_utils import log_user_action, log_database_operation
 
 logger = get_logger(__name__)
-logger.info("Something happened")
 
-# Specialized loggers
-log_user_action("create_property", user="anonymous", object_name="Pizza")
+# Structured logging with key-value pairs (NEW with structlog)
+logger.info("Object created", object_name="Pizza", object_id=123, user="anonymous")
+logger.warning("Validation failed", field="name", value="", error="cannot be empty")
+logger.debug("Processing request", method="POST", path="/veto", user="anonymous")
+
+# Legacy specialized loggers (still available)
+log_user_action("create_property", user="anonymous", object_name="Pizza") 
 log_database_operation("create", "SVObject", success=True, object_id=123)
+```
+
+**Development output:**
+```
+2024-01-01T10:00:00 [info     ] Object created                 object_name=Pizza object_id=123 user=anonymous
+```
+
+**Production output (JSON):**
+```json
+{"timestamp": "2024-01-01T10:00:00.123Z", "level": "info", "event": "Object created", "object_name": "Pizza", "object_id": 123, "user": "anonymous", "logger": "src.routes"}
 ```
 
 ## Development Details

@@ -37,12 +37,22 @@ def get_object(session: Session, name: str) -> SVObject | None:
 
 
 def create_object(session: Session, obj: SVObject) -> SVObject:
-    logger.debug(f"Creating object: {obj.name}")
+    logger.debug("Creating object", object_name=obj.name)
 
     # Validate that name is not empty
     if not obj.name or not obj.name.strip():
-        logger.warning("Object creation failed - empty name provided")
+        logger.warning(
+            "Object creation failed - empty name provided",
+            attempted_name=repr(obj.name),
+        )
         raise ValueError("Object name cannot be empty")
+
+    # Validate name length
+    if len(obj.name) > 100:
+        logger.warning(
+            "Object creation failed - name too long", name_length=len(obj.name)
+        )
+        raise ValueError("Object name cannot be longer than 100 characters")
 
     same_name_object: Final = get_object(session, obj.name)
 
@@ -58,10 +68,12 @@ def create_object(session: Session, obj: SVObject) -> SVObject:
             object_name=obj.name,
             object_id=obj.id,
         )
-        logger.info(f"Object created successfully: {obj.name}")
+        logger.info(
+            "Object created successfully", object_name=obj.name, object_id=obj.id
+        )
         return obj
     else:
-        logger.warning(f"Object creation failed - already exists: {obj.name}")
+        logger.warning("Object creation failed - already exists", object_name=obj.name)
         raise ObjectAlreadyExistsError(f"Object with name '{obj.name}' already exists")
 
 
@@ -84,7 +96,25 @@ def get_property(
 
 
 def create_property(session: Session, prop: SVProperty) -> SVProperty:
-    logger.debug(f"Creating property: {prop.name} (created_by: {prop.created_by})")
+    logger.debug(
+        "Creating property", property_name=prop.name, created_by=prop.created_by
+    )
+
+    # Validate that name is not empty
+    if not prop.name or not prop.name.strip():
+        logger.warning(
+            "Property creation failed - empty name provided",
+            attempted_name=repr(prop.name),
+        )
+        raise ValueError("Property name cannot be empty")
+
+    # Validate name length
+    if len(prop.name) > 100:
+        logger.warning(
+            "Property creation failed - name too long", name_length=len(prop.name)
+        )
+        raise ValueError("Property name cannot be longer than 100 characters")
+
     same_name_property: Final = get_property(session, prop.name)
 
     if not same_name_property:
@@ -109,11 +139,13 @@ def create_property(session: Session, prop: SVProperty) -> SVProperty:
                 property_id=prop.id,
             )
 
-        logger.info(f"Property created successfully: {prop.name}")
+        logger.info("Property created successfully", property_name=prop.name)
         return prop
 
     else:
-        logger.warning(f"Property creation failed - already exists: {prop.name}")
+        logger.warning(
+            "Property creation failed - already exists", property_name=prop.name
+        )
         raise PropertyAlreadyExistsError(
             f"Property with name '{prop.name}' already exists"
         )
@@ -134,14 +166,14 @@ def veto_object_property(
     object_id = None
     if object_name:
         obj = get_object(session=session, name=object_name)
-        logger.debug(f"Found object for {action}: {obj}")
+        logger.debug("Found object for action", action=action, object=obj)
         if obj:
             object_id = obj.id
     else:
         object_id = None
 
     prop = get_property(session=session, name=name, obj_id=object_id)
-    logger.debug(f"Found property for {action}: {prop}")
+    logger.debug("Found property for action", action=action, property=prop)
 
     if prop:
         vetoed_by_set = set(prop.vetoed_by)
@@ -157,7 +189,9 @@ def veto_object_property(
             prop.vetoed_by = sorted(vetoed_by_set)
 
             logger.debug(
-                f"Updating property vetoed_by from {sorted(original_vetoed_by)} to {prop.vetoed_by}"
+                "Updating property vetoed_by",
+                from_vetoed_by=sorted(original_vetoed_by),
+                to_vetoed_by=prop.vetoed_by,
             )
             session.commit()
             session.refresh(prop)
@@ -179,9 +213,19 @@ def veto_object_property(
                 vetoed_by_count=len(prop.vetoed_by),
             )
 
-            logger.info(f"Property {action}ed successfully by {user}: {prop.name}")
+            logger.info(
+                "Property action completed successfully",
+                action=action,
+                user=user,
+                property_name=prop.name,
+            )
         else:
-            logger.debug(f"No change needed for {action} by {user}: {prop.name}")
+            logger.debug(
+                "No change needed for action",
+                action=action,
+                user=user,
+                property_name=prop.name,
+            )
     else:
         logger.warning(
             f"Property not found for {action}",

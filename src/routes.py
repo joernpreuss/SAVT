@@ -35,7 +35,7 @@ async def list_properties(
     objects: Final = get_objects(session)
     # object_id = request.query_params.get("object_id")
 
-    logger.info(f"### {object_id=}")
+    logger.info("Debug object_id", object_id=object_id)
 
     # Create filtered properties list with explicit type
     standalone_properties = [prop for prop in properties if prop.object_id is None]
@@ -61,19 +61,27 @@ async def route_create_object(
     obj: SVObject = Depends(SVObject.as_form),
     response: Response,
 ):
-    logger.debug(f"Creating object via web form: {obj.name}")
+    logger.debug("Creating object via web form", object_name=obj.name)
 
     object_id = obj.id
     response.set_cookie(key="object_id", value=str(object_id))
 
     try:
         create_object(session, obj)
-        logger.info(f"Object created successfully via web form: {obj.name}")
+        logger.info("Object created successfully via web form", object_name=obj.name)
     except ObjectAlreadyExistsError as e:
-        logger.warning(f"Object creation failed via web form: {str(e)}")
+        logger.warning(
+            "Object creation failed - already exists",
+            object_name=obj.name,
+            error=str(e),
+        )
         raise HTTPException(status_code=409, detail=str(e)) from e
     except ValueError as e:
-        logger.warning(f"Object creation failed via web form: {str(e)}")
+        logger.warning(
+            "Object creation failed - validation error",
+            object_name=obj.name,
+            error=str(e),
+        )
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     # If HTMX request, return full page
@@ -105,14 +113,25 @@ async def route_create_property(
     prop: SVProperty = Depends(SVProperty.as_form),
 ):
     logger.debug(
-        f"Creating property via web form: {prop.name} (created_by: {prop.created_by})"
+        "Creating property via web form",
+        property_name=prop.name,
+        created_by=prop.created_by,
     )
     try:
         create_property(session, prop)
-        logger.info(f"Property created successfully via web form: {prop.name}")
+        logger.info(
+            "Property created successfully via web form", property_name=prop.name
+        )
     except PropertyAlreadyExistsError as e:
-        logger.warning(f"Property creation failed via web form: {str(e)}")
+        logger.warning("Property creation failed via web form", error=str(e))
         raise HTTPException(status_code=409, detail=str(e)) from e
+    except ValueError as e:
+        logger.warning(
+            "Property creation failed - validation error",
+            property_name=prop.name,
+            error=str(e),
+        )
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
@@ -148,14 +167,24 @@ async def route_veto_object_property(
     name: str,
 ):
     logger.debug(
-        f"Processing veto via web form: user={user}, property={name}, object={obj}"
+        "Processing veto via web form", user=user, property_name=name, object_name=obj
     )
     result = veto_object_property(session, user, name, obj, veto=True)
 
     if result:
-        logger.info(f"Property vetoed successfully via web form: {name} by {user}")
+        logger.info(
+            "Property vetoed successfully",
+            property_name=name,
+            user=user,
+            object_name=obj,
+        )
     else:
-        logger.warning(f"Property veto failed via web form: property {name} not found")
+        logger.warning(
+            "Property veto failed - not found",
+            property_name=name,
+            user=user,
+            object_name=obj,
+        )
 
     # If HTMX request, return updated fragment
     if "HX-Request" in request.headers:
@@ -199,15 +228,17 @@ async def route_unveto_object_property(
     name: str,
 ):
     logger.debug(
-        f"Processing unveto via web form: user={user}, property={name}, object={obj}"
+        "Processing unveto via web form", user=user, property_name=name, object_name=obj
     )
     result = veto_object_property(session, user, name, obj, veto=False)
 
     if result:
-        logger.info(f"Property unvetoed successfully via web form: {name} by {user}")
+        logger.info(
+            "Property unvetoed successfully via web form", property_name=name, user=user
+        )
     else:
         logger.warning(
-            f"Property unveto failed via web form: property {name} not found"
+            "Property unveto failed via web form - not found", property_name=name
         )
 
     # If HTMX request, return updated fragment

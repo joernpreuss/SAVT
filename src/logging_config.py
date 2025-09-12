@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+import structlog
 from rich.logging import RichHandler
 
 from .config import settings
@@ -52,9 +53,12 @@ def setup_logging(log_level: str | None = None) -> None:
     # Configure third-party loggers
     _configure_third_party_loggers()
 
+    # Configure structlog
+    _configure_structlog()
+
     # Log configuration
-    logger = logging.getLogger(__name__)
-    logger.info(f"Logging configured - Level: {logging.getLevelName(level)}")
+    logger = get_logger(__name__)
+    logger.info("Logging configured", level=logging.getLevelName(level))
 
 
 def _configure_third_party_loggers() -> None:
@@ -71,13 +75,42 @@ def _configure_third_party_loggers() -> None:
     logging.getLogger("uvicorn").setLevel(logging.INFO)
 
 
-def get_logger(name: str) -> logging.Logger:
+def _configure_structlog() -> None:
+    """Configure structlog for enhanced structured logging."""
+    # Configure structlog to output directly (not through stdlib logging)
+    # This avoids conflicts with existing Rich logging setup
+    if settings.debug:
+        # Development: Pretty console output
+        processors = [
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer(colors=False),
+        ]
+        logger_factory = structlog.WriteLoggerFactory()
+        wrapper_class = structlog.make_filtering_bound_logger(logging.INFO)
+    else:
+        # Production: JSON to stdout (which can be captured by log management)
+        processors = [
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.JSONRenderer(),
+        ]
+        logger_factory = structlog.WriteLoggerFactory()
+        wrapper_class = structlog.make_filtering_bound_logger(logging.INFO)
+
+    structlog.configure(
+        processors=processors,
+        logger_factory=logger_factory,
+        wrapper_class=wrapper_class,
+        cache_logger_on_first_use=True,
+    )
+
+
+def get_logger(name: str):
     """Get a logger with the given name.
 
     Args:
         name: Logger name (usually __name__)
 
     Returns:
-        Configured logger instance
+        Configured structlog logger instance
     """
-    return logging.getLogger(name)
+    return structlog.get_logger(name)
