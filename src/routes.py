@@ -7,7 +7,6 @@ from sqlmodel import Session
 
 from .database import get_session
 from .logging_config import get_logger
-from .logging_utils import log_user_action
 from .models import SVObject, SVProperty
 from .service import (
     ObjectAlreadyExistsError,

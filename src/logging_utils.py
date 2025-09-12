@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime, UTC
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import Request
 
@@ -31,7 +31,7 @@ def log_user_action(
 def log_api_request(
     request: Request,
     response_status: int,
-    process_time_ms: Optional[float] = None,
+    process_time_ms: float | None = None,
     logger_name: str = "api",
 ) -> None:
     """Log API requests with consistent format.
