@@ -26,19 +26,19 @@ if [[ "$1" == "--fix" ]]; then
     echo
 fi
 
-echo "🔍 Running linter..."
-if [ "$FIX_MODE" = true ]; then
-    uv tool run ruff check src/ tests/ --fix
-else
-    uv tool run ruff check src/ tests/
-fi
-echo
-
 echo "✨ Running formatter..."
 if [ "$FIX_MODE" = true ]; then
     uv tool run ruff format src/ tests/
 else
     uv tool run ruff format src/ tests/ --check
+fi
+echo
+
+echo "🔍 Running linter..."
+if [ "$FIX_MODE" = true ]; then
+    uv tool run ruff check src/ tests/ --fix
+else
+    uv tool run ruff check src/ tests/
 fi
 echo
 
