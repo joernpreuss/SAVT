@@ -80,7 +80,7 @@ async def route_create_object(
     if "HX-Request" in request.headers:
         properties: Final = get_properties(session)
         objects: Final = get_objects(session)
-        
+
         # Create filtered properties list
         standalone_properties = [prop for prop in properties if prop.object_id is None]
 
@@ -118,7 +118,7 @@ async def route_create_property(
     if "HX-Request" in request.headers:
         properties: Final = get_properties(session)
         objects: Final = get_objects(session)
-        
+
         # Create filtered properties list
         standalone_properties = [p for p in properties if p.object_id is None]
 

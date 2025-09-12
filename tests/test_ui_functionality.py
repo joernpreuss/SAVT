@@ -100,7 +100,9 @@ class TestFormValidation:
             ]
             assert len(empty_objects) == 0
 
-    def test_empty_property_name_validation(self, client: TestClient, populated_data: PopulatedData) -> None:
+    def test_empty_property_name_validation(
+        self, client: TestClient, populated_data: PopulatedData
+    ) -> None:
         """Test creating property with empty name is handled properly."""
         pizza_id = populated_data["objects"][0].id
 

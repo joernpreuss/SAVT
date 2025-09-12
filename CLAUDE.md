@@ -2,16 +2,11 @@
 
 This file contains information for AI assistants and developers working on the SAVT project.
 
-## Quick Commands
+## Quick Reference
 
-### Development
+For basic development commands, package management, project structure, and deployment instructions, see the main [README.md](./README.md).
 
-- **Start server**: `uv run uvicorn src.main:app --reload --host 0.0.0.0`
-- **Run tests**: `uv run pytest`
-- **Lint**: `uv tool run ruff check src/ tests/`
-- **Format**: `uv tool run ruff format src/ tests/`
-- **Typecheck**: `uv tool run mypy src/`
-- **All checks**: `./scripts/check.sh` (installs tools: `uv tool install ruff mypy`)
+This file contains additional development-specific guidance not covered in the README.
 
 ### Configuration
 
@@ -20,32 +15,13 @@ This file contains information for AI assistants and developers working on the S
 - **Key variables**: `DEBUG`, `DATABASE_URL`, `HOST`, `PORT`, `SECRET_KEY`
 - **Validation**: Built-in validation (e.g., port range 1-65535, secret key min length)
 
-### Deployment
+### Development Tooling
 
-- **Docker build**: `docker build -t savt .`
-- **Docker run**: `docker run -p 8000:8000 --env-file .env savt`
-- **Docker Compose**: `docker-compose up --build`
+- **Editor Config**: `.editorconfig` ensures consistent formatting across editors
+- **Pre-commit Hooks**: `.pre-commit-config.yaml` runs linting/formatting before commits
+- **VS Code Settings**: `.vscode/settings.json` configures automatic formatting and linting
+- **Setup pre-commit**: `uv add --dev pre-commit && pre-commit install` (optional but recommended)
 
-### Project Structure
-
-```text
-src/
-├── main.py          # FastAPI app entry point
-├── routes.py        # Web routes (HTML responses)
-├── api_routes.py    # API routes (JSON responses)
-├── models.py        # SQLModel database models
-├── service.py       # Business logic
-├── database.py      # Database connection
-└── utils.py         # Utilities
-
-templates/
-├── properties.html           # Main page template
-└── fragments/               # HTMX partial templates
-    ├── objects_list.html
-    └── standalone_properties.html
-
-tests/                       # Test files
-```
 
 ## Architecture Notes
 
@@ -57,6 +33,7 @@ tests/                       # Test files
 - **HTMX** - Dynamic frontend without JavaScript
 - **Pydantic Settings** - Type-safe configuration management
 - **uv** - Fast Python package management
+
 
 ### Key Design Decisions
 
@@ -124,3 +101,5 @@ tests/                       # Test files
 - Removed problematic debug toolbar middleware
 - Updated Pydantic config from deprecated class-based to ConfigDict
 - Added comprehensive CI/CD pipeline with Docker support
+- Fixed test suite: resolved HTMX fragment issues, template deprecation warnings, and empty name validation
+- Added development tooling: .editorconfig, pre-commit hooks, VS Code settings for consistent formatting

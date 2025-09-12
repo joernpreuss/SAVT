@@ -104,7 +104,10 @@ class TestPartialUpdates:
 
     def test_veto_returns_objects_fragment(self, client, sample_data):
         """Test veto action returns only objects list fragment."""
-        response = client.get("/user/anonymous/veto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"})
+        response = client.get(
+            "/user/anonymous/veto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
+        )
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should be just the objects list
@@ -119,10 +122,16 @@ class TestPartialUpdates:
     def test_unveto_returns_objects_fragment(self, client, sample_data):
         """Test unveto action returns only objects list fragment."""
         # First veto a property
-        client.get("/user/anonymous/veto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"})
+        client.get(
+            "/user/anonymous/veto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
+        )
 
         # Then unveto it
-        response = client.get("/user/anonymous/unveto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"})
+        response = client.get(
+            "/user/anonymous/unveto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
+        )
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should be just the objects list
@@ -135,7 +144,9 @@ class TestPartialUpdates:
 
     def test_standalone_veto_returns_standalone_fragment(self, client, sample_data):
         """Test standalone property veto returns only standalone properties fragment."""
-        response = client.get("/user/anonymous/veto/property/Standalone", headers={"HX-Request": "true"})
+        response = client.get(
+            "/user/anonymous/veto/property/Standalone", headers={"HX-Request": "true"}
+        )
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should be just the standalone properties list
@@ -171,10 +182,16 @@ class TestDynamicContentUpdates:
     def test_unveto_restores_property_state(self, client, sample_data):
         """Test unvetoing restores property normal state."""
         # First veto
-        client.get("/user/anonymous/veto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"})
+        client.get(
+            "/user/anonymous/veto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
+        )
 
         # Then unveto
-        response = client.get("/user/anonymous/unveto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"})
+        response = client.get(
+            "/user/anonymous/unveto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
+        )
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should show property as normal (not struck through)
@@ -191,7 +208,9 @@ class TestDynamicContentUpdates:
         pizza_id = sample_data["objects"][0].id
 
         response = client.post(
-            "/create/property/", data={"name": "New Topping", "object_id": pizza_id}, headers={"HX-Request": "true"}
+            "/create/property/",
+            data={"name": "New Topping", "object_id": pizza_id},
+            headers={"HX-Request": "true"},
         )
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -200,7 +219,7 @@ class TestDynamicContentUpdates:
         new_property_link = soup.find("a", string="New Topping")
         assert new_property_link is not None
 
-        # Should be under the Pizza object  
+        # Should be under the Pizza object
         pizza_section = soup.find(string="Pizza").parent
         pizza_properties = pizza_section.find("ul")
         if pizza_properties:
@@ -213,13 +232,23 @@ class TestDynamicContentUpdates:
 
     def test_object_creation_updates_page(self, client):
         """Test object creation updates page content."""
-        response = client.post("/create/object/", data={"name": "New Object"}, headers={"HX-Request": "true"})
+        response = client.post(
+            "/create/object/",
+            data={"name": "New Object"},
+            headers={"HX-Request": "true"},
+        )
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should find the new object in the objects list
         objects_list = soup.find("ul", id="objects-list")
         object_items = objects_list.find_all("li", recursive=False)
-        object_names = [next((line.strip() for line in item.get_text().split("\n") if line.strip()), "") for item in object_items]
+        object_names = [
+            next(
+                (line.strip() for line in item.get_text().split("\n") if line.strip()),
+                "",
+            )
+            for item in object_items
+        ]
         assert "New Object" in object_names
 
         # Should also update the property form dropdown
@@ -234,7 +263,10 @@ class TestHTMXSwapBehavior:
 
     def test_objects_list_outer_html_swap(self, client, sample_data):
         """Test objects list uses outerHTML swap correctly."""
-        response = client.get("/user/anonymous/veto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"})
+        response = client.get(
+            "/user/anonymous/veto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
+        )
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Response should be a complete ul element that can replace existing one
@@ -246,7 +278,9 @@ class TestHTMXSwapBehavior:
 
     def test_standalone_properties_outer_html_swap(self, client, sample_data):
         """Test standalone properties list uses outerHTML swap correctly."""
-        response = client.get("/user/anonymous/veto/property/Standalone", headers={"HX-Request": "true"})
+        response = client.get(
+            "/user/anonymous/veto/property/Standalone", headers={"HX-Request": "true"}
+        )
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Response should be a complete ul element
@@ -275,14 +309,17 @@ class TestHTMXTargeting:
         """Test veto actions target correct elements."""
         # Object property veto should target objects-list
         obj_response = client.get(
-            "/user/anonymous/veto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"}
+            "/user/anonymous/veto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
         )
         obj_soup = BeautifulSoup(obj_response.content, "html.parser")
         assert obj_soup.find("ul", id="objects-list") is not None
         assert obj_soup.find("ul", id="standalone-properties") is None
 
         # Standalone property veto should target standalone-properties
-        standalone_response = client.get("/user/anonymous/veto/property/Standalone", headers={"HX-Request": "true"})
+        standalone_response = client.get(
+            "/user/anonymous/veto/property/Standalone", headers={"HX-Request": "true"}
+        )
         standalone_soup = BeautifulSoup(standalone_response.content, "html.parser")
         assert standalone_soup.find("ul", id="standalone-properties") is not None
         assert standalone_soup.find("ul", id="objects-list") is None
@@ -296,10 +333,16 @@ class TestHTMXTargeting:
         session.commit()
 
         # Veto one property
-        client.get("/user/anonymous/veto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"})
+        client.get(
+            "/user/anonymous/veto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
+        )
 
         # Get the fragment
-        response = client.get("/user/anonymous/veto/object/Pizza/property/Pepperoni", headers={"HX-Request": "true"})
+        response = client.get(
+            "/user/anonymous/veto/object/Pizza/property/Pepperoni",
+            headers={"HX-Request": "true"},
+        )
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should show both properties with different states

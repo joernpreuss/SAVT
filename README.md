@@ -23,14 +23,59 @@ SAVT is built with **pure Python** to avoid the complexity of JavaScript/TypeScr
 
 This approach provides a responsive, interactive web experience while keeping all logic in Python. HTMX enables instant updates for veto/unveto actions and smooth form submissions without page reloads.
 
-## Start
+## Development
 
-- Python version is pinned to 3.12 via `.python-version` to ensure consistent behavior across development environments and match the pyproject.toml requirement (~=3.12.0)
+### Prerequisites
 
-### Run test server
+If you don't have `uv` installed:
+```bash
+pip install uv
+```
 
-- `uv run uvicorn src.main:app --reload --host 0.0.0.0`
+### Package Management
 
-### Run tests
+**Always use `uv` instead of `pip` for this project:**
+- Install dependencies: `uv add package-name`
+- Install dev dependencies: `uv add --dev package-name`  
+- Run commands: `uv run command`
+- Sync environment: `uv sync`
 
-- `uv run pytest`
+Python version is pinned to 3.12 via `.python-version` to ensure consistent behavior.
+
+### Quick Commands
+
+- **Start server**: `uv run uvicorn src.main:app --reload --host 0.0.0.0`
+- **Run tests**: `uv run pytest`
+- **Lint**: `uv tool run ruff check src/ tests/`
+- **Format**: `uv tool run ruff format src/ tests/`
+- **Typecheck**: `uv tool run mypy src/`
+- **All checks**: `./scripts/check.sh`
+
+### Project Structure
+
+```
+src/
+├── main.py          # FastAPI app entry point
+├── routes.py        # Web routes (HTML responses)
+├── api_routes.py    # API routes (JSON responses)
+├── models.py        # SQLModel database models
+├── service.py       # Business logic
+├── database.py      # Database connection
+└── utils.py         # Utilities
+
+templates/
+├── properties.html           # Main page template
+└── fragments/               # HTMX partial templates
+
+tests/                       # Test files
+```
+
+### Deployment
+
+- **Docker build**: `docker build -t savt .`
+- **Docker run**: `docker run -p 8000:8000 --env-file .env savt`
+- **Docker Compose**: `docker-compose up --build`
+
+## Development Details
+
+For comprehensive development guidance, configuration details, and project history, see [CLAUDE.md](./CLAUDE.md).
