@@ -14,9 +14,9 @@ SAVT is a collaborative decision-making tool that enables groups to reach consen
 - **Creation**: Any user can create objects
 - **Scope**: Objects serve as containers for related properties
 
-### Properties  
+### Properties
 - **Definition**: Specific options or features for objects (e.g., pizza toppings, event locations)
-- **Types**: 
+- **Types**:
   - **Object properties**: Belong to a specific object
   - **Standalone properties**: Independent options not tied to any object
 - **Creation**: Any user can create properties

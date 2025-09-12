@@ -31,7 +31,7 @@ This document maps test cases to functional requirements (FR) and business rules
   - `test_api.py::test_create_property_conflict`
 - **FR-2.5** ⚠️ Properties cannot be deleted (data persistence) - *Not explicitly tested*
 
-### FR-3: Veto System  
+### FR-3: Veto System
 - **FR-3.1** ✅ Any user can veto any property
   - `test_service.py::test_object_scoped_veto`
   - `test_api.py::test_veto_then_unveto_property`
@@ -51,7 +51,7 @@ This document maps test cases to functional requirements (FR) and business rules
 
 ### FR-4: User Interface Behavior
 - **FR-4.1** ⚠️ Properties display as clickable links when not vetoed - *Tested in frontend tests*
-- **FR-4.2** ⚠️ Vetoed properties display as strikethrough text with "undo" link - *Tested in frontend tests*  
+- **FR-4.2** ⚠️ Vetoed properties display as strikethrough text with "undo" link - *Tested in frontend tests*
 - **FR-4.3** ⚠️ HTMX provides immediate visual feedback (no page reloads) - *Tested in HTMX tests*
 - **FR-4.4** ⚠️ Forms have graceful fallback for non-JavaScript browsers - *Tested in frontend tests*
 - **FR-4.5** ⚠️ System shows objects and standalone properties separately - *Tested in frontend tests*
