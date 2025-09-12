@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from src.config import settings
 from src.database import get_session
 from src.main import app
 from src.models import SVObject, SVProperty
@@ -68,7 +69,7 @@ class TestHTMLRendering:
         assert soup.find("title")
         assert soup.find("title").text == "Properties"
         assert soup.find("h1")
-        assert soup.find("h1").text == "Suggestion And Veto Tool"
+        assert soup.find("h1").text == settings.app_name
 
         # Check HTMX script is loaded
         htmx_script = soup.find("script", src="https://unpkg.com/htmx.org@1.9.12")
