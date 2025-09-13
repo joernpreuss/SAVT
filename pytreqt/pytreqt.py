@@ -242,3 +242,47 @@ def requirements(*reqs: str):
         return func
 
     return decorator
+
+
+# CLI functionality
+def show_help():
+    """Show help message with available commands."""
+    print("pytreqt - pytest requirements tracking")
+    print()
+    print("Usage: python -m pytreqt <command> [options]")
+    print()
+    print("Commands:")
+    print("  coverage     Generate TEST_COVERAGE.md report")
+    print("  changes      Check for requirement changes")
+    print("  update       Update all traceability artifacts")
+    print("  help         Show this help message")
+    print()
+    print("Examples:")
+    print("  python -m pytreqt coverage")
+    print("  python -m pytreqt changes")
+    print("  python -m pytreqt update")
+
+
+def main():
+    """Main CLI entry point for pytreqt."""
+    import sys
+
+    if len(sys.argv) < 2 or sys.argv[1] in ["-h", "--help", "help"]:
+        show_help()
+        return
+
+    command = sys.argv[1]
+
+    if command == "coverage":
+        from .tools.generate_coverage_report import main as coverage_main
+        coverage_main()
+    elif command == "changes":
+        from .tools.change_detector import main as changes_main
+        changes_main()
+    elif command == "update":
+        from .tools.update_traceability import main as update_main
+        update_main()
+    else:
+        print(f"Unknown command: {command}")
+        print("Run 'python -m pytreqt help' for available commands")
+        sys.exit(1)
