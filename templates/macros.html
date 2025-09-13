@@ -1,18 +1,18 @@
-{% macro property_item(property, target_id, url_prefix="") %}
-<li id="property-{{property.id}}">
-  {% if property.vetoed_by|length > 0 %}
-  <s>{{property.name}}</s>
+{% macro feature_item(feature, target_id, url_prefix="") %}
+<li id="feature-{{feature.id}}">
+  {% if feature.vetoed_by|length > 0 %}
+  <s>{{feature.name}}</s>
   [<a
-    href="/user/anonymous/unveto{{url_prefix}}/property/{{property.name}}"
-    hx-get="/user/anonymous/unveto{{url_prefix}}/property/{{property.name}}"
+    href="/user/anonymous/unveto{{url_prefix}}/feature/{{feature.name}}"
+    hx-get="/user/anonymous/unveto{{url_prefix}}/feature/{{feature.name}}"
     hx-target="#{{target_id}}"
     hx-swap="outerHTML"
     >unveto</a
   >] {% else %}
-  {{property.name}}
+  {{feature.name}}
   [<a
-    href="/user/anonymous/veto{{url_prefix}}/property/{{property.name}}"
-    hx-get="/user/anonymous/veto{{url_prefix}}/property/{{property.name}}"
+    href="/user/anonymous/veto{{url_prefix}}/feature/{{feature.name}}"
+    hx-get="/user/anonymous/veto{{url_prefix}}/feature/{{feature.name}}"
     hx-target="#{{target_id}}"
     hx-swap="outerHTML"
     >veto</a
@@ -21,24 +21,24 @@
 </li>
 {% endmacro %}
 
-{% macro object_property_item(property, object_name) %}
-<li id="property-{{property.id}}">
-  {% if property.vetoed_by|length > 0 %}
-  <s>{{property.name}}</s>
+{% macro item_feature_item(feature, item_name) %}
+<li id="feature-{{feature.id}}">
+  {% if feature.vetoed_by|length > 0 %}
+  <s>{{feature.name}}</s>
   [<a
     class="unveto-link"
-    href="/user/anonymous/unveto/object/{{object_name}}/property/{{property.name}}"
-    hx-get="/user/anonymous/unveto/object/{{object_name}}/property/{{property.name}}"
-    hx-target="#objects-list"
+    href="/user/anonymous/unveto/item/{{item_name}}/feature/{{feature.name}}"
+    hx-get="/user/anonymous/unveto/item/{{item_name}}/feature/{{feature.name}}"
+hx-target="#objects-list"
     hx-swap="outerHTML"
     >unveto</a
   >] {% else %}
-  {{property.name}}
+  {{feature.name}}
   [<a
     class="veto-link"
-    href="/user/anonymous/veto/object/{{object_name}}/property/{{property.name}}"
-    hx-get="/user/anonymous/veto/object/{{object_name}}/property/{{property.name}}"
-    hx-target="#objects-list"
+    href="/user/anonymous/veto/item/{{item_name}}/feature/{{feature.name}}"
+    hx-get="/user/anonymous/veto/item/{{item_name}}/feature/{{feature.name}}"
+hx-target="#objects-list"
     hx-swap="outerHTML"
     >veto</a
   >]
@@ -46,22 +46,22 @@
 </li>
 {% endmacro %}
 
-{% macro standalone_property_item(property) %}
+{% macro standalone_feature_item(feature) %}
 <li>
-  {% if property.vetoed_by|length > 0 %} <s>{{property.name}}</s>
+  {% if feature.vetoed_by|length > 0 %} <s>{{feature.name}}</s>
   [<a
     class="unveto-link"
-    href="/user/anonymous/unveto/property/{{property.name}}"
-    hx-get="/user/anonymous/unveto/property/{{property.name}}"
+    href="/user/anonymous/unveto/feature/{{feature.name}}"
+    hx-get="/user/anonymous/unveto/feature/{{feature.name}}"
     hx-target="#standalone-properties"
     hx-swap="outerHTML"
     >unveto</a>] {%
   else %}
-  {{property.name}}
+  {{feature.name}}
   [<a
     class="veto-link"
-    href="/user/anonymous/veto/property/{{property.name}}"
-    hx-get="/user/anonymous/veto/property/{{property.name}}"
+    href="/user/anonymous/veto/feature/{{feature.name}}"
+    hx-get="/user/anonymous/veto/feature/{{feature.name}}"
     hx-target="#standalone-properties"
     hx-swap="outerHTML"
     >veto</a

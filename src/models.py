@@ -16,46 +16,41 @@ from sqlmodel import (
 #     name: str
 
 
-class SVObject(SQLModel, table=True):  # type: ignore[call-arg]
-    """An object with properties. Can be a pizza with toppings."""
-
-    # __tablename__ = "sv_objects"  # type: ignore
+class Item(SQLModel, table=True):  # type: ignore[call-arg]
+    """An item with features. Can be a pizza with toppings."""
 
     id: int | None = Field(default=None, primary_key=True)
-    name: str
+    name: str = Field(index=True, min_length=1, max_length=100)
+    kind: str | None = Field(default=None, max_length=50)  # e.g., vegan, vegetarian
     created_by: str | None = None  # use SVUser later
 
-    properties: list["SVProperty"] = Relationship(back_populates="object")
+    features: list["Feature"] = Relationship(back_populates="item")
 
     @classmethod
-    def as_form(cls, name: str = Form(...)) -> "SVObject":
-        return cls(name=name)
+    def as_form(cls, name: str = Form(...), kind: str | None = Form(None)) -> "Item":
+        return cls(name=name, kind=kind)
 
 
-class SVProperty(SQLModel, table=True):  # type: ignore[call-arg]
-    """A property of an object. Can be a topping of a pizza."""
-
-    # __tablename__ = "sv_properties"  # type: ignore
+class Feature(SQLModel, table=True):  # type: ignore[call-arg]
+    """A feature of an item. Can be a topping of a pizza."""
 
     id: int | None = Field(default=None, primary_key=True)
-    name: str
+    name: str = Field(index=True, min_length=1, max_length=100)
     created_by: str | None = None  # use SVUser later
 
-    # to have a list of users who vetoed this property that works with sqlite
+    # to have a list of users who vetoed this feature that works with sqlite
     vetoed_by: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
-    object_id: int | None = Field(default=None, foreign_key="svobject.id")
-    object: SVObject | None = Relationship(back_populates="properties")
+    item_id: int | None = Field(default=None, foreign_key="item.id", index=True)
+    item: Item | None = Relationship(back_populates="features")
 
     # JSON Column works without special config in current setup
 
     @classmethod
     def as_form(
-        cls, name: str = Form(...), object_id: int | str | None = Form(None)
-    ) -> "SVProperty":
+        cls, name: str = Form(...), item_id: int | str | None = Form(None)
+    ) -> "Feature":
         # Form values arrive as strings; convert to int if possible
-        if isinstance(object_id, str):
-            object_id = int(object_id) if object_id.isdigit() else None
-        return cls(
-            name=name, object_id=object_id if isinstance(object_id, int) else None
-        )
+        if isinstance(item_id, str):
+            item_id = int(item_id) if item_id.isdigit() else None
+        return cls(name=name, item_id=item_id if isinstance(item_id, int) else None)

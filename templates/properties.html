@@ -1,7 +1,7 @@
-{% from "macros.html" import object_property_item, standalone_property_item %}
+{% from "macros.html" import item_feature_item, standalone_feature_item %}
 <html>
   <head>
-    <title>Properties</title>
+    <title>Features</title>
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <link rel="stylesheet" href="/static/css/styles.css">
   </head>
@@ -16,12 +16,12 @@
       <div class="section">
         <h3>{{settings.object_name_plural_computed.title()}}</h3>
         <ul id="objects-list">
-          {% for object in objects %}
+          {% for item in items %}
           <li>
-            <strong>{{object.name}}</strong>
+            <strong>{{item.name}}</strong>{% if item.kind %} <span class="kind-badge">({{item.kind}})</span>{% endif %}
             <ul>
-              {% for property in object.properties %}
-              {{ object_property_item(property, object.name) }}
+              {% for feature in item.features %}
+              {{ item_feature_item(feature, item.name) }}
               {% endfor %}
             </ul>
           </li>
@@ -32,8 +32,8 @@
       <div class="section">
         <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}} <span class="standalone-indicator">(Standalone)</span></h4>
         <ul id="standalone-properties">
-          {% for property in properties %}
-          {{ standalone_property_item(property) }}
+          {% for feature in features %}
+          {{ standalone_feature_item(feature) }}
           {% endfor %}
         </ul>
       </div>
@@ -44,19 +44,27 @@
         <h3>{{settings.object_name_singular.title()}}</h3>
         <form
           method="POST"
-          action="/create/object/"
-          hx-post="/create/object/"
+          action="/create/item/"
+          hx-post="/create/item/"
           hx-target="body"
           hx-swap="outerHTML"
           >
-          <label for="obj_name">{{settings.object_name_singular.title()}} Name:</label>
+          <label for="item_name">{{settings.object_name_singular.title()}} Name:</label>
           <input
             type="text"
             required
             name="name"
-            id="obj_name"
+            id="item_name"
             value="{{name}}"
             placeholder="Enter {{settings.object_name_singular}} name..."
+          />
+          <label for="item_kind">Kind (optional):</label>
+          <input
+            type="text"
+            name="kind"
+            id="item_kind"
+            value="{{kind}}"
+            placeholder="e.g., vegan, vegetarian..."
           />
           <button type="submit">Create {{settings.object_name_singular.title()}}</button>
         </form>
@@ -69,28 +77,28 @@
         </div>
         <form
           method="POST"
-          action="/create/property/"
-          hx-post="/create/property/"
+          action="/create/feature/"
+          hx-post="/create/feature/"
           hx-target="body"
           hx-swap="outerHTML"
           >
-          <label for="prop_name">{{settings.property_name_singular.title()}} Name:</label>
+          <label for="feature_name">{{settings.property_name_singular.title()}} Name:</label>
           <input
             type="text"
             required
             name="name"
-            id="prop_name"
+            id="feature_name"
             value="{{name}}"
             placeholder="Enter {{settings.property_name_singular}} name..."
           />
 
-          <label for="object_id">Add to {{settings.object_name_singular}} (optional):</label>
-          <select name="object_id" id="object_id">
+          <label for="item_id">Add to {{settings.object_name_singular}} (optional):</label>
+          <select name="item_id" id="item_id">
             <option value="">[No {{settings.object_name_singular}} - Standalone]</option>
-            {% for object in objects %} {% if object.id == object_id %}
-            <option value="{{object.id}}" selected>{{object.name}}</option>
+            {% for item in items %} {% if item.id == item_id %}
+            <option value="{{item.id}}" selected>{{item.name}}</option>
             {% else %}
-            <option value="{{object.id}}">{{object.name}}</option>
+            <option value="{{item.id}}">{{item.name}}</option>
             {% endif %} {% endfor %}
           </select>
           <button type="submit">Create {{settings.property_name_singular.title()}}</button>
