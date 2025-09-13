@@ -47,7 +47,7 @@ uv tool run mypy src/
 echo
 
 echo "📄 Checking file endings..."
-MISSING_NEWLINES=$(find . -type f \( -name "*.py" -o -name "*.md" -o -name "*.toml" -o -name "*.yml" -o -name "*.yaml" -o -name "*.sh" -o -name ".gitignore" -o -name "*.txt" -o -name "*.json" \) -not -path "./.venv/*" -not -path "./.git/*" -not -path "./.pytest_cache/*" -not -path "./.ruff_cache/*" -not -path "./.mypy_cache/*" | while read -r file; do
+MISSING_NEWLINES=$(find . -type f \( -name "*.py" -o -name "*.md" -o -name "*.toml" -o -name "*.yml" -o -name "*.yaml" -o -name "*.sh" -o -name ".gitignore" -o -name "*.txt" -o -name "*.json" -o -name "*.html" \) -not -path "./.venv/*" -not -path "./.git/*" -not -path "./.pytest_cache/*" -not -path "./.ruff_cache/*" -not -path "./.mypy_cache/*" | while read -r file; do
     if [ -s "$file" ] && [ "$(tail -c1 "$file" | wc -l)" -eq 0 ]; then
         echo "$file"
     fi
