@@ -17,6 +17,7 @@ class RequirementsCollector:
     def __init__(self):
         self.test_requirements = {}
         self.requirement_tests = defaultdict(list)
+        self.test_results = {}  # Track test outcomes
 
     def extract_requirements(self, docstring):
         """Extract FR- and BR- requirements from docstring."""
@@ -33,7 +34,8 @@ class RequirementsCollector:
         if item.function.__doc__:
             requirements = self.extract_requirements(item.function.__doc__)
             if requirements:
-                test_name = f"{item.module.__name__}::{item.function.__name__}"
+                # Use item.nodeid for consistency with test result capture
+                test_name = item.nodeid
                 self.test_requirements[test_name] = requirements
 
                 for req in requirements:
@@ -58,9 +60,28 @@ def pytest_runtest_setup(item):
         print("-" * 40)
 
 
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Hook called after each test runs - capture results."""
+    outcome = yield
+    report = outcome.get_result()
+
+    if report.when == "call":  # Only capture the main test call, not setup/teardown
+        # Debug: print what we're storing
+        # print(f"STORING: {item.nodeid} -> {report.outcome}")
+        requirements_collector.test_results[item.nodeid] = report.outcome
+    elif report.when == "setup" and report.outcome == "skipped":
+        # Handle skipped tests (they don't reach "call" phase)
+        requirements_collector.test_results[item.nodeid] = "skipped"
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     """Hook called at end of test session - generate requirements report."""
+    # Debug: print collected requirements
+    # count = len(requirements_collector.test_requirements)
+    # print(f"DEBUG: Collected {count} tests with requirements")
+
     if not requirements_collector.test_requirements:
         return
 
@@ -81,7 +102,21 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
             for test in tests:
                 # Extract just the test function name for brevity
                 short_name = test.split("::")[-1]
-                terminalreporter.write_line(f"    ✓ {short_name}")
+
+                # Get test result and show appropriate status
+                result = requirements_collector.test_results.get(test, "unknown")
+                if result == "passed":
+                    symbol = terminalreporter._tw.markup("✓", green=True)
+                elif result == "failed":
+                    symbol = terminalreporter._tw.markup("✗", red=True)
+                elif result == "skipped":
+                    symbol = terminalreporter._tw.markup("⊝", yellow=True)
+                else:
+                    symbol = terminalreporter._tw.markup("?", purple=True)
+
+                # Debug: show what we captured
+                # terminalreporter.write_line(f"    DEBUG: {test} -> {result}")
+                terminalreporter.write_line(f"    {symbol} {short_name}")
 
         # Summary statistics
         total_tests = len(requirements_collector.test_requirements)
