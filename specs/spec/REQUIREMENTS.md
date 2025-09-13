@@ -85,10 +85,10 @@ SAVT is a collaborative decision-making tool that enables groups to reach consen
 - **Anonymous operation**: No user authentication required
 
 ### BR-3: Data Integrity
-- **Immutable history**: Created items cannot be deleted
-- **Referential integrity**: Properties maintain references to objects
-- **Unique constraints**: Names must be unique within scope
-- **Atomic operations**: Veto/unveto operations are transactional
+- **BR-3.1**: Immutable history - Created items cannot be deleted
+- **BR-3.2**: Referential integrity - Properties maintain references to objects
+- **BR-3.3**: Atomic operations - Veto/unveto operations are transactional
+- **BR-3.4**: Unique constraints - Names must be unique within scope
 
 ## User Stories
 

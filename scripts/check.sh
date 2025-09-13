@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+echo
+
 # Show help if requested
 if [[ "$1" == "--help" || "$1" == "-h" ]]; then
     echo "🔍 SAVT Code Quality Checker"
