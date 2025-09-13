@@ -58,9 +58,9 @@ class RequirementChangeDetector:
             return {}
 
         try:
-            with open(self.cache_file, "r") as f:
+            with open(self.cache_file) as f:
                 return json.load(f)
-        except (json.JSONDecodeError, IOError):
+        except (OSError, json.JSONDecodeError):
             return {}
 
     def save_cache(self, data):
@@ -68,7 +68,7 @@ class RequirementChangeDetector:
         try:
             with open(self.cache_file, "w") as f:
                 json.dump(data, f, indent=2)
-        except IOError as e:
+        except OSError as e:
             print(f"Warning: Could not save cache: {e}")
 
     def get_test_coverage_mapping(self):
@@ -202,7 +202,8 @@ class RequirementChangeDetector:
                 print(f"   - {test}")
             print()
             print(
-                f'💡 Consider running: `uv run pytest -k "{"|".join(changes["affected_tests"][:5])}" -v`'
+                f'💡 Consider running: `uv run pytest -k "'
+                f'{"|".join(changes["affected_tests"][:5])}" -v`'
             )
         else:
             print("ℹ️  No tests directly affected by requirement changes")

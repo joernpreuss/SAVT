@@ -31,6 +31,7 @@ dev-dependencies = [
     "rich==14.1.0",
     "beautifulsoup4==4.13.5",
     "lxml==6.0.1",
+    "click>=8.2.1",
 ]
 
 [tool.ruff]
@@ -58,7 +59,7 @@ indent-style = "space"
 
 [tool.pytest.ini_options]
 # Enable custom requirements plugin
-addopts = "-p pytreqt.pytreqt"
+addopts = "-p src.tools.pytreqt.pytreqt"
 markers = [
     "requirements(fr_list, br_list): mark test with specific FR/BR requirements"
 ]
