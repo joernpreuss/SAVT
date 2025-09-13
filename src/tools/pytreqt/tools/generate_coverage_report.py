@@ -141,9 +141,9 @@ def generate_coverage_matrix():
     current_coverage_data = {
         "total_requirements": len(all_requirements),
         "tested_requirements": len(test_coverage),
-        "coverage_percentage": len(test_coverage) / len(all_requirements) * 100
-        if all_requirements
-        else 0,
+        "coverage_percentage": (
+            len(test_coverage) / len(all_requirements) * 100 if all_requirements else 0
+        ),
     }
 
     # Only update timestamp if coverage actually changed
@@ -165,7 +165,7 @@ def generate_coverage_matrix():
         "# Test Coverage Matrix",
         "",
         "This document shows the traceability between functional requirements (FR), "
-        "business rules (BR), and test cases.",
+        + "business rules (BR), and test cases.",
         "",
         f"**Last updated**: {timestamp}**",
         "",
@@ -173,11 +173,11 @@ def generate_coverage_matrix():
         "",
         f"- **Total Requirements**: {len(all_requirements)}",
         f"- **Requirements with Tests**: {len(test_coverage)}",
-        f"- **Requirements without Tests**: "
-        f"{len(all_requirements) - len(test_coverage)}",
+        "- **Requirements without Tests**: "
+        + f"{len(all_requirements) - len(test_coverage)}",
         "",
-        f"**Coverage Percentage**: "
-        f"{len(test_coverage) / len(all_requirements) * 100:.1f}%",
+        "**Coverage Percentage**: "
+        + f"{len(test_coverage) / len(all_requirements) * 100:.1f}%",
         "",
         "## Requirements Coverage",
         "",
@@ -188,15 +188,17 @@ def generate_coverage_matrix():
 
     for req_id, description in sorted_requirements:
         tests = test_coverage.get(req_id, [])
-        status = "✅ **Tested**" if tests else "❌ **Not Tested**"
+        # Remove duplicates while preserving order
+        unique_tests = list(dict.fromkeys(tests))
+        status = "✅ **Tested**" if unique_tests else "❌ **Not Tested**"
 
         report_lines.extend(
             [f"### {req_id}: {description}", f"**Status**: {status}", ""]
         )
 
-        if tests:
+        if unique_tests:
             report_lines.append("**Test Cases**:")
-            for test in tests:
+            for test in sorted(unique_tests):  # Also sort for consistency
                 report_lines.append(f"- `{test}`")
             report_lines.append("")
         else:
@@ -222,18 +224,22 @@ def generate_coverage_matrix():
 
         report_lines.append("")
 
-    # Add test statistics
-    total_tests = sum(len(tests) for tests in test_coverage.values())
+    # Add test statistics (deduplicated)
+    total_tests = sum(
+        len(list(dict.fromkeys(tests))) for tests in test_coverage.values()
+    )
     report_lines.extend(
         [
             "## Test Statistics",
             "",
             f"- **Total Test Cases with Requirements**: {total_tests}",
             f"- **Unique Requirements Tested**: {len(test_coverage)}",
-            f"- **Average Tests per Requirement**: "
-            f"{total_tests / len(test_coverage):.1f}"
-            if test_coverage
-            else "- **Average Tests per Requirement**: 0",
+            (
+                "- **Average Tests per Requirement**: "
+                + f"{total_tests / len(test_coverage):.1f}"
+                if test_coverage
+                else "- **Average Tests per Requirement**: 0"
+            ),
             "",
             "---",
             "",
@@ -267,8 +273,8 @@ def main():
 
     print(f"✅ Coverage report generated: {coverage_file}")
     print(
-        f"📊 Coverage summary: "
-        f"{len(extract_requirements_from_specs())} total requirements"
+        "📊 Coverage summary: "
+        + f"{len(extract_requirements_from_specs())} total requirements"
     )
 
 

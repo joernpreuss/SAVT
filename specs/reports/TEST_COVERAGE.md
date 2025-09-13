@@ -30,10 +30,8 @@ This document shows the traceability between functional requirements (FR), busin
 **Status**: ✅ **Tested**
 
 **Test Cases**:
-- `test_veto_idempotency`
 - `test_unveto_idempotency`
 - `test_veto_idempotency`
-- `test_unveto_idempotency`
 
 ### BR-3.4: Unique constraints - Names must be unique within scope
 **Status**: ❌ **Not Tested**
@@ -46,13 +44,11 @@ This document shows the traceability between functional requirements (FR), busin
 
 **Test Cases**:
 - `test_create_item_with_feature`
-- `test_create_item_with_feature`
 
 ### FR-1.2: Object names must be unique within the system
 **Status**: ✅ **Tested**
 
 **Test Cases**:
-- `test_create_item_conflict`
 - `test_create_item_conflict`
 
 ### FR-1.3: Objects cannot be deleted (data persistence)
@@ -72,28 +68,21 @@ This document shows the traceability between functional requirements (FR), busin
 
 **Test Cases**:
 - `test_create_item_conflict`
-- `test_create_item_conflict`
 
 ### FR-2.1: Users can create properties with names
 **Status**: ✅ **Tested**
 
 **Test Cases**:
 - `test_create_feature`
-- `test_create_item_with_feature`
 - `test_create_feature_without_item`
-- `test_create_feature`
 - `test_create_item_with_feature`
-- `test_create_feature_without_item`
 
 ### FR-2.2: Properties can be standalone or associated with objects
 **Status**: ✅ **Tested**
 
 **Test Cases**:
-- `test_create_item_with_feature`
 - `test_create_feature_without_item`
-- `test_item_scoped_veto`
 - `test_create_item_with_feature`
-- `test_create_feature_without_item`
 - `test_item_scoped_veto`
 
 ### FR-2.3: Property names must be unique within their scope (object or standalone)
@@ -101,17 +90,11 @@ This document shows the traceability between functional requirements (FR), busin
 
 **Test Cases**:
 - `test_create_feature_conflict`
-- `test_create_feature_conflict`
-- `test_create_feature_conflict`
-- `test_create_feature_conflict`
 
 ### FR-2.4: System prevents duplicate property creation (returns 409 error)
 **Status**: ✅ **Tested**
 
 **Test Cases**:
-- `test_create_feature_conflict`
-- `test_create_feature_conflict`
-- `test_create_feature_conflict`
 - `test_create_feature_conflict`
 
 ### FR-2.5: Properties cannot be deleted (data persistence)
@@ -124,10 +107,8 @@ This document shows the traceability between functional requirements (FR), busin
 **Status**: ✅ **Tested**
 
 **Test Cases**:
-- `test_veto_then_unveto_feature`
 - `test_item_scoped_veto`
 - `test_veto_then_unveto_feature`
-- `test_item_scoped_veto`
 
 ### FR-3.2: Users can only veto once per property (idempotent operation)
 **Status**: ✅ **Tested**
@@ -135,17 +116,13 @@ This document shows the traceability between functional requirements (FR), busin
 **Test Cases**:
 - `test_two_vetos_by_same_user`
 - `test_veto_idempotency`
-- `test_two_vetos_by_same_user`
-- `test_veto_idempotency`
 
 ### FR-3.3: Users can unveto their own vetoes
 **Status**: ✅ **Tested**
 
 **Test Cases**:
-- `test_veto_then_unveto_feature`
 - `test_unveto_idempotency`
 - `test_veto_then_unveto_feature`
-- `test_unveto_idempotency`
 
 ### FR-3.4: Vetoed properties are visually distinguished (strikethrough)
 **Status**: ❌ **Not Tested**
@@ -157,19 +134,15 @@ This document shows the traceability between functional requirements (FR), busin
 **Status**: ✅ **Tested**
 
 **Test Cases**:
-- `test_veto_then_unveto_feature`
 - `test_item_scoped_veto`
 - `test_veto_then_unveto_feature`
-- `test_item_scoped_veto`
 
 ### FR-3.6: Veto/unveto operations are immediate and persistent
 **Status**: ✅ **Tested**
 
 **Test Cases**:
-- `test_veto_then_unveto_feature`
 - `test_unveto_idempotency`
 - `test_veto_then_unveto_feature`
-- `test_unveto_idempotency`
 
 ### FR-4.1: Properties display as clickable links when not vetoed
 **Status**: ❌ **Not Tested**
@@ -248,9 +221,9 @@ The following requirements have no test coverage:
 
 ## Test Statistics
 
-- **Total Test Cases with Requirements**: 50
+- **Total Test Cases with Requirements**: 23
 - **Unique Requirements Tested**: 13
-- **Average Tests per Requirement**: 3.8
+- **Average Tests per Requirement**: 1.8
 
 ---
 
