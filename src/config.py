@@ -1,5 +1,9 @@
+from typing import Final
+
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from .constants import DEFAULT_PORT, MIN_SECRET_KEY_LENGTH
 
 
 class Settings(BaseSettings):
@@ -8,7 +12,7 @@ class Settings(BaseSettings):
     # Server configuration
     debug: bool = Field(default=True, description="Enable debug mode")
     host: str = Field(default="0.0.0.0", description="Server host")
-    port: int = Field(default=8000, ge=1, le=65535, description="Server port")
+    port: int = Field(default=DEFAULT_PORT, ge=1, le=65535, description="Server port")
 
     # Database configuration
     database_url: str = Field(
@@ -40,7 +44,7 @@ class Settings(BaseSettings):
     # Security configuration
     secret_key: str = Field(
         default="dev-secret-key-change-in-production",
-        min_length=32,
+        min_length=MIN_SECRET_KEY_LENGTH,
         description="Secret key for security features",
     )
 
@@ -88,4 +92,4 @@ class Settings(BaseSettings):
 
 
 # Global settings instance
-settings = Settings()
+settings: Final = Settings()

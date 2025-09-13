@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
 
 from .config import settings
+from .constants import HTTP_BAD_REQUEST, HTTP_CONFLICT
 from .database import get_session
 from .logging_config import get_logger
 from .models import Feature, Item
@@ -19,24 +20,24 @@ from .service import (
     veto_item_feature,
 )
 
-logger = get_logger(__name__)
+logger: Final = get_logger(__name__)
 
 router: Final = APIRouter()
 templates: Final = Jinja2Templates(directory="templates/")
 
 
-def filter_standalone_features(features):
+def _filter_standalone_features(features):
     """Filter features to return only standalone features (item_id is None)."""
     return [feature for feature in features if feature.item_id is None]
 
 
-def render_full_page_response(
+def _render_full_page_response(
     request: Request, session: Session, item_id: str | int | None = None
 ):
     """Render the full features page with both items and standalone features."""
     features: Final = get_features(session)
     items: Final = get_items(session)
-    standalone_features = filter_standalone_features(features)
+    standalone_features = _filter_standalone_features(features)
 
     return templates.TemplateResponse(
         request,
@@ -50,7 +51,7 @@ def render_full_page_response(
     )
 
 
-def render_fragment_response(request: Request, session: Session, item: str | None):
+def _render_fragment_response(request: Request, session: Session, item: str | None):
     """Render appropriate fragment based on item feature vs standalone feature."""
     features: Final = get_features(session)
     items: Final = get_items(session)
@@ -65,7 +66,7 @@ def render_fragment_response(request: Request, session: Session, item: str | Non
             },
         )
     else:  # Standalone feature
-        standalone_features = filter_standalone_features(features)
+        standalone_features = _filter_standalone_features(features)
         return templates.TemplateResponse(
             request,
             "fragments/standalone_properties.html",
@@ -84,7 +85,7 @@ async def list_features(
     item_id: str | None = Cookie(default=None),
 ):
     logger.info("Debug item_id", item_id=item_id)
-    return render_full_page_response(request, session, item_id)
+    return _render_full_page_response(request, session, item_id)
 
 
 @router.post("/create/item/")
@@ -109,18 +110,18 @@ async def route_create_item(
             item_name=item.name,
             error=str(e),
         )
-        raise HTTPException(status_code=409, detail=str(e)) from e
+        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
     except ValueError as e:
         logger.warning(
             "Item creation failed - validation error",
             item_name=item.name,
             error=str(e),
         )
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=HTTP_BAD_REQUEST, detail=str(e)) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return render_full_page_response(request, session, item_id)
+        return _render_full_page_response(request, session, item_id)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -144,18 +145,18 @@ async def route_create_feature(
         )
     except FeatureAlreadyExistsError as e:
         logger.warning("Feature creation failed via web form", error=str(e))
-        raise HTTPException(status_code=409, detail=str(e)) from e
+        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
     except ValueError as e:
         logger.warning(
             "Feature creation failed - validation error",
             feature_name=feature.name,
             error=str(e),
         )
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=HTTP_BAD_REQUEST, detail=str(e)) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return render_full_page_response(request, session, feature.item_id)
+        return _render_full_page_response(request, session, feature.item_id)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -194,7 +195,7 @@ async def route_veto_item_feature(
 
     # If HTMX request, return updated fragment
     if "HX-Request" in request.headers:
-        return render_fragment_response(request, session, item)
+        return _render_fragment_response(request, session, item)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -227,6 +228,6 @@ async def route_unveto_item_feature(
 
     # If HTMX request, return updated fragment
     if "HX-Request" in request.headers:
-        return render_fragment_response(request, session, item)
+        return _render_fragment_response(request, session, item)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

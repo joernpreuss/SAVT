@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
 
+from .constants import HTTP_CONFLICT, HTTP_NOT_FOUND
 from .database import get_session
 from .models import Feature
 from .service import (
@@ -28,7 +29,7 @@ async def api_create_feature(
         feature = create_feature(session, Feature(name=feature_name.name))
         return {"created": feature.model_dump()}
     except FeatureAlreadyExistsError as e:
-        raise HTTPException(status_code=409, detail=str(e)) from e
+        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
 
 
 @api_router.post("/users/{user}/properties")
@@ -41,7 +42,7 @@ async def api_user_create_feature(
         )
         return {"created": feature.model_dump()}
     except FeatureAlreadyExistsError as e:
-        raise HTTPException(status_code=409, detail=str(e)) from e
+        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
 
 
 @api_router.post("/users/{user}/properties/{name}/veto")
@@ -53,7 +54,9 @@ async def api_user_veto_feature(
     if feature:
         return {"vetoed": feature.model_dump()}
     else:
-        raise HTTPException(status_code=404, detail=f'Feature "{name}" not found')
+        raise HTTPException(
+            status_code=HTTP_NOT_FOUND, detail=f'Feature "{name}" not found'
+        )
 
 
 @api_router.post("/users/{user}/properties/{name}/unveto")
@@ -65,7 +68,9 @@ async def api_user_unveto_feature(
     if feature:
         return {"unvetoed": feature.model_dump()}
     else:
-        raise HTTPException(status_code=404, detail=f'Feature "{name}" not found')
+        raise HTTPException(
+            status_code=HTTP_NOT_FOUND, detail=f'Feature "{name}" not found'
+        )
 
 
 @api_router.get("/properties")

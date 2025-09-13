@@ -7,6 +7,8 @@ from sqlmodel import (
     SQLModel,
 )
 
+from .constants import MAX_KIND_LENGTH, MAX_NAME_LENGTH
+
 # later
 # class SVUser(SQLModel, table=True):
 #     """A user of the system."""
@@ -20,8 +22,10 @@ class Item(SQLModel, table=True):  # type: ignore[call-arg]
     """An item with features. Can be a pizza with toppings."""
 
     id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(index=True, min_length=1, max_length=100)
-    kind: str | None = Field(default=None, max_length=50)  # e.g., vegan, vegetarian
+    name: str = Field(index=True, min_length=1, max_length=MAX_NAME_LENGTH)
+    kind: str | None = Field(
+        default=None, max_length=MAX_KIND_LENGTH
+    )  # e.g., vegan, vegetarian
     created_by: str | None = None  # use SVUser later
 
     features: list["Feature"] = Relationship(back_populates="item")
@@ -35,7 +39,7 @@ class Feature(SQLModel, table=True):  # type: ignore[call-arg]
     """A feature of an item. Can be a topping of a pizza."""
 
     id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(index=True, min_length=1, max_length=100)
+    name: str = Field(index=True, min_length=1, max_length=MAX_NAME_LENGTH)
     created_by: str | None = None  # use SVUser later
 
     # to have a list of users who vetoed this feature that works with sqlite

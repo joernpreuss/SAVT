@@ -1,5 +1,6 @@
 import socket
 from contextlib import asynccontextmanager
+from typing import Final
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -33,7 +34,7 @@ async def lifespan(_app: FastAPI):
     logger.info("Application shutdown completed")
 
 
-app = FastAPI(
+app: Final = FastAPI(
     title=settings.app_name,
     version=settings.version,
     debug=settings.debug,
