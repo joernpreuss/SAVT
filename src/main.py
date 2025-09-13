@@ -2,6 +2,7 @@ import socket
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from .api_routes import api_router
 from .config import settings
@@ -38,6 +39,9 @@ app = FastAPI(
     debug=settings.debug,
     lifespan=lifespan,
 )
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Add request logging middleware
 app.middleware("http")(log_requests_middleware)

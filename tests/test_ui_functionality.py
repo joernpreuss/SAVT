@@ -245,11 +245,11 @@ class TestUIAccessibility:
     """Test UI accessibility and usability features."""
 
     def test_focus_management(self, client):
-        """Test focus is set correctly on form elements."""
+        """Test that auto-focus is not applied to avoid page jumping."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Check that JavaScript sets focus to property name input
+        # Check that no JavaScript auto-focuses on form elements
         script_tags = soup.find_all("script")
         focus_script = None
         for script in script_tags:
@@ -257,8 +257,8 @@ class TestUIAccessibility:
                 focus_script = script
                 break
 
-        assert focus_script is not None
-        assert "prop_name" in focus_script.string
+        # Should not have auto-focus to prevent page jumping
+        assert focus_script is None
 
     def test_form_input_attributes(self, client):
         """Test form inputs have proper attributes for accessibility."""

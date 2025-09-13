@@ -26,6 +26,7 @@
   {% if property.vetoed_by|length > 0 %}
   <s>{{property.name}}</s>
   [<a
+    class="unveto-link"
     href="/user/anonymous/unveto/object/{{object_name}}/property/{{property.name}}"
     hx-get="/user/anonymous/unveto/object/{{object_name}}/property/{{property.name}}"
     hx-target="#objects-list"
@@ -34,6 +35,7 @@
   >] {% else %}
   {{property.name}}
   [<a
+    class="veto-link"
     href="/user/anonymous/veto/object/{{object_name}}/property/{{property.name}}"
     hx-get="/user/anonymous/veto/object/{{object_name}}/property/{{property.name}}"
     hx-target="#objects-list"
@@ -48,6 +50,7 @@
 <li>
   {% if property.vetoed_by|length > 0 %} <s>{{property.name}}</s>
   [<a
+    class="unveto-link"
     href="/user/anonymous/unveto/property/{{property.name}}"
     hx-get="/user/anonymous/unveto/property/{{property.name}}"
     hx-target="#standalone-properties"
@@ -56,6 +59,7 @@
   else %}
   {{property.name}}
   [<a
+    class="veto-link"
     href="/user/anonymous/veto/property/{{property.name}}"
     hx-get="/user/anonymous/veto/property/{{property.name}}"
     hx-target="#standalone-properties"

@@ -1,0 +1,178 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f8f9fa;
+}
+
+.container {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+  color: #2c3e50;
+  border-bottom: 3px solid #3498db;
+  padding-bottom: 10px;
+  margin-bottom: 30px;
+}
+
+h2 {
+  color: #34495e;
+  margin-top: 40px;
+  margin-bottom: 15px;
+}
+
+h3 {
+  color: #7f8c8d;
+  margin-top: 30px;
+  margin-bottom: 10px;
+}
+
+h4 {
+  color: #95a5a6;
+  margin-top: 25px;
+  margin-bottom: 15px;
+}
+
+.instruction {
+  background: #e8f4f8;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #3498db;
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.section {
+  margin-bottom: 30px;
+  padding: 20px;
+  border: 1px solid #ecf0f1;
+  border-radius: 6px;
+  background: #fdfdfd;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  padding: 8px 15px;
+  margin: 5px 0;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+li:hover {
+  background: #f8f9fa;
+}
+
+a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+a:hover {
+  background: #3498db;
+  color: white;
+}
+
+.veto-link {
+  color: #e74c3c;
+}
+
+.veto-link:hover {
+  background: #e74c3c;
+}
+
+.unveto-link {
+  color: #27ae60;
+}
+
+.unveto-link:hover {
+  background: #27ae60;
+}
+
+form {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 6px;
+  border: 2px dashed #bdc3c7;
+  margin-top: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ecf0f1;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-bottom: 15px;
+  transition: border-color 0.2s;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+button {
+  background: #3498db;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background: #2980b9;
+}
+
+.form-description {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.standalone-indicator {
+  color: #7f8c8d;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.htmx-request {
+  opacity: 0.5;
+}
+
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
