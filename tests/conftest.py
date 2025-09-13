@@ -4,8 +4,6 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
-# from sqlmodel.pool import StaticPool
-
 
 @pytest.fixture(scope="function")
 def timestamp_str():
