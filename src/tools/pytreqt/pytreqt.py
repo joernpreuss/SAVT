@@ -66,7 +66,7 @@ class RequirementsCollector:
             invalid_list = ", ".join(sorted(invalid_requirements))
             raise ValueError(
                 f"Test '{test_name}' references invalid requirements: {invalid_list}. "
-                + f"Valid requirements are defined in REQUIREMENTS.md"
+                + "Valid requirements are defined in REQUIREMENTS.md"
             )
 
     def collect_test_requirements(self, item):

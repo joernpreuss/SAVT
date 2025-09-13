@@ -374,6 +374,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "beautifulsoup4" },
+    { name = "click" },
     { name = "httpx" },
     { name = "lxml" },
     { name = "pytest" },
@@ -394,6 +395,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "beautifulsoup4", specifier = "==4.13.5" },
+    { name = "click", specifier = ">=8.2.1" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "lxml", specifier = "==6.0.1" },
     { name = "pytest", specifier = "==8.4.2" },

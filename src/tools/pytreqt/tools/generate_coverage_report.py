@@ -164,7 +164,8 @@ def generate_coverage_matrix():
     report_lines = [
         "# Test Coverage Matrix",
         "",
-        "This document shows the traceability between functional requirements (FR), business rules (BR), and test cases.",
+        "This document shows the traceability between functional requirements (FR), "
+        "business rules (BR), and test cases.",
         "",
         f"**Last updated**: {timestamp}**",
         "",
@@ -172,9 +173,11 @@ def generate_coverage_matrix():
         "",
         f"- **Total Requirements**: {len(all_requirements)}",
         f"- **Requirements with Tests**: {len(test_coverage)}",
-        f"- **Requirements without Tests**: {len(all_requirements) - len(test_coverage)}",
+        f"- **Requirements without Tests**: "
+        f"{len(all_requirements) - len(test_coverage)}",
         "",
-        f"**Coverage Percentage**: {len(test_coverage) / len(all_requirements) * 100:.1f}%",
+        f"**Coverage Percentage**: "
+        f"{len(test_coverage) / len(all_requirements) * 100:.1f}%",
         "",
         "## Requirements Coverage",
         "",
@@ -227,7 +230,8 @@ def generate_coverage_matrix():
             "",
             f"- **Total Test Cases with Requirements**: {total_tests}",
             f"- **Unique Requirements Tested**: {len(test_coverage)}",
-            f"- **Average Tests per Requirement**: {total_tests / len(test_coverage):.1f}"
+            f"- **Average Tests per Requirement**: "
+            f"{total_tests / len(test_coverage):.1f}"
             if test_coverage
             else "- **Average Tests per Requirement**: 0",
             "",
@@ -263,7 +267,8 @@ def main():
 
     print(f"✅ Coverage report generated: {coverage_file}")
     print(
-        f"📊 Coverage summary: {len(extract_requirements_from_specs())} total requirements"
+        f"📊 Coverage summary: "
+        f"{len(extract_requirements_from_specs())} total requirements"
     )
 
 
