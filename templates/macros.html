@@ -1,0 +1,67 @@
+{% macro property_item(property, target_id, url_prefix="") %}
+<li id="property-{{property.id}}">
+  {% if property.vetoed_by|length > 0 %}
+  <s>{{property.name}}</s>
+  [<a
+    href="/user/anonymous/unveto{{url_prefix}}/property/{{property.name}}"
+    hx-get="/user/anonymous/unveto{{url_prefix}}/property/{{property.name}}"
+    hx-target="#{{target_id}}"
+    hx-swap="outerHTML"
+    >unveto</a
+  >] {% else %}
+  {{property.name}}
+  [<a
+    href="/user/anonymous/veto{{url_prefix}}/property/{{property.name}}"
+    hx-get="/user/anonymous/veto{{url_prefix}}/property/{{property.name}}"
+    hx-target="#{{target_id}}"
+    hx-swap="outerHTML"
+    >veto</a
+  >]
+  {% endif %}
+</li>
+{% endmacro %}
+
+{% macro object_property_item(property, object_name) %}
+<li id="property-{{property.id}}">
+  {% if property.vetoed_by|length > 0 %}
+  <s>{{property.name}}</s>
+  [<a
+    href="/user/anonymous/unveto/object/{{object_name}}/property/{{property.name}}"
+    hx-get="/user/anonymous/unveto/object/{{object_name}}/property/{{property.name}}"
+    hx-target="#objects-list"
+    hx-swap="outerHTML"
+    >unveto</a
+  >] {% else %}
+  {{property.name}}
+  [<a
+    href="/user/anonymous/veto/object/{{object_name}}/property/{{property.name}}"
+    hx-get="/user/anonymous/veto/object/{{object_name}}/property/{{property.name}}"
+    hx-target="#objects-list"
+    hx-swap="outerHTML"
+    >veto</a
+  >]
+  {% endif %}
+</li>
+{% endmacro %}
+
+{% macro standalone_property_item(property) %}
+<li>
+  {% if property.vetoed_by|length > 0 %} <s>{{property.name}}</s>
+  [<a
+    href="/user/anonymous/unveto/property/{{property.name}}"
+    hx-get="/user/anonymous/unveto/property/{{property.name}}"
+    hx-target="#standalone-properties"
+    hx-swap="outerHTML"
+    >unveto</a>] {%
+  else %}
+  {{property.name}}
+  [<a
+    href="/user/anonymous/veto/property/{{property.name}}"
+    hx-get="/user/anonymous/veto/property/{{property.name}}"
+    hx-target="#standalone-properties"
+    hx-swap="outerHTML"
+    >veto</a
+  >]
+  {% endif %}
+</li>
+{% endmacro %}

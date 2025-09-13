@@ -1,3 +1,4 @@
+{% from "macros.html" import object_property_item, standalone_property_item %}
 <html>
   <head>
     <title>Properties</title>
@@ -18,27 +19,7 @@
         {{object.name}}
         <ul>
           {% for property in object.properties %}
-
-          <li id="property-{{property.id}}">
-            {% if property.vetoed_by|length >0 %}
-            <s>{{property.name}}</s>
-            [<a
-              href="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
-              hx-get="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
-              hx-target="#objects-list"
-              hx-swap="outerHTML"
-              >unveto</a
-            >] {% else %}
-            {{property.name}}
-            [<a
-              href="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
-              hx-get="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
-              hx-target="#objects-list"
-              hx-swap="outerHTML"
-              >veto</a
-            >]
-            {% endif %}
-          </li>
+          {{ object_property_item(property, object.name) }}
           {% endfor %}
         </ul>
       </li>
@@ -48,25 +29,7 @@
     <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}}</h4>
     <ul id="standalone-properties">
       {% for property in properties %}
-      <li>
-        {% if property.vetoed_by|length >0 %} <s>{{property.name}}</s>
-        [<a
-          href="/user/anonymous/unveto/property/{{property.name}}"
-          hx-get="/user/anonymous/unveto/property/{{property.name}}"
-          hx-target="#standalone-properties"
-          hx-swap="outerHTML"
-          >unveto</a>] {%
-        else %}
-        {{property.name}}
-        [<a
-          href="/user/anonymous/veto/property/{{property.name}}"
-          hx-get="/user/anonymous/veto/property/{{property.name}}"
-          hx-target="#standalone-properties"
-          hx-swap="outerHTML"
-          >veto</a
-        >]
-        {% endif %}
-      </li>
+      {{ standalone_property_item(property) }}
       {% endfor %}
     </ul>
 
