@@ -83,39 +83,61 @@ def check_trailing_newlines(fix: bool = False) -> bool:
         return True
 
 
-@click.command()
-@click.option("--check", is_flag=True, help="Run code quality checks")
+@click.group(invoke_without_command=True)
+@click.pass_context
+@click.help_option("-h", "--help")
+def cli(ctx):
+    """SAVT Quality Assurance Tool
+
+    \b
+    Examples:
+      qa check                   - run all checks (no fixes)
+      qa check --fix-all         - run checks with all fixes
+      qa check --fix-format      - fix formatting only
+      qa check --fix-lint        - fix linting only
+      qa check --fix-newlines    - fix newlines only
+      qa check --skip-tests      - skip test execution
+      qa check fix-all           - equivalent to 'qa check --fix-all'
+      qa fix-all                 - shortcut for 'qa check --fix-all'
+    """
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@cli.group(invoke_without_command=True)
+@click.help_option("-h", "--help")
+@click.option("--fix-all", is_flag=True, help="Auto-fix all issues")
 @click.option("--fix-format", is_flag=True, help="Auto-fix formatting issues")
 @click.option("--fix-lint", is_flag=True, help="Auto-fix linting issues")
 @click.option("--fix-newlines", is_flag=True, help="Auto-fix trailing newlines")
-@click.option(
-    "--fix", is_flag=True, help="Auto-fix all issues (equivalent to all --fix-* flags)"
-)
 @click.option("--skip-tests", is_flag=True, help="Skip running tests")
 @click.pass_context
-def cli(
+def check(
     ctx,
-    check: bool,
+    fix_all: bool,
     fix_format: bool,
     fix_lint: bool,
     fix_newlines: bool,
-    fix: bool,
     skip_tests: bool,
 ) -> None:
-    """SAVT Code Quality Checker
+    """Run code quality checks (default: check only, no fixes)"""
+    # If called without subcommand, run the actual check logic
+    if ctx.invoked_subcommand is None:
+        _run_checks(fix_all, fix_format, fix_lint, fix_newlines, skip_tests)
 
-    Run code quality checks with granular fix options.
-    """
-    # If no options provided, show help
-    if not any([check, fix_format, fix_lint, fix_newlines, fix, skip_tests]):
-        click.echo(ctx.get_help())
-        return
 
-    # If --check or any fix option is provided, run checks
+def _run_checks(
+    fix_all: bool,
+    fix_format: bool,
+    fix_lint: bool,
+    fix_newlines: bool,
+    skip_tests: bool,
+) -> None:
+    """Internal function to run the actual checks."""
     console.print()
 
-    # If --fix is used, enable all fix options
-    if fix:
+    # If --fix-all is used, enable all fix options
+    if fix_all:
         fix_format = fix_lint = fix_newlines = True
         console.print("🔧 Running in full fix mode...", style="yellow")
         console.print()
@@ -165,7 +187,7 @@ def cli(
         console.print()
 
     # Summary
-    if fix or fix_format or fix_lint or fix_newlines:
+    if fix_all or fix_format or fix_lint or fix_newlines:
         if success:
             console.print("🔧 All checks completed with fixes applied!", style="green")
         else:
@@ -180,6 +202,22 @@ def cli(
 
     if not success:
         sys.exit(1)
+
+
+@check.command(name="fix-all")
+@click.help_option("-h", "--help")
+@click.option("--skip-tests", is_flag=True, help="Skip running tests")
+def check_fix_all(skip_tests: bool) -> None:
+    """Run checks with all fixes applied"""
+    _run_checks(True, False, False, False, skip_tests)  # fix_all=True enables all fixes
+
+
+@cli.command(name="fix-all")
+@click.help_option("-h", "--help")
+@click.option("--skip-tests", is_flag=True, help="Skip running tests")
+def fix_all_command(skip_tests: bool) -> None:
+    """Run all checks with auto-fixes applied"""
+    _run_checks(True, False, False, False, skip_tests)  # fix_all=True enables all fixes
 
 
 if __name__ == "__main__":
