@@ -251,12 +251,14 @@ def requirements(*reqs: str):
 
 
 @click.group()
+@click.help_option("-h", "--help")
 def cli():
     """pytreqt - pytest requirements tracking"""
     pass
 
 
 @cli.command()
+@click.help_option("-h", "--help")
 def coverage():
     """Generate TEST_COVERAGE.md report"""
     from .tools.generate_coverage_report import main as coverage_main
@@ -265,6 +267,7 @@ def coverage():
 
 
 @cli.command()
+@click.help_option("-h", "--help")
 def changes():
     """Check for requirement changes"""
     from .tools.change_detector import main as changes_main
@@ -273,6 +276,7 @@ def changes():
 
 
 @cli.command()
+@click.help_option("-h", "--help")
 def update():
     """Update all traceability artifacts"""
     from .tools.update_traceability import main as update_main
