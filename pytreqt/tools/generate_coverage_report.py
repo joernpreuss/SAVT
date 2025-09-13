@@ -39,7 +39,7 @@ def get_test_coverage():
             ["uv", "run", "pytest", "--requirements-only", "-v"],
             capture_output=True,
             text=True,
-            cwd=Path.cwd()
+            cwd=Path.cwd(),
         )
 
         if result.returncode != 0 and "skipped" not in result.stdout:
@@ -48,18 +48,18 @@ def get_test_coverage():
 
         # Parse the requirements coverage output
         coverage_data = defaultdict(list)
-        lines = result.stdout.split('\n')
+        lines = result.stdout.split("\n")
 
         current_req = None
         for line in lines:
             line = line.strip()
 
             # Look for requirement headers like "  BR-3.3:"
-            if re.match(r'^[A-Z]+-\d+\.?\d*:$', line):
-                current_req = line.rstrip(':')
+            if re.match(r"^[A-Z]+-\d+\.?\d*:$", line):
+                current_req = line.rstrip(":")
 
             # Look for test entries like "    ⊝ test_veto_idempotency"
-            elif current_req and line.startswith('⊝'):
+            elif current_req and line.startswith("⊝"):
                 test_name = line[2:].strip()  # Remove "⊝ " prefix
                 coverage_data[current_req].append(test_name)
 
@@ -78,7 +78,7 @@ def get_previous_coverage():
 
     try:
         content = coverage_file.read_text(encoding="utf-8")
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         # Extract previous stats
         previous_data = {}
@@ -86,24 +86,28 @@ def get_previous_coverage():
             if "Last updated" in line:
                 # Extract date from **Last updated**: 2025-09-13**
                 import re
-                match = re.search(r'Last updated\*\*:\s*([^\*]+)', line)
+
+                match = re.search(r"Last updated\*\*:\s*([^\*]+)", line)
                 if match:
-                    previous_data['timestamp'] = match.group(1).strip()
+                    previous_data["timestamp"] = match.group(1).strip()
             elif "Total Requirements" in line:
                 import re
-                match = re.search(r'(\d+)', line)
+
+                match = re.search(r"(\d+)", line)
                 if match:
-                    previous_data['total_requirements'] = int(match.group(1))
+                    previous_data["total_requirements"] = int(match.group(1))
             elif "Requirements with Tests" in line:
                 import re
-                match = re.search(r'(\d+)', line)
+
+                match = re.search(r"(\d+)", line)
                 if match:
-                    previous_data['tested_requirements'] = int(match.group(1))
+                    previous_data["tested_requirements"] = int(match.group(1))
             elif "Coverage Percentage" in line:
                 import re
-                match = re.search(r'([\d.]+)%', line)
+
+                match = re.search(r"([\d.]+)%", line)
                 if match:
-                    previous_data['coverage_percentage'] = float(match.group(1))
+                    previous_data["coverage_percentage"] = float(match.group(1))
 
         return previous_data if previous_data else None
     except Exception:
@@ -117,9 +121,10 @@ def coverage_changed(previous, current):
 
     # Check if key metrics changed
     return (
-        previous.get('total_requirements') != current['total_requirements'] or
-        previous.get('tested_requirements') != current['tested_requirements'] or
-        abs(previous.get('coverage_percentage', 0) - current['coverage_percentage']) > 0.1
+        previous.get("total_requirements") != current["total_requirements"]
+        or previous.get("tested_requirements") != current["tested_requirements"]
+        or abs(previous.get("coverage_percentage", 0) - current["coverage_percentage"])
+        > 0.1
     )
 
 
@@ -134,16 +139,22 @@ def generate_coverage_matrix():
     # Get previous coverage to check if it changed
     previous_coverage = get_previous_coverage()
     current_coverage_data = {
-        'total_requirements': len(all_requirements),
-        'tested_requirements': len(test_coverage),
-        'coverage_percentage': len(test_coverage) / len(all_requirements) * 100 if all_requirements else 0
+        "total_requirements": len(all_requirements),
+        "tested_requirements": len(test_coverage),
+        "coverage_percentage": len(test_coverage) / len(all_requirements) * 100
+        if all_requirements
+        else 0,
     }
 
     # Only update timestamp if coverage actually changed
     if coverage_changed(previous_coverage, current_coverage_data):
-        timestamp = __import__('datetime').datetime.now().strftime('%Y-%m-%d')
+        timestamp = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
     else:
-        timestamp = previous_coverage.get('timestamp', 'unchanged') if previous_coverage else __import__('datetime').datetime.now().strftime('%Y-%m-%d')
+        timestamp = (
+            previous_coverage.get("timestamp", "unchanged")
+            if previous_coverage
+            else __import__("datetime").datetime.now().strftime("%Y-%m-%d")
+        )
 
     if not all_requirements:
         print("No requirements found!")
@@ -166,7 +177,7 @@ def generate_coverage_matrix():
         f"**Coverage Percentage**: {len(test_coverage) / len(all_requirements) * 100:.1f}%",
         "",
         "## Requirements Coverage",
-        ""
+        "",
     ]
 
     # Sort requirements by ID
@@ -176,11 +187,9 @@ def generate_coverage_matrix():
         tests = test_coverage.get(req_id, [])
         status = "✅ **Tested**" if tests else "❌ **Not Tested**"
 
-        report_lines.extend([
-            f"### {req_id}: {description}",
-            f"**Status**: {status}",
-            ""
-        ])
+        report_lines.extend(
+            [f"### {req_id}: {description}", f"**Status**: {status}", ""]
+        )
 
         if tests:
             report_lines.append("**Test Cases**:")
@@ -188,21 +197,21 @@ def generate_coverage_matrix():
                 report_lines.append(f"- `{test}`")
             report_lines.append("")
         else:
-            report_lines.extend([
-                "**Test Cases**: None",
-                "⚠️ *This requirement needs test coverage*",
-                ""
-            ])
+            report_lines.extend(
+                ["**Test Cases**: None", "⚠️ *This requirement needs test coverage*", ""]
+            )
 
     # Add untested requirements section
     untested = [req for req in all_requirements if req not in test_coverage]
     if untested:
-        report_lines.extend([
-            "## Requirements Needing Tests",
-            "",
-            "The following requirements have no test coverage:",
-            ""
-        ])
+        report_lines.extend(
+            [
+                "## Requirements Needing Tests",
+                "",
+                "The following requirements have no test coverage:",
+                "",
+            ]
+        )
 
         for req_id in sorted(untested):
             description = all_requirements[req_id]
@@ -212,20 +221,24 @@ def generate_coverage_matrix():
 
     # Add test statistics
     total_tests = sum(len(tests) for tests in test_coverage.values())
-    report_lines.extend([
-        "## Test Statistics",
-        "",
-        f"- **Total Test Cases with Requirements**: {total_tests}",
-        f"- **Unique Requirements Tested**: {len(test_coverage)}",
-        f"- **Average Tests per Requirement**: {total_tests / len(test_coverage):.1f}" if test_coverage else "- **Average Tests per Requirement**: 0",
-        "",
-        "---",
-        "",
-        "*This file is auto-generated by `pytreqt/generate_coverage_report.py`*",
-        "*To update, run: `uv run python pytreqt/generate_coverage_report.py`*"
-    ])
+    report_lines.extend(
+        [
+            "## Test Statistics",
+            "",
+            f"- **Total Test Cases with Requirements**: {total_tests}",
+            f"- **Unique Requirements Tested**: {len(test_coverage)}",
+            f"- **Average Tests per Requirement**: {total_tests / len(test_coverage):.1f}"
+            if test_coverage
+            else "- **Average Tests per Requirement**: 0",
+            "",
+            "---",
+            "",
+            "*This file is auto-generated by `pytreqt/generate_coverage_report.py`*",
+            "*To update, run: `uv run python pytreqt/generate_coverage_report.py`*",
+        ]
+    )
 
-    return '\n'.join(report_lines) + '\n'
+    return "\n".join(report_lines) + "\n"
 
 
 def main():
@@ -249,7 +262,9 @@ def main():
     coverage_file.write_text(report_content, encoding="utf-8")
 
     print(f"✅ Coverage report generated: {coverage_file}")
-    print(f"📊 Coverage summary: {len(extract_requirements_from_specs())} total requirements")
+    print(
+        f"📊 Coverage summary: {len(extract_requirements_from_specs())} total requirements"
+    )
 
 
 if __name__ == "__main__":

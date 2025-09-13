@@ -58,7 +58,7 @@ class RequirementChangeDetector:
             return {}
 
         try:
-            with open(self.cache_file, 'r') as f:
+            with open(self.cache_file, "r") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
             return {}
@@ -66,7 +66,7 @@ class RequirementChangeDetector:
     def save_cache(self, data):
         """Save the current requirements cache."""
         try:
-            with open(self.cache_file, 'w') as f:
+            with open(self.cache_file, "w") as f:
                 json.dump(data, f, indent=2)
         except IOError as e:
             print(f"Warning: Could not save cache: {e}")
@@ -78,7 +78,7 @@ class RequirementChangeDetector:
                 ["uv", "run", "pytest", "--requirements-only", "-v"],
                 capture_output=True,
                 text=True,
-                cwd=Path.cwd()
+                cwd=Path.cwd(),
             )
 
             if result.returncode != 0 and "skipped" not in result.stdout:
@@ -87,18 +87,18 @@ class RequirementChangeDetector:
 
             # Parse requirements to tests mapping
             req_to_tests = defaultdict(list)
-            lines = result.stdout.split('\n')
+            lines = result.stdout.split("\n")
 
             current_req = None
             for line in lines:
                 line = line.strip()
 
                 # Look for requirement headers like "  BR-3.3:"
-                if re.match(r'^[A-Z]+-\d+\.?\d*:$', line):
-                    current_req = line.rstrip(':')
+                if re.match(r"^[A-Z]+-\d+\.?\d*:$", line):
+                    current_req = line.rstrip(":")
 
                 # Look for test entries like "    ⊝ test_veto_idempotency"
-                elif current_req and line.startswith('⊝'):
+                elif current_req and line.startswith("⊝"):
                     test_name = line[2:].strip()  # Remove "⊝ " prefix
                     req_to_tests[current_req].append(test_name)
 
@@ -126,7 +126,7 @@ class RequirementChangeDetector:
             "added_requirements": [],
             "modified_requirements": [],
             "removed_requirements": [],
-            "affected_tests": set()
+            "affected_tests": set(),
         }
 
         if not changes["file_changed"]:
@@ -148,9 +148,11 @@ class RequirementChangeDetector:
         req_to_tests = self.get_test_coverage_mapping()
 
         # Collect affected tests
-        affected_reqs = (changes["added_requirements"] +
-                        changes["modified_requirements"] +
-                        changes["removed_requirements"])
+        affected_reqs = (
+            changes["added_requirements"]
+            + changes["modified_requirements"]
+            + changes["removed_requirements"]
+        )
 
         for req_id in affected_reqs:
             tests = req_to_tests.get(req_id, [])
@@ -162,7 +164,7 @@ class RequirementChangeDetector:
         new_cache = {
             "file_hash": current_file_hash,
             "requirement_hashes": current_req_hashes,
-            "last_check": __import__('datetime').datetime.now().isoformat()
+            "last_check": __import__("datetime").datetime.now().isoformat(),
         }
         self.save_cache(new_cache)
 
@@ -199,11 +201,15 @@ class RequirementChangeDetector:
             for test in sorted(changes["affected_tests"]):
                 print(f"   - {test}")
             print()
-            print(f"💡 Consider running: `uv run pytest -k \"{'|'.join(changes['affected_tests'][:5])}\" -v`")
+            print(
+                f'💡 Consider running: `uv run pytest -k "{"|".join(changes["affected_tests"][:5])}" -v`'
+            )
         else:
             print("ℹ️  No tests directly affected by requirement changes")
 
-        print(f"\n📊 Total impact: {len(changes['affected_tests'])} tests may need review")
+        print(
+            f"\n📊 Total impact: {len(changes['affected_tests'])} tests may need review"
+        )
 
 
 def main():

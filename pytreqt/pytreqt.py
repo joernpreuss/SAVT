@@ -37,7 +37,9 @@ class RequirementsCollector:
         if self._valid_requirements is not None:
             return self._valid_requirements
 
-        requirements_file = Path(__file__).parent.parent / "specs" / "spec" / "REQUIREMENTS.md"
+        requirements_file = (
+            Path(__file__).parent.parent / "specs" / "spec" / "REQUIREMENTS.md"
+        )
         if not requirements_file.exists():
             self._valid_requirements = set()
             return self._valid_requirements
@@ -63,8 +65,8 @@ class RequirementsCollector:
         if invalid_requirements:
             invalid_list = ", ".join(sorted(invalid_requirements))
             raise ValueError(
-                f"Test '{test_name}' references invalid requirements: {invalid_list}. " +
-                f"Valid requirements are defined in REQUIREMENTS.md"
+                f"Test '{test_name}' references invalid requirements: {invalid_list}. "
+                + f"Valid requirements are defined in REQUIREMENTS.md"
             )
 
     def collect_test_requirements(self, item):
@@ -258,6 +260,7 @@ def cli():
 def coverage():
     """Generate TEST_COVERAGE.md report"""
     from .tools.generate_coverage_report import main as coverage_main
+
     coverage_main()
 
 
@@ -265,6 +268,7 @@ def coverage():
 def changes():
     """Check for requirement changes"""
     from .tools.change_detector import main as changes_main
+
     changes_main()
 
 
@@ -272,6 +276,7 @@ def changes():
 def update():
     """Update all traceability artifacts"""
     from .tools.update_traceability import main as update_main
+
     update_main()
 
 

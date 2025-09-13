@@ -38,7 +38,7 @@ def main():
             ["uv", "run", "python", "pytreqt/tools/change_detector.py"],
             cwd=Path.cwd(),
             capture_output=True,
-            text=True
+            text=True,
         )
         # Note: change_detector exits with 1 if changes found, 0 if no changes
         if result.returncode == 1:
@@ -52,7 +52,7 @@ def main():
     success = run_command(
         ["uv", "run", "python", "pytreqt/tools/generate_coverage_report.py"],
         "2️⃣  Regenerating TEST_COVERAGE.md",
-        suppress_output=True
+        suppress_output=True,
     )
 
     if not success:
@@ -60,8 +60,7 @@ def main():
 
     # Run tests with requirements coverage
     success = run_command(
-        ["uv", "run", "pytest", "-q"],
-        "3️⃣  Running tests with requirements coverage"
+        ["uv", "run", "pytest", "-q"], "3️⃣  Running tests with requirements coverage"
     )
 
     if success:

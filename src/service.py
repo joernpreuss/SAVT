@@ -7,11 +7,12 @@ from sqlmodel import (
     select,
 )
 
+from .constants import MAX_NAME_LENGTH
 from .logging_config import get_logger
 from .logging_utils import log_database_operation, log_user_action
 from .models import Feature, Item
 
-logger = get_logger(__name__)
+logger: Final = get_logger(__name__)
 
 
 class ItemAlreadyExistsError(ValueError):
@@ -20,6 +21,48 @@ class ItemAlreadyExistsError(ValueError):
 
 class FeatureAlreadyExistsError(ValueError):
     pass
+
+
+def _validate_name(name: str, entity_type: str) -> None:
+    """Validate entity name (common validation for items and features).
+
+    Args:
+        name: The name to validate
+        entity_type: Type of entity ('Item' or 'Feature') for error messages
+
+    Raises:
+        ValueError: If name is empty or too long
+    """
+    if not name or not name.strip():
+        logger.warning(
+            f"{entity_type} creation failed - empty name provided",
+            attempted_name=repr(name),
+        )
+        raise ValueError(f"{entity_type} name cannot be empty")
+
+    if len(name) > MAX_NAME_LENGTH:
+        logger.warning(
+            f"{entity_type} creation failed - name too long", name_length=len(name)
+        )
+        raise ValueError(
+            f"{entity_type} name cannot be longer than {MAX_NAME_LENGTH} characters"
+        )
+
+
+def _commit_and_refresh(session: Session, entity: Item | Feature) -> Item | Feature:
+    """Common pattern for committing and refreshing entities.
+
+    Args:
+        session: Database session
+        entity: Entity to commit and refresh
+
+    Returns:
+        The refreshed entity
+    """
+    session.add(entity)
+    session.commit()
+    session.refresh(entity)
+    return entity
 
 
 def get_items(session: Session) -> Sequence[Item]:
@@ -39,27 +82,13 @@ def get_item(session: Session, name: str) -> Item | None:
 def create_item(session: Session, item: Item) -> Item:
     logger.debug("Creating item", item_name=item.name)
 
-    # Validate that name is not empty
-    if not item.name or not item.name.strip():
-        logger.warning(
-            "Item creation failed - empty name provided",
-            attempted_name=repr(item.name),
-        )
-        raise ValueError("Item name cannot be empty")
-
-    # Validate name length
-    if len(item.name) > 100:
-        logger.warning(
-            "Item creation failed - name too long", name_length=len(item.name)
-        )
-        raise ValueError("Item name cannot be longer than 100 characters")
+    # Validate name using common validation function
+    _validate_name(item.name, "Item")
 
     same_name_item: Final = get_item(session, item.name)
 
     if not same_name_item:
-        session.add(item)
-        session.commit()
-        session.refresh(item)
+        _commit_and_refresh(session, item)
 
         log_database_operation(
             operation="create",
@@ -98,27 +127,13 @@ def create_feature(session: Session, feature: Feature) -> Feature:
         "Creating feature", feature_name=feature.name, created_by=feature.created_by
     )
 
-    # Validate that name is not empty
-    if not feature.name or not feature.name.strip():
-        logger.warning(
-            "Feature creation failed - empty name provided",
-            attempted_name=repr(feature.name),
-        )
-        raise ValueError("Feature name cannot be empty")
-
-    # Validate name length
-    if len(feature.name) > 100:
-        logger.warning(
-            "Feature creation failed - name too long", name_length=len(feature.name)
-        )
-        raise ValueError("Feature name cannot be longer than 100 characters")
+    # Validate name using common validation function
+    _validate_name(feature.name, "Feature")
 
     same_name_feature: Final = get_feature(session, feature.name, feature.item_id)
 
     if not same_name_feature:
-        session.add(feature)
-        session.commit()
-        session.refresh(feature)
+        _commit_and_refresh(session, feature)
 
         log_database_operation(
             operation="create",
