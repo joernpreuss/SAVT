@@ -157,10 +157,10 @@ class TestUserWorkflow:
         initial_response = client.get("/")
         initial_soup = BeautifulSoup(initial_response.content, "html.parser")
 
-        # Find a property to veto
-        pepperoni_link = initial_soup.find("a", string="Pepperoni")
-        assert pepperoni_link is not None
-        veto_url = pepperoni_link.get("href")
+        # Find a veto link to click
+        veto_link = initial_soup.find("a", string="veto")
+        assert veto_link is not None
+        veto_url = veto_link.get("href")
 
         # Step 1: Veto the property
         veto_response = client.get(veto_url)
@@ -171,7 +171,7 @@ class TestUserWorkflow:
         assert vetoed_pepperoni is not None
 
         # Find unveto link
-        unveto_link = veto_soup.find("a", string="undo")
+        unveto_link = veto_soup.find("a", string="unveto")
         assert unveto_link is not None
         unveto_url = unveto_link.get("href")
 
@@ -179,10 +179,14 @@ class TestUserWorkflow:
         unveto_response = client.get(unveto_url)
         unveto_soup = BeautifulSoup(unveto_response.content, "html.parser")
 
-        # Verify property is back to normal
-        normal_pepperoni = unveto_soup.find("a", string="Pepperoni")
-        assert normal_pepperoni is not None
-        assert "/veto/" in normal_pepperoni.get("href")
+        # Verify property is back to normal (not struck through)
+        normal_pepperoni = unveto_soup.find("s", string="Pepperoni")
+        assert normal_pepperoni is None
+
+        # Should have veto link available
+        veto_link = unveto_soup.find("a", string="veto")
+        assert veto_link is not None
+        assert "/veto/" in veto_link.get("href")
 
     def test_multiple_vetos_workflow(self, client, populated_data):
         """Test workflow with multiple vetoed properties."""

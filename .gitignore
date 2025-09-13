@@ -141,6 +141,3 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
-
-# Internal planning documents (not for public repo)
-.internal-planning/

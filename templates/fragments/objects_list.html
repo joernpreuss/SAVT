@@ -7,21 +7,22 @@
 
       <li id="property-{{property.id}}">
         {% if property.vetoed_by|length >0 %}
-        <s>{{property.name}}</s> (vetoed
-        <a
+        <s>{{property.name}}</s>
+        [<a
           href="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
           hx-get="/user/anonymous/unveto/object/{{object.name}}/property/{{property.name}}"
           hx-target="#objects-list"
           hx-swap="outerHTML"
-          >undo</a
-        >) {% else %}
-        <a
+          >unveto</a
+        >] {% else %}
+        {{property.name}}
+        [<a
           href="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
           hx-get="/user/anonymous/veto/object/{{object.name}}/property/{{property.name}}"
           hx-target="#objects-list"
           hx-swap="outerHTML"
-          >{{property.name}}</a
-        >
+          >veto</a
+        >]
         {% endif %}
       </li>
       {% endfor %}
