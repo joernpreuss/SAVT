@@ -11,14 +11,20 @@ A pytest plugin for validating and reporting functional requirements (FR) and bu
 - 📈 **Auto-generates** TEST_COVERAGE.md with traceability matrix
 - 🔍 **Change detection** identifies tests affected by requirement updates
 
-## Files
+## Structure
 
-- **`pytreqt.py`** - Main plugin module
-- **`__init__.py`** - Package initialization
-- **`generate_coverage_report.py`** - Auto-generates TEST_COVERAGE.md
-- **`change_detector.py`** - Detects requirement changes and affected tests
-- **`update_traceability.py`** - Updates all traceability artifacts
-- **`README.md`** - This documentation
+```
+pytreqt/
+├── __main__.py              # Central CLI entry point
+├── __init__.py              # Package initialization
+├── pytreqt.py               # Main pytest plugin
+├── README.md                # This documentation
+└── tools/                   # Standalone tools
+    ├── __init__.py
+    ├── generate_coverage_report.py  # Auto-generates TEST_COVERAGE.md
+    ├── change_detector.py           # Detects requirement changes
+    └── update_traceability.py       # Updates all artifacts
+```
 
 ## Configuration
 
@@ -36,22 +42,21 @@ Run any pytest command with `-v` to see requirements coverage:
 uv run pytest -v
 ```
 
-### Coverage Matrix Generation
-Auto-generate TEST_COVERAGE.md with complete traceability matrix:
+### Central CLI Interface
+Use the unified command interface:
 ```bash
-uv run python pytreqt/generate_coverage_report.py
+python -m pytreqt coverage     # Generate TEST_COVERAGE.md
+python -m pytreqt changes      # Check for requirement changes
+python -m pytreqt update       # Update all artifacts
+python -m pytreqt help         # Show available commands
 ```
 
-### Change Detection
-Check for requirement changes and identify affected tests:
+### Direct Tool Access
+Or run tools directly:
 ```bash
-uv run python pytreqt/change_detector.py
-```
-
-### Complete Traceability Update
-Update all traceability artifacts in one command:
-```bash
-uv run python pytreqt/update_traceability.py
+uv run python pytreqt/tools/generate_coverage_report.py
+uv run python pytreqt/tools/change_detector.py
+uv run python pytreqt/tools/update_traceability.py
 ```
 
 ## Test Format
