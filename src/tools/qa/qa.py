@@ -41,6 +41,7 @@ def check_trailing_newlines(fix: bool = False) -> bool:
 
     missing_files = []
 
+    # Check files with extensions
     for pattern in extensions:
         for file_path in Path(".").rglob(pattern):
             if any(part in exclude_dirs for part in file_path.parts):
@@ -50,6 +51,16 @@ def check_trailing_newlines(fix: bool = False) -> bool:
                     f.seek(-1, 2)  # Go to last byte
                     if f.read(1) != b"\n":
                         missing_files.append(file_path)
+
+    # Check specific root-level executable scripts
+    root_executables = ["pytreqt", "qa"]
+    for name in root_executables:
+        file_path = Path(name)
+        if file_path.is_file() and file_path.stat().st_size > 0:
+            with open(file_path, "rb") as f:
+                f.seek(-1, 2)  # Go to last byte
+                if f.read(1) != b"\n":
+                    missing_files.append(file_path)
 
     if missing_files:
         console.print("❌ Files missing trailing newlines:", style="red")
@@ -72,13 +83,8 @@ def check_trailing_newlines(fix: bool = False) -> bool:
         return True
 
 
-@click.group()
-def cli():
-    """SAVT Quality Assurance Tool"""
-    pass
-
-
-@cli.command()
+@click.command()
+@click.option("--check", is_flag=True, help="Run code quality checks")
 @click.option("--fix-format", is_flag=True, help="Auto-fix formatting issues")
 @click.option("--fix-lint", is_flag=True, help="Auto-fix linting issues")
 @click.option("--fix-newlines", is_flag=True, help="Auto-fix trailing newlines")
@@ -86,13 +92,26 @@ def cli():
     "--fix", is_flag=True, help="Auto-fix all issues (equivalent to all --fix-* flags)"
 )
 @click.option("--skip-tests", is_flag=True, help="Skip running tests")
-def check(
-    fix_format: bool, fix_lint: bool, fix_newlines: bool, fix: bool, skip_tests: bool
+@click.pass_context
+def cli(
+    ctx,
+    check: bool,
+    fix_format: bool,
+    fix_lint: bool,
+    fix_newlines: bool,
+    fix: bool,
+    skip_tests: bool,
 ) -> None:
     """SAVT Code Quality Checker
 
     Run code quality checks with granular fix options.
     """
+    # If no options provided, show help
+    if not any([check, fix_format, fix_lint, fix_newlines, fix, skip_tests]):
+        click.echo(ctx.get_help())
+        return
+
+    # If --check or any fix option is provided, run checks
     console.print()
 
     # If --fix is used, enable all fix options
