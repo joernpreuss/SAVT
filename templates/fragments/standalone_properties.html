@@ -1,21 +1,22 @@
 <ul id="standalone-properties">
   {% for property in properties %}
   <li>
-    {% if property.vetoed_by|length >0 %} <s>{{property.name}}</s> (vetoed
-    <a 
+    {% if property.vetoed_by|length >0 %} <s>{{property.name}}</s>
+    [<a
       href="/user/anonymous/unveto/property/{{property.name}}"
       hx-get="/user/anonymous/unveto/property/{{property.name}}"
       hx-target="#standalone-properties"
       hx-swap="outerHTML"
-      >undo</a>) {%
+      >unveto</a>] {%
     else %}
-    <a 
+    {{property.name}}
+    [<a
       href="/user/anonymous/veto/property/{{property.name}}"
       hx-get="/user/anonymous/veto/property/{{property.name}}"
       hx-target="#standalone-properties"
       hx-swap="outerHTML"
-      >{{property.name}}</a
-    >
+      >veto</a
+    >]
     {% endif %}
   </li>
   {% endfor %}

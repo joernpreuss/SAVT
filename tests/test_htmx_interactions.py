@@ -175,7 +175,7 @@ class TestDynamicContentUpdates:
         assert struck_property is not None
 
         # Should have unveto link
-        unveto_link = initial_soup.find("a", string="undo")
+        unveto_link = initial_soup.find("a", string="unveto")
         assert unveto_link is not None
         assert "/unveto/" in unveto_link.get("href")
 
@@ -194,10 +194,13 @@ class TestDynamicContentUpdates:
         )
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Should show property as normal (not struck through)
-        property_link = soup.find("a", string="Pepperoni")
-        assert property_link is not None
-        assert "/veto/" in property_link.get("href")
+        # Should show property as normal text with veto link
+        property_text = soup.find(string=lambda text: text and "Pepperoni" in text)
+        assert property_text is not None
+
+        veto_link = soup.find("a", string="veto")
+        assert veto_link is not None
+        assert "/veto/" in veto_link.get("href")
 
         # Should not be struck through
         struck_property = soup.find("s", string="Pepperoni")
@@ -216,8 +219,8 @@ class TestDynamicContentUpdates:
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should find the new property in the objects list
-        new_property_link = soup.find("a", string="New Topping")
-        assert new_property_link is not None
+        property_text = soup.find(string=lambda text: text and "New Topping" in text)
+        assert property_text is not None
 
         # Should be under the Pizza object
         pizza_section = soup.find(string="Pizza").parent
@@ -228,7 +231,7 @@ class TestDynamicContentUpdates:
             assert "New Topping" in pizza_property_names
         else:
             # If no ul found, just check that the new property exists somewhere
-            assert new_property_link is not None
+            assert property_text is not None
 
     def test_object_creation_updates_page(self, client):
         """Test object creation updates page content."""
@@ -347,10 +350,10 @@ class TestHTMXTargeting:
 
         # Should show both properties with different states
         pepperoni_vetoed = soup.find("s", string="Pepperoni")
-        mushrooms_link = soup.find("a", string="Mushrooms")
+        mushrooms_text = soup.find(string=lambda text: text and "Mushrooms" in text)
 
         assert pepperoni_vetoed is not None  # Vetoed property
-        assert mushrooms_link is not None  # Non-vetoed property
+        assert mushrooms_text is not None  # Non-vetoed property as plain text
 
 
 class TestHTMXFallbackBehavior:

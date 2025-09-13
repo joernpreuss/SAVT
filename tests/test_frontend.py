@@ -200,12 +200,13 @@ class TestVetoFunctionality:
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Find a property link that can be vetoed
-        veto_link = soup.find("a", href=lambda x: x and "/veto/property/" in x)
+        # Find a veto link that can be clicked
+        veto_link = soup.find("a", string="veto")
         assert veto_link is not None
 
-        property_name = veto_link.text
         veto_url = veto_link.get("href")
+        # Extract property name from URL
+        property_name = veto_url.split("/")[-1]
 
         # Veto the property
         veto_response = client.get(veto_url)
@@ -219,7 +220,7 @@ class TestVetoFunctionality:
         assert struck_property is not None
 
         # Should have unveto link
-        unveto_link = veto_soup.find("a", string="undo")
+        unveto_link = veto_soup.find("a", string="unveto")
         assert unveto_link is not None
         assert "/unveto/" in unveto_link.get("href")
 
@@ -230,7 +231,7 @@ class TestVetoFunctionality:
         veto_soup = BeautifulSoup(veto_response.content, "html.parser")
 
         # Find unveto link
-        unveto_link = veto_soup.find("a", string="undo")
+        unveto_link = veto_soup.find("a", string="unveto")
         assert unveto_link is not None
         unveto_url = unveto_link.get("href")
 
@@ -241,10 +242,14 @@ class TestVetoFunctionality:
         # Check property is no longer struck through
         unveto_soup = BeautifulSoup(unveto_response.content, "html.parser")
 
-        # Property should be back to normal (clickable link)
-        property_link = unveto_soup.find("a", string="Standalone")
-        assert property_link is not None
-        assert "/veto/" in property_link.get("href")
+        # Should have veto link again (not struck through)
+        veto_link = unveto_soup.find("a", string="veto")
+        assert veto_link is not None
+        assert "/veto/" in veto_link.get("href")
+
+        # Property name should not be struck through
+        struck_property = unveto_soup.find("s", string="Standalone")
+        assert struck_property is None
 
 
 class TestFormSubmission:
@@ -285,9 +290,10 @@ class TestFormSubmission:
         # Check new property appears under the object
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Find the property link
-        property_link = soup.find("a", string="Test Property")
-        assert property_link is not None
+        # Find the property in the objects list
+        # Look for text containing the property name
+        property_text = soup.find(string=lambda text: text and "Test Property" in text)
+        assert property_text is not None
 
     def test_create_standalone_property(self, client):
         """Test creating a property without an object."""
@@ -300,8 +306,11 @@ class TestFormSubmission:
         soup = BeautifulSoup(response.content, "html.parser")
         standalone_list = soup.find("ul", id="standalone-properties")
 
-        property_link = standalone_list.find("a", string="New Standalone")
-        assert property_link is not None
+        # Check the property appears in the standalone list
+        property_text = standalone_list.find(
+            string=lambda text: text and "New Standalone" in text
+        )
+        assert property_text is not None
 
 
 class TestHTMLValidation:

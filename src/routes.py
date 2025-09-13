@@ -25,23 +25,20 @@ router: Final = APIRouter()
 templates: Final = Jinja2Templates(directory="templates/")
 
 
-@router.get("/", response_class=HTMLResponse)
-async def list_properties(
-    *,
-    session: Session = Depends(get_session),
-    request: Request,
-    object_id: str | None = Cookie(default=None),
+def filter_standalone_properties(properties):
+    """Filter properties to return only standalone properties (object_id is None)."""
+    return [prop for prop in properties if prop.object_id is None]
+
+
+def render_full_page_response(
+    request: Request, session: Session, object_id: str | int | None = None
 ):
+    """Render the full properties page with both objects and standalone properties."""
     properties: Final = get_properties(session)
     objects: Final = get_objects(session)
-    # object_id = request.query_params.get("object_id")
+    standalone_properties = filter_standalone_properties(properties)
 
-    logger.info("Debug object_id", object_id=object_id)
-
-    # Create filtered properties list with explicit type
-    standalone_properties = [prop for prop in properties if prop.object_id is None]
-
-    response = templates.TemplateResponse(
+    return templates.TemplateResponse(
         request,
         "properties.html",
         {
@@ -52,7 +49,42 @@ async def list_properties(
         },
     )
 
-    return response
+
+def render_fragment_response(request: Request, session: Session, obj: str | None):
+    """Render appropriate fragment based on object property vs standalone property."""
+    properties: Final = get_properties(session)
+    objects: Final = get_objects(session)
+
+    if obj:  # Object property
+        return templates.TemplateResponse(
+            request,
+            "fragments/objects_list.html",
+            {
+                "objects": list(objects),
+                "settings": settings,
+            },
+        )
+    else:  # Standalone property
+        standalone_properties = filter_standalone_properties(properties)
+        return templates.TemplateResponse(
+            request,
+            "fragments/standalone_properties.html",
+            {
+                "properties": standalone_properties,
+                "settings": settings,
+            },
+        )
+
+
+@router.get("/", response_class=HTMLResponse)
+async def list_properties(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    object_id: str | None = Cookie(default=None),
+):
+    logger.info("Debug object_id", object_id=object_id)
+    return render_full_page_response(request, session, object_id)
 
 
 @router.post("/create/object/")
@@ -88,22 +120,7 @@ async def route_create_object(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        properties: Final = get_properties(session)
-        objects: Final = get_objects(session)
-
-        # Create filtered properties list
-        standalone_properties = [prop for prop in properties if prop.object_id is None]
-
-        return templates.TemplateResponse(
-            request,
-            "properties.html",
-            {
-                "properties": standalone_properties,
-                "objects": list(objects),
-                "object_id": object_id,
-                "settings": settings,
-            },
-        )
+        return render_full_page_response(request, session, object_id)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -138,22 +155,7 @@ async def route_create_property(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        properties: Final = get_properties(session)
-        objects: Final = get_objects(session)
-
-        # Create filtered properties list
-        standalone_properties = [p for p in properties if p.object_id is None]
-
-        return templates.TemplateResponse(
-            request,
-            "properties.html",
-            {
-                "properties": standalone_properties,
-                "objects": list(objects),
-                "object_id": prop.object_id,
-                "settings": settings,
-            },
-        )
+        return render_full_page_response(request, session, prop.object_id)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -192,31 +194,7 @@ async def route_veto_object_property(
 
     # If HTMX request, return updated fragment
     if "HX-Request" in request.headers:
-        properties: Final = get_properties(session)
-        objects: Final = get_objects(session)
-
-        if obj:  # Object property veto
-            return templates.TemplateResponse(
-                request,
-                "fragments/objects_list.html",
-                {
-                    "objects": list(objects),
-                    "settings": settings,
-                },
-            )
-        else:  # Standalone property veto
-            # Create filtered properties list
-            standalone_properties = [
-                prop for prop in properties if prop.object_id is None
-            ]
-            return templates.TemplateResponse(
-                request,
-                "fragments/standalone_properties.html",
-                {
-                    "properties": standalone_properties,
-                    "settings": settings,
-                },
-            )
+        return render_fragment_response(request, session, obj)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -249,30 +227,6 @@ async def route_unveto_object_property(
 
     # If HTMX request, return updated fragment
     if "HX-Request" in request.headers:
-        properties: Final = get_properties(session)
-        objects: Final = get_objects(session)
-
-        if obj:  # Object property unveto
-            return templates.TemplateResponse(
-                request,
-                "fragments/objects_list.html",
-                {
-                    "objects": list(objects),
-                    "settings": settings,
-                },
-            )
-        else:  # Standalone property unveto
-            # Create filtered properties list
-            standalone_properties = [
-                prop for prop in properties if prop.object_id is None
-            ]
-            return templates.TemplateResponse(
-                request,
-                "fragments/standalone_properties.html",
-                {
-                    "properties": standalone_properties,
-                    "settings": settings,
-                },
-            )
+        return render_fragment_response(request, session, obj)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
