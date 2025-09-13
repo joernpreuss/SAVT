@@ -9,175 +9,173 @@ from sqlmodel import (
 
 from .logging_config import get_logger
 from .logging_utils import log_database_operation, log_user_action
-from .models import SVObject, SVProperty
+from .models import Feature, Item
 
 logger = get_logger(__name__)
 
 
-class ObjectAlreadyExistsError(ValueError):
+class ItemAlreadyExistsError(ValueError):
     pass
 
 
-class PropertyAlreadyExistsError(ValueError):
+class FeatureAlreadyExistsError(ValueError):
     pass
 
 
-def get_objects(session: Session) -> Sequence[SVObject]:
-    statement: Final = select(SVObject).options(selectinload(SVObject.properties))
+def get_items(session: Session) -> Sequence[Item]:
+    statement: Final = select(Item).options(selectinload(Item.features))
     results: Final = session.exec(statement)
-    objects: Final = results.all()
-    return objects  # type: ignore[no-any-return]
+    items: Final = results.all()
+    return items  # type: ignore[no-any-return]
 
 
-def get_object(session: Session, name: str) -> SVObject | None:
-    statement: Final = select(SVObject).where(SVObject.name == name)
+def get_item(session: Session, name: str) -> Item | None:
+    statement: Final = select(Item).where(Item.name == name)
     results: Final = session.exec(statement)
-    obj: Final = results.first()
-    return obj  # type: ignore[no-any-return]
+    item: Final = results.first()
+    return item  # type: ignore[no-any-return]
 
 
-def create_object(session: Session, obj: SVObject) -> SVObject:
-    logger.debug("Creating object", object_name=obj.name)
+def create_item(session: Session, item: Item) -> Item:
+    logger.debug("Creating item", item_name=item.name)
 
     # Validate that name is not empty
-    if not obj.name or not obj.name.strip():
+    if not item.name or not item.name.strip():
         logger.warning(
-            "Object creation failed - empty name provided",
-            attempted_name=repr(obj.name),
+            "Item creation failed - empty name provided",
+            attempted_name=repr(item.name),
         )
-        raise ValueError("Object name cannot be empty")
+        raise ValueError("Item name cannot be empty")
 
     # Validate name length
-    if len(obj.name) > 100:
+    if len(item.name) > 100:
         logger.warning(
-            "Object creation failed - name too long", name_length=len(obj.name)
+            "Item creation failed - name too long", name_length=len(item.name)
         )
-        raise ValueError("Object name cannot be longer than 100 characters")
+        raise ValueError("Item name cannot be longer than 100 characters")
 
-    same_name_object: Final = get_object(session, obj.name)
+    same_name_item: Final = get_item(session, item.name)
 
-    if not same_name_object:
-        session.add(obj)
+    if not same_name_item:
+        session.add(item)
         session.commit()
-        session.refresh(obj)
+        session.refresh(item)
 
         log_database_operation(
             operation="create",
-            table="SVObject",
+            table="Item",
             success=True,
-            object_name=obj.name,
-            object_id=obj.id,
+            item_name=item.name,
+            item_id=item.id,
         )
-        logger.info(
-            "Object created successfully", object_name=obj.name, object_id=obj.id
-        )
-        return obj
+        logger.info("Item created successfully", item_name=item.name, item_id=item.id)
+        return item
     else:
-        logger.warning("Object creation failed - already exists", object_name=obj.name)
-        raise ObjectAlreadyExistsError(f"Object with name '{obj.name}' already exists")
+        logger.warning("Item creation failed - already exists", item_name=item.name)
+        raise ItemAlreadyExistsError(f"Item with name '{item.name}' already exists")
 
 
-def get_properties(session: Session) -> Sequence[SVProperty]:
-    statement: Final = select(SVProperty)
+def get_features(session: Session) -> Sequence[Feature]:
+    statement: Final = select(Feature)
     results: Final = session.exec(statement)
-    properties: Final = results.all()
-    return properties  # type: ignore[no-any-return]
+    features: Final = results.all()
+    return features  # type: ignore[no-any-return]
 
 
-def get_property(
-    session: Session, name: str, obj_id: int | None = None
-) -> SVProperty | None:
-    statement: Final = select(SVProperty).where(
-        SVProperty.name == name, SVProperty.object_id == obj_id
+def get_feature(
+    session: Session, name: str, item_id: int | None = None
+) -> Feature | None:
+    statement: Final = select(Feature).where(
+        Feature.name == name, Feature.item_id == item_id
     )
     results: Final = session.exec(statement)
-    prop: Final = results.first()
-    return prop  # type: ignore[no-any-return]
+    feature: Final = results.first()
+    return feature  # type: ignore[no-any-return]
 
 
-def create_property(session: Session, prop: SVProperty) -> SVProperty:
+def create_feature(session: Session, feature: Feature) -> Feature:
     logger.debug(
-        "Creating property", property_name=prop.name, created_by=prop.created_by
+        "Creating feature", feature_name=feature.name, created_by=feature.created_by
     )
 
     # Validate that name is not empty
-    if not prop.name or not prop.name.strip():
+    if not feature.name or not feature.name.strip():
         logger.warning(
-            "Property creation failed - empty name provided",
-            attempted_name=repr(prop.name),
+            "Feature creation failed - empty name provided",
+            attempted_name=repr(feature.name),
         )
-        raise ValueError("Property name cannot be empty")
+        raise ValueError("Feature name cannot be empty")
 
     # Validate name length
-    if len(prop.name) > 100:
+    if len(feature.name) > 100:
         logger.warning(
-            "Property creation failed - name too long", name_length=len(prop.name)
+            "Feature creation failed - name too long", name_length=len(feature.name)
         )
-        raise ValueError("Property name cannot be longer than 100 characters")
+        raise ValueError("Feature name cannot be longer than 100 characters")
 
-    same_name_property: Final = get_property(session, prop.name)
+    same_name_feature: Final = get_feature(session, feature.name, feature.item_id)
 
-    if not same_name_property:
-        session.add(prop)
+    if not same_name_feature:
+        session.add(feature)
         session.commit()
-        session.refresh(prop)
+        session.refresh(feature)
 
         log_database_operation(
             operation="create",
-            table="SVProperty",
+            table="Feature",
             success=True,
-            property_name=prop.name,
-            property_id=prop.id,
-            created_by=prop.created_by,
+            feature_name=feature.name,
+            feature_id=feature.id,
+            created_by=feature.created_by,
         )
 
-        if prop.created_by:
+        if feature.created_by:
             log_user_action(
-                action="create_property",
-                user=prop.created_by,
-                property_name=prop.name,
-                property_id=prop.id,
+                action="create_feature",
+                user=feature.created_by,
+                feature_name=feature.name,
+                feature_id=feature.id,
             )
 
-        logger.info("Property created successfully", property_name=prop.name)
-        return prop
+        logger.info("Feature created successfully", feature_name=feature.name)
+        return feature
 
     else:
         logger.warning(
-            "Property creation failed - already exists", property_name=prop.name
+            "Feature creation failed - already exists", feature_name=feature.name
         )
-        raise PropertyAlreadyExistsError(
-            f"Property with name '{prop.name}' already exists"
+        raise FeatureAlreadyExistsError(
+            f"Feature with name '{feature.name}' already exists"
         )
 
 
-def veto_object_property(
+def veto_item_feature(
     session: Session,
     user: str,
     name: str,
-    object_name: str | None = None,
+    item_name: str | None = None,
     veto: bool = True,
-) -> SVProperty | None:
+) -> Feature | None:
     action = "veto" if veto else "unveto"
     logger.debug(
-        f"Processing {action} for user={user}, property={name}, object={object_name}"
+        f"Processing {action} for user={user}, feature={name}, item={item_name}"
     )
 
-    object_id = None
-    if object_name:
-        obj = get_object(session=session, name=object_name)
-        logger.debug("Found object for action", action=action, object=obj)
-        if obj:
-            object_id = obj.id
+    item_id = None
+    if item_name:
+        item = get_item(session=session, name=item_name)
+        logger.debug("Found item for action", action=action, item=item)
+        if item:
+            item_id = item.id
     else:
-        object_id = None
+        item_id = None
 
-    prop = get_property(session=session, name=name, obj_id=object_id)
-    logger.debug("Found property for action", action=action, property=prop)
+    feature = get_feature(session=session, name=name, item_id=item_id)
+    logger.debug("Found feature for action", action=action, feature=feature)
 
-    if prop:
-        vetoed_by_set = set(prop.vetoed_by)
-        original_vetoed_by = set(prop.vetoed_by)
+    if feature:
+        vetoed_by_set = set(feature.vetoed_by)
+        original_vetoed_by = set(feature.vetoed_by)
 
         if veto:
             vetoed_by_set.add(user)
@@ -186,50 +184,50 @@ def veto_object_property(
 
         # Only update if there's a change
         if original_vetoed_by != vetoed_by_set:
-            prop.vetoed_by = sorted(vetoed_by_set)
+            feature.vetoed_by = sorted(vetoed_by_set)
 
             logger.debug(
-                "Updating property vetoed_by",
+                "Updating feature vetoed_by",
                 from_vetoed_by=sorted(original_vetoed_by),
-                to_vetoed_by=prop.vetoed_by,
+                to_vetoed_by=feature.vetoed_by,
             )
             session.commit()
-            session.refresh(prop)
+            session.refresh(feature)
 
             log_database_operation(
                 operation="update",
-                table="SVProperty",
+                table="Feature",
                 success=True,
-                property_name=prop.name,
-                property_id=prop.id,
+                feature_name=feature.name,
+                feature_id=feature.id,
                 action=action,
             )
 
             log_user_action(
-                action=f"{action}_property",
+                action=f"{action}_feature",
                 user=user,
-                property_name=prop.name,
-                object_name=object_name,
-                vetoed_by_count=len(prop.vetoed_by),
+                feature_name=feature.name,
+                item_name=item_name,
+                vetoed_by_count=len(feature.vetoed_by),
             )
 
             logger.info(
-                "Property action completed successfully",
+                "Feature action completed successfully",
                 action=action,
                 user=user,
-                property_name=prop.name,
+                feature_name=feature.name,
             )
         else:
             logger.debug(
                 "No change needed for action",
                 action=action,
                 user=user,
-                property_name=prop.name,
+                feature_name=feature.name,
             )
     else:
         logger.warning(
-            f"Property not found for {action}",
-            extra={"property_name": name, "object_name": object_name, "user": user},
+            f"Feature not found for {action}",
+            extra={"feature_name": name, "item_name": item_name, "user": user},
         )
 
-    return prop
+    return feature

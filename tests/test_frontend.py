@@ -12,7 +12,7 @@ from sqlmodel import Session
 from src.config import settings
 from src.database import get_session
 from src.main import app
-from src.models import SVObject, SVProperty
+from src.models import Feature, Item
 
 
 @pytest.fixture(name="client")
@@ -31,27 +31,27 @@ def client_fixture(session: Session):
 @pytest.fixture
 def sample_data(session):
     """Create sample data for testing."""
-    # Create objects
-    pizza = SVObject(name="Pizza")
-    salad = SVObject(name="Salad")
+    # Create items
+    pizza = Item(name="Pizza")
+    salad = Item(name="Salad")
     session.add(pizza)
     session.add(salad)
     session.commit()
     session.refresh(pizza)
     session.refresh(salad)
 
-    # Create properties
-    pepperoni = SVProperty(name="Pepperoni", object_id=pizza.id)
-    mushrooms = SVProperty(name="Mushrooms", object_id=pizza.id)
-    croutons = SVProperty(name="Croutons", object_id=salad.id)
-    standalone_prop = SVProperty(name="Standalone")
+    # Create features
+    pepperoni = Feature(name="Pepperoni", item_id=pizza.id)
+    mushrooms = Feature(name="Mushrooms", item_id=pizza.id)
+    croutons = Feature(name="Croutons", item_id=salad.id)
+    standalone_feature = Feature(name="Standalone")
 
-    session.add_all([pepperoni, mushrooms, croutons, standalone_prop])
+    session.add_all([pepperoni, mushrooms, croutons, standalone_feature])
     session.commit()
 
     return {
         "objects": [pizza, salad],
-        "properties": [pepperoni, mushrooms, croutons, standalone_prop],
+        "properties": [pepperoni, mushrooms, croutons, standalone_feature],
     }
 
 
@@ -67,7 +67,7 @@ class TestHTMLRendering:
 
         # Check basic HTML structure
         assert soup.find("title")
-        assert soup.find("title").text == "Properties"
+        assert soup.find("title").text == "Features"
         assert soup.find("h1")
         assert soup.find("h1").text == settings.app_name
 
@@ -81,56 +81,56 @@ class TestHTMLRendering:
         )
         assert css_link is not None
 
-    def test_objects_list_rendering(self, client, sample_data):
-        """Test objects and properties are rendered correctly."""
+    def test_items_list_rendering(self, client, sample_data):
+        """Test items and features are rendered correctly."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Check objects list exists
-        objects_list = soup.find("ul", id="objects-list")
-        assert objects_list is not None
+        # Check items list exists
+        items_list = soup.find("ul", id="objects-list")
+        assert items_list is not None
 
-        # Check objects are rendered
-        object_items = objects_list.find_all("li", recursive=False)
-        assert len(object_items) >= 2  # Pizza and Salad
+        # Check items are rendered
+        item_elements = items_list.find_all("li", recursive=False)
+        assert len(item_elements) >= 2  # Pizza and Salad
 
-        # Check properties are nested under objects
-        for obj_item in object_items:
-            properties_list = obj_item.find("ul")
-            if properties_list:
-                property_items = properties_list.find_all("li")
-                assert len(property_items) >= 0
+        # Check features are nested under items
+        for item_elem in item_elements:
+            features_list = item_elem.find("ul")
+            if features_list:
+                feature_items = features_list.find_all("li")
+                assert len(feature_items) >= 0
 
-    def test_standalone_properties_rendering(self, client, sample_data):
-        """Test standalone properties are rendered correctly."""
+    def test_standalone_features_rendering(self, client, sample_data):
+        """Test standalone features are rendered correctly."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Check standalone properties list exists
+        # Check standalone features list exists
         standalone_list = soup.find("ul", id="standalone-properties")
         assert standalone_list is not None
 
-        # Check standalone properties are rendered
-        property_items = standalone_list.find_all("li")
-        assert len(property_items) >= 1  # At least the standalone property
+        # Check standalone features are rendered
+        feature_items = standalone_list.find_all("li")
+        assert len(feature_items) >= 1  # At least the standalone feature
 
     def test_forms_rendering(self, client):
         """Test create forms are rendered correctly."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Check object creation form
-        object_form = soup.find("form", action="/create/object/")
-        assert object_form is not None
-        assert object_form.find("input", {"name": "name"}) is not None
-        assert object_form.find("button", type="submit") is not None
+        # Check item creation form
+        item_form = soup.find("form", action="/create/item/")
+        assert item_form is not None
+        assert item_form.find("input", {"name": "name"}) is not None
+        assert item_form.find("button", type="submit") is not None
 
-        # Check property creation form
-        property_form = soup.find("form", action="/create/property/")
-        assert property_form is not None
-        assert property_form.find("input", {"name": "name"}) is not None
-        assert property_form.find("select", {"name": "object_id"}) is not None
-        assert property_form.find("button", type="submit") is not None
+        # Check feature creation form
+        feature_form = soup.find("form", action="/create/feature/")
+        assert feature_form is not None
+        assert feature_form.find("input", {"name": "name"}) is not None
+        assert feature_form.find("select", {"name": "item_id"}) is not None
+        assert feature_form.find("button", type="submit") is not None
 
 
 class TestHTMXAttributes:
@@ -155,8 +155,8 @@ class TestHTMXAttributes:
 
     def test_unveto_links_have_htmx_attributes(self, client, sample_data):
         """Test unveto links have correct HTMX attributes."""
-        # First veto a property
-        client.get("/user/anonymous/veto/property/Standalone")
+        # First veto a feature
+        client.get("/user/anonymous/veto/feature/Standalone")
 
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -178,17 +178,17 @@ class TestHTMXAttributes:
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Check object creation form
-        object_form = soup.find("form", action="/create/object/")
-        assert object_form.get("hx-post") == "/create/object/"
-        assert object_form.get("hx-target") == "body"
-        assert object_form.get("hx-swap") == "outerHTML"
+        # Check item creation form
+        item_form = soup.find("form", action="/create/item/")
+        assert item_form.get("hx-post") == "/create/item/"
+        assert item_form.get("hx-target") == "body"
+        assert item_form.get("hx-swap") == "outerHTML"
 
-        # Check property creation form
-        property_form = soup.find("form", action="/create/property/")
-        assert property_form.get("hx-post") == "/create/property/"
-        assert property_form.get("hx-target") == "body"
-        assert property_form.get("hx-swap") == "outerHTML"
+        # Check feature creation form
+        feature_form = soup.find("form", action="/create/feature/")
+        assert feature_form.get("hx-post") == "/create/feature/"
+        assert feature_form.get("hx-target") == "body"
+        assert feature_form.get("hx-swap") == "outerHTML"
 
 
 class TestVetoFunctionality:
@@ -226,8 +226,8 @@ class TestVetoFunctionality:
 
     def test_unveto_property_restores_display(self, client, sample_data):
         """Test unvetoing a property restores normal display."""
-        # First veto a property
-        veto_response = client.get("/user/anonymous/veto/property/Standalone")
+        # First veto a feature
+        veto_response = client.get("/user/anonymous/veto/feature/Standalone")
         veto_soup = BeautifulSoup(veto_response.content, "html.parser")
 
         # Find unveto link
@@ -258,7 +258,7 @@ class TestFormSubmission:
     def test_create_object_form_submission(self, client):
         """Test object creation form submission."""
         response = client.post(
-            "/create/object/", data={"name": "Test Object"}, follow_redirects=True
+            "/create/item/", data={"name": "Test Object"}, follow_redirects=True
         )
         assert response.status_code == 200
 
@@ -283,7 +283,7 @@ class TestFormSubmission:
         pizza_id = sample_data["objects"][0].id
 
         response = client.post(
-            "/create/property/", data={"name": "Test Property", "object_id": pizza_id}
+            "/create/feature/", data={"name": "Test Property", "item_id": pizza_id}
         )
         assert response.status_code == 200
 
@@ -296,21 +296,21 @@ class TestFormSubmission:
         assert property_text is not None
 
     def test_create_standalone_property(self, client):
-        """Test creating a property without an object."""
+        """Test creating a feature without an item."""
         response = client.post(
-            "/create/property/", data={"name": "New Standalone", "object_id": ""}
+            "/create/feature/", data={"name": "New Standalone", "item_id": ""}
         )
         assert response.status_code == 200
 
-        # Check new property appears in standalone section
+        # Check new feature appears in standalone section
         soup = BeautifulSoup(response.content, "html.parser")
         standalone_list = soup.find("ul", id="standalone-properties")
 
-        # Check the property appears in the standalone list
-        property_text = standalone_list.find(
+        # Check the feature appears in the standalone list
+        feature_text = standalone_list.find(
             string=lambda text: text and "New Standalone" in text
         )
-        assert property_text is not None
+        assert feature_text is not None
 
 
 class TestHTMLValidation:
@@ -324,8 +324,8 @@ class TestHTMLValidation:
         # Required IDs for HTMX targets
         assert soup.find(id="objects-list") is not None
         assert soup.find(id="standalone-properties") is not None
-        assert soup.find(id="obj_name") is not None
-        assert soup.find(id="prop_name") is not None
+        assert soup.find(id="item_name") is not None
+        assert soup.find(id="feature_name") is not None
 
     def test_property_ids_are_unique(self, client, sample_data):
         """Test each property has a unique ID."""
@@ -363,7 +363,7 @@ class TestFragmentRendering:
     def test_objects_list_fragment_structure(self, client, sample_data):
         """Test objects list fragment has correct structure."""
         # Trigger an action that returns the objects list fragment
-        response = client.get("/user/anonymous/veto/object/Pizza/property/Pepperoni")
+        response = client.get("/user/anonymous/veto/item/Pizza/feature/Pepperoni")
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should be just the ul element with objects-list id
@@ -372,8 +372,8 @@ class TestFragmentRendering:
 
     def test_standalone_properties_fragment_structure(self, client, sample_data):
         """Test standalone properties fragment has correct structure."""
-        # Trigger an action that returns the standalone properties fragment
-        response = client.get("/user/anonymous/veto/property/Standalone")
+        # Trigger an action that returns the standalone features fragment
+        response = client.get("/user/anonymous/veto/feature/Standalone")
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should be just the ul element with standalone-properties id

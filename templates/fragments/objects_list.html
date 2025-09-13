@@ -1,11 +1,11 @@
-{% from "macros.html" import object_property_item %}
+{% from "macros.html" import item_feature_item %}
 <ul id="objects-list">
-  {% for object in objects %}
+  {% for item in items %}
   <li>
-    {{object.name}}
+    <strong>{{item.name}}</strong>{% if item.kind %} <span class="kind-badge">({{item.kind}})</span>{% endif %}
     <ul>
-      {% for property in object.properties %}
-      {{ object_property_item(property, object.name) }}
+      {% for feature in item.features %}
+      {{ item_feature_item(feature, item.name) }}
       {% endfor %}
     </ul>
   </li>

@@ -1,98 +1,98 @@
 import pytest
 from sqlmodel import Session
 
-from src.models import SVObject, SVProperty
+from src.models import Feature, Item
 from src.service import (
-    ObjectAlreadyExistsError,
-    PropertyAlreadyExistsError,
-    create_object,
-    create_property,
-    get_property,
-    veto_object_property,
+    FeatureAlreadyExistsError,
+    ItemAlreadyExistsError,
+    create_feature,
+    create_item,
+    get_feature,
+    veto_item_feature,
 )
 
 
-def test_create_object_with_property(
+def test_create_item_with_feature(
     session: Session,
     timestamp_str: str,
 ):
-    """Test object and property creation.
+    """Test item and feature creation.
 
     Covers:
-    - FR-1.1: Users can create objects with unique names
-    - FR-2.1: Users can create properties with names
-    - FR-2.2: Properties can be associated with objects
+    - FR-1.1: Users can create items with unique names
+    - FR-2.1: Users can create features with names
+    - FR-2.2: Features can be associated with items
     """
-    obj = SVObject(
-        name=f"test_object_{timestamp_str}",
+    item = Item(
+        name=f"test_item_{timestamp_str}",
     )
-    create_object(session, obj)
-    assert obj.id is not None
+    create_item(session, item)
+    assert item.id is not None
 
-    prop = SVProperty(
-        name=f"test_property_{timestamp_str}",
-        object_id=obj.id,
+    feature = Feature(
+        name=f"test_feature_{timestamp_str}",
+        item_id=item.id,
     )
-    create_property(session, prop)
-    assert prop.id is not None
+    create_feature(session, feature)
+    assert feature.id is not None
 
 
-def test_create_property_without_object(
+def test_create_feature_without_item(
     session: Session,
     timestamp_str: str,
 ):
-    """Test standalone property creation.
+    """Test standalone feature creation.
 
     Covers:
-    - FR-2.1: Users can create properties with names
-    - FR-2.2: Properties can be standalone (not tied to objects)
+    - FR-2.1: Users can create features with names
+    - FR-2.2: Features can be standalone (not tied to items)
     """
-    prop = SVProperty(
-        name=f"test_property_{timestamp_str}",
+    feature = Feature(
+        name=f"test_feature_{timestamp_str}",
     )
-    create_property(session, prop)
-    assert prop.id is not None
+    create_feature(session, feature)
+    assert feature.id is not None
 
 
-def test_create_object_conflict(session: Session, timestamp_str: str):
-    """Test object name uniqueness enforcement.
-
-    Covers:
-    - FR-1.2: Object names must be unique within the system
-    - FR-1.5: System prevents duplicate object creation (returns 409 error)
-    """
-    name = f"obj_{timestamp_str}"
-    create_object(session, SVObject(name=name))
-    with pytest.raises(ObjectAlreadyExistsError):
-        create_object(session, SVObject(name=name))
-
-
-def test_create_property_conflict(session: Session, timestamp_str: str):
-    """Test property name uniqueness enforcement.
+def test_create_item_conflict(session: Session, timestamp_str: str):
+    """Test item name uniqueness enforcement.
 
     Covers:
-    - FR-2.3: Property names must be unique within their scope
-    - FR-2.4: System prevents duplicate property creation (returns 409 error)
+    - FR-1.2: Item names must be unique within the system
+    - FR-1.5: System prevents duplicate item creation (returns 409 error)
     """
-    name = f"prop_{timestamp_str}"
-    create_property(session, SVProperty(name=name))
-    with pytest.raises(PropertyAlreadyExistsError):
-        create_property(session, SVProperty(name=name))
+    name = f"item_{timestamp_str}"
+    create_item(session, Item(name=name))
+    with pytest.raises(ItemAlreadyExistsError):
+        create_item(session, Item(name=name))
+
+
+def test_create_feature_conflict(session: Session, timestamp_str: str):
+    """Test feature name uniqueness enforcement.
+
+    Covers:
+    - FR-2.3: Feature names must be unique within their scope
+    - FR-2.4: System prevents duplicate feature creation (returns 409 error)
+    """
+    name = f"feature_{timestamp_str}"
+    create_feature(session, Feature(name=name))
+    with pytest.raises(FeatureAlreadyExistsError):
+        create_feature(session, Feature(name=name))
 
 
 def test_veto_idempotency(session: Session, timestamp_str: str):
     """Test that multiple veto operations by same user are idempotent.
 
     Covers:
-    - FR-3.2: Users can only veto once per property (idempotent operation)
+    - FR-3.2: Users can only veto once per feature (idempotent operation)
     - BR-3.3: Atomic operations - Veto/unveto operations are transactional
     """
     name = f"idem_{timestamp_str}"
-    create_property(session, SVProperty(name=name))
-    p1 = veto_object_property(session, user="alice", name=name, veto=True)
-    p2 = veto_object_property(session, user="alice", name=name, veto=True)
-    assert p1 and p2
-    assert p2.vetoed_by.count("alice") == 1
+    create_feature(session, Feature(name=name))
+    f1 = veto_item_feature(session, user="alice", name=name, veto=True)
+    f2 = veto_item_feature(session, user="alice", name=name, veto=True)
+    assert f1 and f2
+    assert f2.vetoed_by.count("alice") == 1
 
 
 def test_unveto_idempotency(session: Session, timestamp_str: str):
@@ -104,37 +104,37 @@ def test_unveto_idempotency(session: Session, timestamp_str: str):
     - BR-3.3: Atomic operations - Veto/unveto operations are transactional
     """
     name = f"unidem_{timestamp_str}"
-    create_property(session, SVProperty(name=name))
-    veto_object_property(session, user="alice", name=name, veto=True)
-    p1 = veto_object_property(session, user="alice", name=name, veto=False)
-    p2 = veto_object_property(session, user="alice", name=name, veto=False)
-    assert p1 and p2
-    assert "alice" not in p2.vetoed_by
+    create_feature(session, Feature(name=name))
+    veto_item_feature(session, user="alice", name=name, veto=True)
+    f1 = veto_item_feature(session, user="alice", name=name, veto=False)
+    f2 = veto_item_feature(session, user="alice", name=name, veto=False)
+    assert f1 and f2
+    assert "alice" not in f2.vetoed_by
 
 
-def test_object_scoped_veto(session: Session, timestamp_str: str):
-    """Test that vetoes are scoped correctly between standalone and object properties.
+def test_item_scoped_veto(session: Session, timestamp_str: str):
+    """Test that vetoes are scoped correctly between standalone and item features.
 
     Covers:
-    - FR-3.1: Any user can veto any property
-    - FR-3.5: System tracks which users vetoed each property
-    - FR-2.2: Properties can be standalone or associated with objects
+    - FR-3.1: Any user can veto any feature
+    - FR-3.5: System tracks which users vetoed each feature
+    - FR-2.2: Features can be standalone or associated with items
     """
-    obj = SVObject(name=f"o_{timestamp_str}")
-    create_object(session, obj)
+    item = Item(name=f"i_{timestamp_str}")
+    create_item(session, item)
 
-    # Create distinct property names (global uniqueness enforced by service)
-    standalone = SVProperty(name=f"p_standalone_{timestamp_str}")
-    for_object = SVProperty(name=f"p_for_object_{timestamp_str}", object_id=obj.id)
-    create_property(session, standalone)
-    create_property(session, for_object)
+    # Create distinct feature names (global uniqueness enforced by service)
+    standalone = Feature(name=f"f_standalone_{timestamp_str}")
+    for_item = Feature(name=f"f_for_item_{timestamp_str}", item_id=item.id)
+    create_feature(session, standalone)
+    create_feature(session, for_item)
 
-    # Veto only the object-scoped property
-    veto_object_property(
-        session, user="alice", name=for_object.name, object_name=obj.name, veto=True
+    # Veto only the item-scoped feature
+    veto_item_feature(
+        session, user="alice", name=for_item.name, item_name=item.name, veto=True
     )
 
-    s = get_property(session, name=standalone.name, obj_id=None)
-    o = get_property(session, name=for_object.name, obj_id=obj.id)
+    s = get_feature(session, name=standalone.name, item_id=None)
+    i = get_feature(session, name=for_item.name, item_id=item.id)
     assert s and "alice" not in s.vetoed_by
-    assert o and "alice" in o.vetoed_by
+    assert i and "alice" in i.vetoed_by

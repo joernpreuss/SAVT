@@ -11,12 +11,16 @@ from .config import settings
 def get_engine(_: str) -> Engine:
     # Use effective_database_url which handles both DATABASE_URL and DB_NAME
     sqlite_url = settings.effective_database_url
+    connect_args = {}
+
+    # Only disable thread checking in development/debug mode
+    if settings.debug and "sqlite" in sqlite_url:
+        connect_args["check_same_thread"] = False
+
     engine = create_engine(
         sqlite_url,
         # echo=True,
-        connect_args={
-            "check_same_thread": False,  # TODO remove in production
-        },
+        connect_args=connect_args,
         # poolclass=StaticPool,
     )
     return engine

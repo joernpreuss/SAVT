@@ -44,45 +44,49 @@ def _setup_logging_once() -> None:
     )
 
 
-def test_create_property(client: TestClient, timestamp_str: str):
-    """Test property creation via API endpoint.
+def test_create_feature(client: TestClient, timestamp_str: str):
+    """Test feature creation via API endpoint.
 
     Covers:
-    - FR-2.1: Users can create properties with names
-    - API responds with 200 status and created property data
+    - FR-2.1: Users can create features with names
+    - API responds with 200 status and created feature data
     """
     _setup_logging_once()
     response = client.post(
         "/api/users/test_user/properties",
-        json={"name": f"test_prop_per_api_{timestamp_str}"},
+        json={"name": f"test_feature_per_api_{timestamp_str}"},
     )
     assert response.status_code == 200
-    logging.info(f"create_property status: {response.status_code}")
+    logging.info(f"create_feature status: {response.status_code}")
     data = response.json()
-    _log_response_json("create_property response", data)
+    _log_response_json("create_feature response", data)
     assert "created" in data
-    assert data["created"]["name"].startswith("test_prop_per_api_")
+    assert data["created"]["name"].startswith("test_feature_per_api_")
 
 
 def test_two_vetos(client: TestClient, timestamp_str: str):
     _setup_logging_once()
-    prop_name = f"test_prop_controversial_two_{timestamp_str}"
+    feature_name = f"test_feature_controversial_two_{timestamp_str}"
 
     response = client.post(
-        "/api/users/test_user_pro/properties", json={"name": prop_name}
+        "/api/users/test_user_pro/properties", json={"name": feature_name}
     )
     assert response.status_code == 200
-    logging.info(f"create property status: {response.status_code}")
-    _log_response_json("create property", response.json())
+    logging.info(f"create feature status: {response.status_code}")
+    _log_response_json("create feature", response.json())
     # TODO check response content
 
-    response = client.post(f"/api/users/test_user_contra_1/properties/{prop_name}/veto")
+    response = client.post(
+        f"/api/users/test_user_contra_1/properties/{feature_name}/veto"
+    )
     assert response.status_code == 200
     logging.info(f"veto 1 status: {response.status_code}")
     _log_response_json("veto 1", response.json())
     # TODO check response content
 
-    response = client.post(f"/api/users/test_user_contra_2/properties/{prop_name}/veto")
+    response = client.post(
+        f"/api/users/test_user_contra_2/properties/{feature_name}/veto"
+    )
     assert response.status_code == 200
     logging.info(f"veto 2 status: {response.status_code}")
     _log_response_json("veto 2", response.json())
@@ -93,41 +97,45 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
     """Test that multiple veto attempts by same user are idempotent via API.
 
     Covers:
-    - FR-3.2: Users can only veto once per property (idempotent operation)
+    - FR-3.2: Users can only veto once per feature (idempotent operation)
     - API properly handles duplicate veto attempts
     """
     _setup_logging_once()
-    prop_name = f"test_prop_controversial_same_{timestamp_str}"
+    feature_name = f"test_feature_controversial_same_{timestamp_str}"
 
     response = client.post(
-        "/api/users/test_user_pro/properties", json={"name": prop_name}
+        "/api/users/test_user_pro/properties", json={"name": feature_name}
     )
     assert response.status_code == 200
-    logging.info(f"create property status: {response.status_code}")
-    _log_response_json("create property", response.json())
+    logging.info(f"create feature status: {response.status_code}")
+    _log_response_json("create feature", response.json())
     # TODO check response content
 
-    response = client.post(f"/api/users/test_user_contra/properties/{prop_name}/veto")
+    response = client.post(
+        f"/api/users/test_user_contra/properties/{feature_name}/veto"
+    )
     assert response.status_code == 200
     logging.info(f"veto 1 status: {response.status_code}")
     _log_response_json("veto 1", response.json())
     # TODO check response content
 
-    response = client.post(f"/api/users/test_user_contra/properties/{prop_name}/veto")
+    response = client.post(
+        f"/api/users/test_user_contra/properties/{feature_name}/veto"
+    )
     assert response.status_code == 200
     response_json = response.json()
     _log_response_json("veto 2 (same user)", response_json)
     assert len(response_json["vetoed"]["vetoed_by"]) == 1
 
 
-def test_create_property_conflict(client: TestClient, timestamp_str: str):
-    """Test property name uniqueness enforcement via API.
+def test_create_feature_conflict(client: TestClient, timestamp_str: str):
+    """Test feature name uniqueness enforcement via API.
 
     Covers:
-    - FR-2.3: Property names must be unique within their scope
-    - FR-2.4: System prevents duplicate property creation (returns 409 error)
+    - FR-2.3: Feature names must be unique within their scope
+    - FR-2.4: System prevents duplicate feature creation (returns 409 error)
     """
-    name = f"dup_prop_{timestamp_str}"
+    name = f"dup_feature_{timestamp_str}"
     r1 = client.post("/api/users/alice/properties", json={"name": name})
     assert r1.status_code == 200
     r2 = client.post("/api/users/bob/properties", json={"name": name})
@@ -135,13 +143,13 @@ def test_create_property_conflict(client: TestClient, timestamp_str: str):
     assert "already exists" in r2.json()["detail"].lower()
 
 
-def test_veto_then_unveto_property(client: TestClient, timestamp_str: str):
+def test_veto_then_unveto_feature(client: TestClient, timestamp_str: str):
     """Test veto/unveto cycle via API.
 
     Covers:
-    - FR-3.1: Any user can veto any property
+    - FR-3.1: Any user can veto any feature
     - FR-3.3: Users can unveto their own vetoes
-    - FR-3.5: System tracks which users vetoed each property
+    - FR-3.5: System tracks which users vetoed each feature
     - FR-3.6: Veto/unveto operations are immediate and persistent
     """
     name = f"veto_toggle_{timestamp_str}"
@@ -160,7 +168,7 @@ def test_veto_then_unveto_property(client: TestClient, timestamp_str: str):
     assert "alice" not in r.json()["unvetoed"]["vetoed_by"]
 
 
-def test_list_properties_sorted_and_flags(client: TestClient, timestamp_str: str):
+def test_list_features_sorted_and_flags(client: TestClient, timestamp_str: str):
     names = [f"a_{timestamp_str}", f"b_{timestamp_str}", f"c_{timestamp_str}"]
     for n in names:
         assert (
@@ -174,13 +182,13 @@ def test_list_properties_sorted_and_flags(client: TestClient, timestamp_str: str
     assert r.status_code == 200
     body = r.json()
     assert "properties" in body
-    props = body["properties"]
+    features = body["properties"]
     # All requested names present
-    returned_names = [p["name"] for p in props]
+    returned_names = [f["name"] for f in features]
     for n in names:
         assert n in returned_names
     # Sorted by vetoed flag then name
-    vetoed_flags = [p["vetoed"] for p in props]
+    vetoed_flags = [f["vetoed"] for f in features]
     assert vetoed_flags.count(True) >= 1
     # All False entries appear before any True entries
     first_true_index = next(

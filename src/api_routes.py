@@ -5,78 +5,78 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from .database import get_session
-from .models import SVProperty
+from .models import Feature
 from .service import (
-    PropertyAlreadyExistsError,
-    create_property,
-    get_properties,
-    veto_object_property,
+    FeatureAlreadyExistsError,
+    create_feature,
+    get_features,
+    veto_item_feature,
 )
 
 api_router: Final = APIRouter(prefix="/api")
 
 
-class PropertyName(BaseModel):
+class FeatureName(BaseModel):
     name: str
 
 
 @api_router.post("/properties")
-async def api_create_property(
-    *, session: Session = Depends(get_session), prop_name: PropertyName
+async def api_create_feature(
+    *, session: Session = Depends(get_session), feature_name: FeatureName
 ):
     try:
-        prop = create_property(session, SVProperty(name=prop_name.name))
-        return {"created": prop.model_dump()}
-    except PropertyAlreadyExistsError as e:
+        feature = create_feature(session, Feature(name=feature_name.name))
+        return {"created": feature.model_dump()}
+    except FeatureAlreadyExistsError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 @api_router.post("/users/{user}/properties")
-async def api_user_create_property(
-    *, session: Session = Depends(get_session), user: str, prop_name: PropertyName
+async def api_user_create_feature(
+    *, session: Session = Depends(get_session), user: str, feature_name: FeatureName
 ):
     try:
-        prop = create_property(
-            session, SVProperty(name=prop_name.name, created_by=user)
+        feature = create_feature(
+            session, Feature(name=feature_name.name, created_by=user)
         )
-        return {"created": prop.model_dump()}
-    except PropertyAlreadyExistsError as e:
+        return {"created": feature.model_dump()}
+    except FeatureAlreadyExistsError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 @api_router.post("/users/{user}/properties/{name}/veto")
-async def api_user_veto_property(
+async def api_user_veto_feature(
     *, session: Session = Depends(get_session), user: str, name: str
 ):
-    prop = veto_object_property(session, user, name, veto=True)
+    feature = veto_item_feature(session, user, name, veto=True)
 
-    if prop:
-        return {"vetoed": prop.model_dump()}
+    if feature:
+        return {"vetoed": feature.model_dump()}
     else:
-        raise HTTPException(status_code=404, detail=f'Property "{name}" not found')
+        raise HTTPException(status_code=404, detail=f'Feature "{name}" not found')
 
 
 @api_router.post("/users/{user}/properties/{name}/unveto")
-async def api_user_unveto_property(
+async def api_user_unveto_feature(
     *, session: Session = Depends(get_session), user: str, name: str
 ):
-    prop = veto_object_property(session, user, name, veto=False)
+    feature = veto_item_feature(session, user, name, veto=False)
 
-    if prop:
-        return {"unvetoed": prop.model_dump()}
+    if feature:
+        return {"unvetoed": feature.model_dump()}
     else:
-        raise HTTPException(status_code=404, detail=f'Property "{name}" not found')
+        raise HTTPException(status_code=404, detail=f'Feature "{name}" not found')
 
 
 @api_router.get("/properties")
-async def api_list_properties(
+async def api_list_features(
     *,
     session: Session = Depends(get_session),
 ):
-    properties = get_properties(session)
+    features = get_features(session)
 
-    # Define TypedDict for property structure
-    class PropertyDict(TypedDict):
+    # Define TypedDict for feature structure
+    class FeatureDict(TypedDict):
         name: str
         vetoed: bool
 
@@ -84,11 +84,11 @@ async def api_list_properties(
     return {
         "properties": sorted(
             [
-                PropertyDict(
-                    name=prop.name,
-                    vetoed=len(prop.vetoed_by) > 0,
+                FeatureDict(
+                    name=feature.name,
+                    vetoed=len(feature.vetoed_by) > 0,
                 )
-                for prop in properties
+                for feature in features
             ],
             key=lambda x: (x["vetoed"], x["name"].lower()),
         )
