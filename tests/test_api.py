@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -26,7 +27,7 @@ def client_fixture(session: Session):
 console = Console()
 
 
-def _log_response_json(title: str, response_json: dict | list) -> None:
+def _log_response_json(title: str, response_json: dict[str, Any] | list[Any]) -> None:
     pretty = json.dumps(response_json, indent=2, ensure_ascii=False)
     syntax = Syntax(pretty, "json", theme="monokai", word_wrap=False)
     console.rule(title)

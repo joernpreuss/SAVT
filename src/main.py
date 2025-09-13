@@ -14,7 +14,7 @@ from .routes import router
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(_app: FastAPI):
     # Setup logging first
     setup_logging()
     logger = get_logger(__name__)

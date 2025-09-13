@@ -50,6 +50,7 @@ select = [
 ignore = [
     "B008", # FastAPI uses Depends() in defaults, this is expected
 ]
+fixable = ["ALL"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -57,7 +58,7 @@ indent-style = "space"
 
 [tool.pytest.ini_options]
 # Enable custom requirements plugin
-addopts = "-p tests.pytest_requirements"
+addopts = "-p pytreqt.pytreqt"
 markers = [
     "requirements(fr_list, br_list): mark test with specific FR/BR requirements"
 ]

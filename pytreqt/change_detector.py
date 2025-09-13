@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""
+Detect changes in requirements and identify affected tests.
+"""
+
+import hashlib
+import json
+import re
+import subprocess
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+
+class RequirementChangeDetector:
+    """Detects changes in requirements and identifies affected tests."""
+
+    def __init__(self, cache_file="specs/.req_cache.json"):
+        self.cache_file = Path(cache_file)
+        self.requirements_file = Path("specs/spec/REQUIREMENTS.md")
+
+    def get_requirements_hash(self):
+        """Calculate hash of requirements file content."""
+        if not self.requirements_file.exists():
+            return None
+
+        content = self.requirements_file.read_text(encoding="utf-8")
+        return hashlib.sha256(content.encode()).hexdigest()
+
+    def extract_requirements(self):
+        """Extract requirements with their full text from REQUIREMENTS.md."""
+        if not self.requirements_file.exists():
+            return {}
+
+        content = self.requirements_file.read_text(encoding="utf-8")
+        requirements = {}
+
+        # Extract requirements with their descriptions
+        pattern = r"-\s+\*\*((?:FR|BR)-\d+\.?\d*)\*\*:\s+(.+)"
+        matches = re.findall(pattern, content, re.MULTILINE)
+
+        for req_id, description in matches:
+            requirements[req_id.upper()] = description.strip()
+
+        return requirements
+
+    def get_requirement_hashes(self, requirements):
+        """Calculate individual hashes for each requirement."""
+        req_hashes = {}
+        for req_id, description in requirements.items():
+            combined = f"{req_id}:{description}"
+            req_hashes[req_id] = hashlib.sha256(combined.encode()).hexdigest()
+        return req_hashes
+
+    def load_cache(self):
+        """Load the previous requirements cache."""
+        if not self.cache_file.exists():
+            return {}
+
+        try:
+            with open(self.cache_file, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {}
+
+    def save_cache(self, data):
+        """Save the current requirements cache."""
+        try:
+            with open(self.cache_file, 'w') as f:
+                json.dump(data, f, indent=2)
+        except IOError as e:
+            print(f"Warning: Could not save cache: {e}")
+
+    def get_test_coverage_mapping(self):
+        """Get mapping of requirements to tests from pytest output."""
+        try:
+            result = subprocess.run(
+                ["uv", "run", "pytest", "--requirements-only", "-v"],
+                capture_output=True,
+                text=True,
+                cwd=Path.cwd()
+            )
+
+            if result.returncode != 0 and "skipped" not in result.stdout:
+                print(f"Warning: pytest failed: {result.stderr}")
+                return {}
+
+            # Parse requirements to tests mapping
+            req_to_tests = defaultdict(list)
+            lines = result.stdout.split('\n')
+
+            current_req = None
+            for line in lines:
+                line = line.strip()
+
+                # Look for requirement headers like "  BR-3.3:"
+                if re.match(r'^[A-Z]+-\d+\.?\d*:$', line):
+                    current_req = line.rstrip(':')
+
+                # Look for test entries like "    ⊝ test_veto_idempotency"
+                elif current_req and line.startswith('⊝'):
+                    test_name = line[2:].strip()  # Remove "⊝ " prefix
+                    req_to_tests[current_req].append(test_name)
+
+            return dict(req_to_tests)
+
+        except Exception as e:
+            print(f"Warning: Could not get test coverage: {e}")
+            return {}
+
+    def detect_changes(self):
+        """Detect changes in requirements and identify affected tests."""
+        # Get current requirements
+        current_requirements = self.extract_requirements()
+        current_req_hashes = self.get_requirement_hashes(current_requirements)
+        current_file_hash = self.get_requirements_hash()
+
+        # Load previous state
+        cache = self.load_cache()
+        previous_req_hashes = cache.get("requirement_hashes", {})
+        previous_file_hash = cache.get("file_hash")
+
+        # Determine what changed
+        changes = {
+            "file_changed": current_file_hash != previous_file_hash,
+            "added_requirements": [],
+            "modified_requirements": [],
+            "removed_requirements": [],
+            "affected_tests": set()
+        }
+
+        if not changes["file_changed"]:
+            return changes  # No changes detected
+
+        # Find specific requirement changes
+        current_req_ids = set(current_req_hashes.keys())
+        previous_req_ids = set(previous_req_hashes.keys())
+
+        changes["added_requirements"] = list(current_req_ids - previous_req_ids)
+        changes["removed_requirements"] = list(previous_req_ids - current_req_ids)
+
+        # Find modified requirements
+        for req_id in current_req_ids & previous_req_ids:
+            if current_req_hashes[req_id] != previous_req_hashes.get(req_id):
+                changes["modified_requirements"].append(req_id)
+
+        # Get test coverage to identify affected tests
+        req_to_tests = self.get_test_coverage_mapping()
+
+        # Collect affected tests
+        affected_reqs = (changes["added_requirements"] +
+                        changes["modified_requirements"] +
+                        changes["removed_requirements"])
+
+        for req_id in affected_reqs:
+            tests = req_to_tests.get(req_id, [])
+            changes["affected_tests"].update(tests)
+
+        changes["affected_tests"] = list(changes["affected_tests"])
+
+        # Update cache
+        new_cache = {
+            "file_hash": current_file_hash,
+            "requirement_hashes": current_req_hashes,
+            "last_check": __import__('datetime').datetime.now().isoformat()
+        }
+        self.save_cache(new_cache)
+
+        return changes
+
+    def print_change_report(self, changes):
+        """Print a human-readable change report."""
+        if not changes["file_changed"]:
+            print("✅ No changes detected in requirements")
+            return
+
+        print("🔍 Requirements changes detected!\n")
+
+        if changes["added_requirements"]:
+            print("➕ **Added Requirements:**")
+            for req_id in sorted(changes["added_requirements"]):
+                print(f"   - {req_id}")
+            print()
+
+        if changes["modified_requirements"]:
+            print("✏️  **Modified Requirements:**")
+            for req_id in sorted(changes["modified_requirements"]):
+                print(f"   - {req_id}")
+            print()
+
+        if changes["removed_requirements"]:
+            print("❌ **Removed Requirements:**")
+            for req_id in sorted(changes["removed_requirements"]):
+                print(f"   - {req_id}")
+            print()
+
+        if changes["affected_tests"]:
+            print("🧪 **Tests that may need review:**")
+            for test in sorted(changes["affected_tests"]):
+                print(f"   - {test}")
+            print()
+            print(f"💡 Consider running: `uv run pytest -k \"{'|'.join(changes['affected_tests'][:5])}\" -v`")
+        else:
+            print("ℹ️  No tests directly affected by requirement changes")
+
+        print(f"\n📊 Total impact: {len(changes['affected_tests'])} tests may need review")
+
+
+def main():
+    """Main function to detect and report requirement changes."""
+    if not Path("specs").exists():
+        print("ERROR: Run this script from the project root directory")
+        sys.exit(1)
+
+    detector = RequirementChangeDetector()
+    changes = detector.detect_changes()
+    detector.print_change_report(changes)
+
+    # Exit with non-zero if there are changes (useful for CI/CD)
+    if changes["file_changed"]:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
