@@ -11,7 +11,7 @@
   <body>
     <h1>{{settings.app_name}}</h1>
     <h2>View</h2>
-    Click on {{settings.property_name_plural_computed}} to veto
+    Click <strong>[veto]</strong> or <strong>[unveto]</strong> to change {{settings.property_name_plural_computed}} status
     <h3>{{settings.object_name_plural_computed.title()}}</h3>
     <ul id="objects-list">
       {% for object in objects %}
@@ -26,7 +26,7 @@
       {% endfor %}
     </ul>
 
-    <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}}</h4>
+    <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}} <em>(Standalone)</em></h4>
     <ul id="standalone-properties">
       {% for property in properties %}
       {{ standalone_property_item(property) }}
@@ -56,6 +56,7 @@
     </form>
 
     <h3>{{settings.property_name_singular.title()}}</h3>
+    <p><em>You can create {{settings.property_name_plural_computed}} that belong to a specific {{settings.object_name_singular}}, or create standalone {{settings.property_name_plural_computed}} that don't belong to any {{settings.object_name_singular}}.</em></p>
     <form
       method="POST"
       action="/create/property/"
@@ -72,9 +73,10 @@
         value="{{name}}"
         placeholder="{{settings.property_name_singular.title()}}"
       />
-      in
-      <select name="object_id">
-        <option value="">{{settings.object_name_singular.title()}}</option>
+      <br><br>
+      <label for="object_id">Add to {{settings.object_name_singular}} (optional):</label>
+      <select name="object_id" id="object_id">
+        <option value="">[No {{settings.object_name_singular}} - Standalone]</option>
         {% for object in objects %} {% if object.id == object_id %}
         <option value="{{object.id}}" selected>{{object.name}}</option>
         {% else %}
