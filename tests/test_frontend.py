@@ -75,11 +75,11 @@ class TestHTMLRendering:
         htmx_script = soup.find("script", src="https://unpkg.com/htmx.org@1.9.12")
         assert htmx_script is not None
 
-        # Check required CSS classes for HTMX
-        style_tag = soup.find("style")
-        assert style_tag is not None
-        assert ".htmx-request" in style_tag.text
-        assert ".fade-out" in style_tag.text
+        # Check CSS is linked externally
+        css_link = soup.find(
+            "link", {"rel": "stylesheet", "href": "/static/css/styles.css"}
+        )
+        assert css_link is not None
 
     def test_objects_list_rendering(self, client, sample_data):
         """Test objects and properties are rendered correctly."""

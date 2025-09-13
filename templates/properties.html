@@ -3,90 +3,99 @@
   <head>
     <title>Properties</title>
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <style>
-      .htmx-request { opacity: 0.5; }
-      .fade-out { opacity: 0; transition: opacity 0.5s; }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
   </head>
   <body>
-    <h1>{{settings.app_name}}</h1>
-    <h2>View</h2>
-    Click <strong>[veto]</strong> or <strong>[unveto]</strong> to change {{settings.property_name_plural_computed}} status
-    <h3>{{settings.object_name_plural_computed.title()}}</h3>
-    <ul id="objects-list">
-      {% for object in objects %}
-      <li>
-        {{object.name}}
-        <ul>
-          {% for property in object.properties %}
-          {{ object_property_item(property, object.name) }}
+    <div class="container">
+      <h1>{{settings.app_name}}</h1>
+
+      <h2>View</h2>
+      <div class="instruction">
+        Click <strong>[veto]</strong> or <strong>[unveto]</strong> to change {{settings.property_name_plural_computed}} status
+      </div>
+      <div class="section">
+        <h3>{{settings.object_name_plural_computed.title()}}</h3>
+        <ul id="objects-list">
+          {% for object in objects %}
+          <li>
+            <strong>{{object.name}}</strong>
+            <ul>
+              {% for property in object.properties %}
+              {{ object_property_item(property, object.name) }}
+              {% endfor %}
+            </ul>
+          </li>
           {% endfor %}
         </ul>
-      </li>
-      {% endfor %}
-    </ul>
+      </div>
 
-    <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}} <em>(Standalone)</em></h4>
-    <ul id="standalone-properties">
-      {% for property in properties %}
-      {{ standalone_property_item(property) }}
-      {% endfor %}
-    </ul>
+      <div class="section">
+        <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}} <span class="standalone-indicator">(Standalone)</span></h4>
+        <ul id="standalone-properties">
+          {% for property in properties %}
+          {{ standalone_property_item(property) }}
+          {% endfor %}
+        </ul>
+      </div>
 
-    <h2>Create</h2>
+      <h2>Create</h2>
 
-    <h3>{{settings.object_name_singular.title()}}</h3>
-    <form
-      method="POST"
-      action="/create/object/"
-      hx-post="/create/object/"
-      hx-target="body"
-      hx-swap="outerHTML"
-      >
-      Create
-      <input
-        type="text"
-        required
-        name="name"
-        id="obj_name"
-        value="{{name}}"
-        placeholder="{{settings.object_name_singular.title()}}"
-      />
-      <button type="submit">Submit</button>
-    </form>
+      <div class="section">
+        <h3>{{settings.object_name_singular.title()}}</h3>
+        <form
+          method="POST"
+          action="/create/object/"
+          hx-post="/create/object/"
+          hx-target="body"
+          hx-swap="outerHTML"
+          >
+          <label for="obj_name">{{settings.object_name_singular.title()}} Name:</label>
+          <input
+            type="text"
+            required
+            name="name"
+            id="obj_name"
+            value="{{name}}"
+            placeholder="Enter {{settings.object_name_singular}} name..."
+          />
+          <button type="submit">Create {{settings.object_name_singular.title()}}</button>
+        </form>
+      </div>
 
-    <h3>{{settings.property_name_singular.title()}}</h3>
-    <p><em>You can create {{settings.property_name_plural_computed}} that belong to a specific {{settings.object_name_singular}}, or create standalone {{settings.property_name_plural_computed}} that don't belong to any {{settings.object_name_singular}}.</em></p>
-    <form
-      method="POST"
-      action="/create/property/"
-      hx-post="/create/property/"
-      hx-target="body"
-      hx-swap="outerHTML"
-      >
-      Create
-      <input
-        type="text"
-        required
-        name="name"
-        id="prop_name"
-        value="{{name}}"
-        placeholder="{{settings.property_name_singular.title()}}"
-      />
-      <br><br>
-      <label for="object_id">Add to {{settings.object_name_singular}} (optional):</label>
-      <select name="object_id" id="object_id">
-        <option value="">[No {{settings.object_name_singular}} - Standalone]</option>
-        {% for object in objects %} {% if object.id == object_id %}
-        <option value="{{object.id}}" selected>{{object.name}}</option>
-        {% else %}
-        <option value="{{object.id}}">{{object.name}}</option>
-        {% endif %} {% endfor %}
-      </select>
-      <button type="submit">Submit</button>
-    </form>
+      <div class="section">
+        <h3>{{settings.property_name_singular.title()}}</h3>
+        <div class="form-description">
+          You can create {{settings.property_name_plural_computed}} that belong to a specific {{settings.object_name_singular}}, or create standalone {{settings.property_name_plural_computed}} that don't belong to any {{settings.object_name_singular}}.
+        </div>
+        <form
+          method="POST"
+          action="/create/property/"
+          hx-post="/create/property/"
+          hx-target="body"
+          hx-swap="outerHTML"
+          >
+          <label for="prop_name">{{settings.property_name_singular.title()}} Name:</label>
+          <input
+            type="text"
+            required
+            name="name"
+            id="prop_name"
+            value="{{name}}"
+            placeholder="Enter {{settings.property_name_singular}} name..."
+          />
+
+          <label for="object_id">Add to {{settings.object_name_singular}} (optional):</label>
+          <select name="object_id" id="object_id">
+            <option value="">[No {{settings.object_name_singular}} - Standalone]</option>
+            {% for object in objects %} {% if object.id == object_id %}
+            <option value="{{object.id}}" selected>{{object.name}}</option>
+            {% else %}
+            <option value="{{object.id}}">{{object.name}}</option>
+            {% endif %} {% endfor %}
+          </select>
+          <button type="submit">Create {{settings.property_name_singular.title()}}</button>
+        </form>
+      </div>
+    </div>
   </body>
-  <script>
-    document.getElementById("prop_name").focus();
-  </script>
 </html>
