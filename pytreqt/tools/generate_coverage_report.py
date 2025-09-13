@@ -70,6 +70,59 @@ def get_test_coverage():
         return {}
 
 
+def get_previous_coverage():
+    """Get previous coverage data from existing report."""
+    coverage_file = Path("specs/reports/TEST_COVERAGE.md")
+    if not coverage_file.exists():
+        return None
+
+    try:
+        content = coverage_file.read_text(encoding="utf-8")
+        lines = content.split('\n')
+
+        # Extract previous stats
+        previous_data = {}
+        for line in lines:
+            if "Last updated" in line:
+                # Extract date from **Last updated**: 2025-09-13**
+                import re
+                match = re.search(r'Last updated\*\*:\s*([^\*]+)', line)
+                if match:
+                    previous_data['timestamp'] = match.group(1).strip()
+            elif "Total Requirements" in line:
+                import re
+                match = re.search(r'(\d+)', line)
+                if match:
+                    previous_data['total_requirements'] = int(match.group(1))
+            elif "Requirements with Tests" in line:
+                import re
+                match = re.search(r'(\d+)', line)
+                if match:
+                    previous_data['tested_requirements'] = int(match.group(1))
+            elif "Coverage Percentage" in line:
+                import re
+                match = re.search(r'([\d.]+)%', line)
+                if match:
+                    previous_data['coverage_percentage'] = float(match.group(1))
+
+        return previous_data if previous_data else None
+    except Exception:
+        return None
+
+
+def coverage_changed(previous, current):
+    """Check if coverage data has meaningfully changed."""
+    if not previous:
+        return True
+
+    # Check if key metrics changed
+    return (
+        previous.get('total_requirements') != current['total_requirements'] or
+        previous.get('tested_requirements') != current['tested_requirements'] or
+        abs(previous.get('coverage_percentage', 0) - current['coverage_percentage']) > 0.1
+    )
+
+
 def generate_coverage_matrix():
     """Generate the complete coverage matrix."""
     print("Extracting requirements from specifications...")
@@ -77,6 +130,20 @@ def generate_coverage_matrix():
 
     print("Analyzing test coverage...")
     test_coverage = get_test_coverage()
+
+    # Get previous coverage to check if it changed
+    previous_coverage = get_previous_coverage()
+    current_coverage_data = {
+        'total_requirements': len(all_requirements),
+        'tested_requirements': len(test_coverage),
+        'coverage_percentage': len(test_coverage) / len(all_requirements) * 100 if all_requirements else 0
+    }
+
+    # Only update timestamp if coverage actually changed
+    if coverage_changed(previous_coverage, current_coverage_data):
+        timestamp = __import__('datetime').datetime.now().strftime('%Y-%m-%d')
+    else:
+        timestamp = previous_coverage.get('timestamp', 'unchanged') if previous_coverage else __import__('datetime').datetime.now().strftime('%Y-%m-%d')
 
     if not all_requirements:
         print("No requirements found!")
@@ -88,7 +155,7 @@ def generate_coverage_matrix():
         "",
         "This document shows the traceability between functional requirements (FR), business rules (BR), and test cases.",
         "",
-        f"**Generated**: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
+        f"**Last updated**: {timestamp}**",
         "",
         "## Coverage Summary",
         "",
@@ -158,7 +225,7 @@ def generate_coverage_matrix():
         "*To update, run: `uv run python pytreqt/generate_coverage_report.py`*"
     ])
 
-    return '\n'.join(report_lines)
+    return '\n'.join(report_lines) + '\n'
 
 
 def main():

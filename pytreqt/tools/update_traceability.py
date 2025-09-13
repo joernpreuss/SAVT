@@ -8,15 +8,18 @@ import sys
 from pathlib import Path
 
 
-def run_command(cmd, description):
+def run_command(cmd, description, suppress_output=False):
     """Run a command and handle errors."""
     print(f"🔄 {description}...")
     try:
-        subprocess.run(cmd, check=True, cwd=Path.cwd())
-        print(f"✅ {description} completed")
+        if suppress_output:
+            subprocess.run(cmd, check=True, cwd=Path.cwd(), capture_output=True)
+        else:
+            subprocess.run(cmd, check=True, cwd=Path.cwd())
+        print(f"✅ {description} completed\n")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ {description} failed with exit code {e.returncode}")
+        print(f"❌ {description} failed with exit code {e.returncode}\n")
         return False
 
 
@@ -29,24 +32,27 @@ def main():
     print("🏃 Updating requirements traceability...\n")
 
     # Check for requirement changes
-    print("1️⃣ Checking for requirement changes...")
+    print("1️⃣  Checking for requirement changes...")
     try:
         result = subprocess.run(
-            ["uv", "run", "python", "pytreqt/change_detector.py"],
-            cwd=Path.cwd()
+            ["uv", "run", "python", "pytreqt/tools/change_detector.py"],
+            cwd=Path.cwd(),
+            capture_output=True,
+            text=True
         )
         # Note: change_detector exits with 1 if changes found, 0 if no changes
         if result.returncode == 1:
-            print("   Changes detected - continuing with updates...\n")
+            print("   ⚠️  Changes detected - continuing with updates...\n")
         else:
-            print("   No changes detected\n")
+            print("   ✅ No changes detected\n")
     except subprocess.CalledProcessError:
-        print("   Warning: Could not check for changes\n")
+        print("   ⚠️  Warning: Could not check for changes\n")
 
     # Regenerate coverage report
     success = run_command(
-        ["uv", "run", "python", "pytreqt/generate_coverage_report.py"],
-        "2️⃣ Regenerating TEST_COVERAGE.md"
+        ["uv", "run", "python", "pytreqt/tools/generate_coverage_report.py"],
+        "2️⃣  Regenerating TEST_COVERAGE.md",
+        suppress_output=True
     )
 
     if not success:
@@ -54,15 +60,15 @@ def main():
 
     # Run tests with requirements coverage
     success = run_command(
-        ["uv", "run", "pytest", "-v"],
-        "3️⃣ Running tests with requirements coverage"
+        ["uv", "run", "pytest", "-q"],
+        "3️⃣  Running tests with requirements coverage"
     )
 
     if success:
-        print("\n🎉 Traceability update completed successfully!")
+        print("🎉 Traceability update completed successfully!")
         print("📋 Check specs/reports/TEST_COVERAGE.md for updated coverage matrix")
     else:
-        print("\n⚠️  Traceability update completed with test failures")
+        print("⚠️  Traceability update completed with test failures")
         print("🔍 Review test results and fix any issues")
         sys.exit(1)
 
