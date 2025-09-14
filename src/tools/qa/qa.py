@@ -11,13 +11,48 @@ from rich.console import Console
 console = Console()
 
 
-def run_command(cmd: list[str], description: str) -> bool:
+def get_single_key() -> str:
+    """Get a single keypress without requiring Enter."""
+    try:
+        # Windows
+        import msvcrt  # type: ignore
+
+        key_bytes = msvcrt.getch()  # type: ignore
+        if isinstance(key_bytes, bytes):
+            return key_bytes.decode("utf-8").lower()
+        return str(key_bytes).lower()
+    except ImportError:
+        try:
+            # Unix/Linux/macOS
+            import sys
+            import termios
+            import tty
+
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+            try:
+                tty.setcbreak(fd)  # type: ignore
+                return sys.stdin.read(1).lower()
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        except (ImportError, OSError, termios.error):  # type: ignore
+            # Fallback to regular input if terminal doesn't support raw mode
+            return input().strip().lower()[:1] or "s"
+
+
+def run_command(cmd: list[str], description: str, show_output: bool = False) -> bool:
     """Run a command and return success status."""
     try:
-        result = subprocess.run(cmd, check=True, capture_output=False)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        if show_output and result.stdout:
+            console.print(result.stdout, style="dim")
         return result.returncode == 0
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         console.print(f"❌ {description} failed", style="red")
+        if e.stdout:
+            console.print(e.stdout, style="dim")
+        if e.stderr:
+            console.print(e.stderr, style="dim")
         return False
 
 
@@ -143,35 +178,82 @@ def _run_checks(
         console.print()
 
     success = True
+    interactive_fixes = []
 
     # Formatter
-    console.print("✨ Running formatter...", style="blue")
+    console.print("✨ Running formatter...", style="cyan")
     if fix_format:
         success &= run_command(
             ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Formatting"
         )
     else:
-        success &= run_command(
-            ["uv", "tool", "run", "ruff", "format", "src/", "tests/", "--check"],
+        format_result = run_command(
+            [
+                "uv",
+                "tool",
+                "run",
+                "ruff",
+                "format",
+                "src/",
+                "tests/",
+                "--check",
+                "--diff",
+            ],
             "Format check",
+            show_output=True,
         )
+        success &= format_result
+        if not format_result:
+            console.print(
+                "Formatting issues found. Press: (f)ix, (s)kip, or (q)uit",
+                style="yellow",
+            )
+            choice = get_single_key()
+            console.print(f"[{choice}]")  # Show what was pressed
+
+            if choice == "q":
+                console.print("Exiting QA check.", style="yellow")
+                sys.exit(0)
+            elif choice == "f":
+                run_command(
+                    ["uv", "tool", "run", "ruff", "format", "src/", "tests/"],
+                    "Formatting",
+                )
+                interactive_fixes.append("format")
     console.print()
 
     # Linter
-    console.print("🔍 Running linter...", style="blue")
+    console.print("🔍 Running linter...", style="cyan")
     if fix_lint:
         success &= run_command(
             ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"],
             "Linting with fixes",
         )
     else:
-        success &= run_command(
+        lint_result = run_command(
             ["uv", "tool", "run", "ruff", "check", "src/", "tests/"], "Linting"
         )
+        success &= lint_result
+        if not lint_result:
+            console.print(
+                "Linting issues found. Press: (f)ix, (s)kip, or (q)uit", style="yellow"
+            )
+            choice = get_single_key()
+            console.print(f"[{choice}]")
+
+            if choice == "q":
+                console.print("Exiting QA check.", style="yellow")
+                sys.exit(0)
+            elif choice == "f":
+                run_command(
+                    ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"],
+                    "Linting with fixes",
+                )
+                interactive_fixes.append("lint")
     console.print()
 
     # Template formatter/linter
-    console.print("🎨 Running template formatter...", style="blue")
+    console.print("🎨 Running template formatter...", style="cyan")
     if fix_format:
         success &= run_command(
             ["uv", "run", "djlint", "templates/", "--reformat"],
@@ -185,20 +267,37 @@ def _run_checks(
     console.print()
 
     # Type checker
-    console.print("🔎 Running type checker...", style="blue")
+    console.print("🔎 Running type checker...", style="cyan")
     success &= run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")
     console.print()
 
     # Trailing newlines
-    console.print("📄 Checking file endings...", style="blue")
-    success &= check_trailing_newlines(fix_newlines)
+    console.print("📄 Checking file endings...", style="cyan")
+    if fix_newlines:
+        success &= check_trailing_newlines(fix_newlines)
+    else:
+        newlines_result = check_trailing_newlines(fix_newlines)
+        success &= newlines_result
+        if not newlines_result:
+            console.print(
+                "Trailing newline issues found. Press: (f)ix, (s)kip, or (q)uit",
+                style="yellow",
+            )
+            choice = get_single_key()
+            console.print(f"[{choice}]")
+
+            if choice == "q":
+                console.print("Exiting QA check.", style="yellow")
+                sys.exit(0)
+            elif choice == "f":
+                check_trailing_newlines(True)
+                interactive_fixes.append("newlines")
     console.print()
 
     # Tests
     if not skip_tests:
-        console.print("🧪 Running tests...", style="blue")
-        success &= run_command(["uv", "run", "pytest"], "Tests")
-        console.print()
+        console.print("🧪 Running tests...", style="cyan")
+        success &= run_command(["uv", "run", "pytest"], "Tests", show_output=True)
 
     # Summary
     if fix_all or fix_format or fix_lint or fix_newlines:
@@ -211,6 +310,11 @@ def _run_checks(
             console.print("✅ All checks passed!", style="green")
         else:
             console.print("❌ Some checks failed", style="red")
+
+    if interactive_fixes:
+        console.print(
+            f"🔧 Applied fixes: {', '.join(interactive_fixes)}", style="green"
+        )
 
     console.print()
 
