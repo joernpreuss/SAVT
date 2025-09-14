@@ -40,6 +40,23 @@ def get_single_key() -> str:
             return input().strip().lower()[:1] or "s"
 
 
+def prompt_fix_skip_quit(issue_type: str) -> str:
+    """Prompt user for fix/skip/quit choice and handle the response."""
+    console.print(
+        f"{issue_type} issues found. Press: (f)ix, (s)kip, or (q)uit",
+        style="yellow",
+    )
+    choice = get_single_key()
+    console.print(f"[{choice}]")
+
+    if choice == "q":
+        console.print("Exiting QA check.", style="yellow")
+        sys.exit(0)
+    elif choice == "f":
+        return "fix"
+    return "skip"
+
+
 def run_command(cmd: list[str], description: str, show_output: bool = False) -> bool:
     """Run a command and return success status."""
     try:
@@ -204,17 +221,8 @@ def _run_checks(
         )
         success &= format_result
         if not format_result:
-            console.print(
-                "Formatting issues found. Press: (f)ix, (s)kip, or (q)uit",
-                style="yellow",
-            )
-            choice = get_single_key()
-            console.print(f"[{choice}]")  # Show what was pressed
-
-            if choice == "q":
-                console.print("Exiting QA check.", style="yellow")
-                sys.exit(0)
-            elif choice == "f":
+            choice = prompt_fix_skip_quit("Formatting")
+            if choice == "fix":
                 run_command(
                     ["uv", "tool", "run", "ruff", "format", "src/", "tests/"],
                     "Formatting",
@@ -235,16 +243,8 @@ def _run_checks(
         )
         success &= lint_result
         if not lint_result:
-            console.print(
-                "Linting issues found. Press: (f)ix, (s)kip, or (q)uit", style="yellow"
-            )
-            choice = get_single_key()
-            console.print(f"[{choice}]")
-
-            if choice == "q":
-                console.print("Exiting QA check.", style="yellow")
-                sys.exit(0)
-            elif choice == "f":
+            choice = prompt_fix_skip_quit("Linting")
+            if choice == "fix":
                 run_command(
                     ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"],
                     "Linting with fixes",
@@ -279,17 +279,8 @@ def _run_checks(
         newlines_result = check_trailing_newlines(fix_newlines)
         success &= newlines_result
         if not newlines_result:
-            console.print(
-                "Trailing newline issues found. Press: (f)ix, (s)kip, or (q)uit",
-                style="yellow",
-            )
-            choice = get_single_key()
-            console.print(f"[{choice}]")
-
-            if choice == "q":
-                console.print("Exiting QA check.", style="yellow")
-                sys.exit(0)
-            elif choice == "f":
+            choice = prompt_fix_skip_quit("Trailing newline")
+            if choice == "fix":
                 check_trailing_newlines(True)
                 interactive_fixes.append("newlines")
     console.print()
