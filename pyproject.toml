@@ -34,6 +34,7 @@ dev-dependencies = [
     "click>=8.2.1",
     "djlint>=1.36.4",
     "mdformat>=0.7.22",
+    "typer>=0.17.4",
 ]
 
 [tool.ruff]
