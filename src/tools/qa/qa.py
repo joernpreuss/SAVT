@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import click
+import typer
 from rich.console import Console
 
 console = Console()
@@ -132,13 +132,10 @@ def check_trailing_newlines(fix: bool = False) -> bool:
         return True
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
-@click.help_option("-h", "--help")
-def cli(ctx):
-    """SAVT Quality Assurance Tool
+app = typer.Typer(
+    name="qa",
+    help="""SAVT Quality Assurance Tool
 
-    \b
     Examples:
       qa check                   - run all checks (no fixes)
       qa check --fix-all         - run checks with all fixes
@@ -146,33 +143,40 @@ def cli(ctx):
       qa check --fix-lint        - fix linting only
       qa check --fix-newlines    - fix newlines only
       qa check --skip-tests      - skip test execution
-      qa check fix-all           - equivalent to 'qa check --fix-all'
       qa fix-all                 - shortcut for 'qa check --fix-all'
-    """
-    if ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help())
+    """,
+    add_completion=False,
+    rich_markup_mode="rich",
+    no_args_is_help=True,
+)
 
 
-@cli.group(invoke_without_command=True)
-@click.help_option("-h", "--help")
-@click.option("--fix-all", is_flag=True, help="Auto-fix all issues")
-@click.option("--fix-format", is_flag=True, help="Auto-fix formatting issues")
-@click.option("--fix-lint", is_flag=True, help="Auto-fix linting issues")
-@click.option("--fix-newlines", is_flag=True, help="Auto-fix trailing newlines")
-@click.option("--skip-tests", is_flag=True, help="Skip running tests")
-@click.pass_context
+def main():
+    """Main entry point for the QA tool."""
+    app()
+
+
+@app.command()
 def check(
-    ctx,
-    fix_all: bool,
-    fix_format: bool,
-    fix_lint: bool,
-    fix_newlines: bool,
-    skip_tests: bool,
+    ctx: typer.Context,
+    fix_all: bool = typer.Option(False, "--fix-all", help="Auto-fix all issues"),
+    fix_format: bool = typer.Option(
+        False, "--fix-format", help="Auto-fix formatting issues"
+    ),
+    fix_lint: bool = typer.Option(False, "--fix-lint", help="Auto-fix linting issues"),
+    fix_newlines: bool = typer.Option(
+        False, "--fix-newlines", help="Auto-fix trailing newlines"
+    ),
+    skip_tests: bool = typer.Option(False, "--skip-tests", help="Skip running tests"),
+    help_flag: bool = typer.Option(
+        False, "-h", "--help", help="Show this message and exit"
+    ),
 ) -> None:
     """Run code quality checks (default: check only, no fixes)"""
-    # If called without subcommand, run the actual check logic
-    if ctx.invoked_subcommand is None:
-        _run_checks(fix_all, fix_format, fix_lint, fix_newlines, skip_tests)
+    if help_flag:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+    _run_checks(fix_all, fix_format, fix_lint, fix_newlines, skip_tests)
 
 
 def _run_checks(
@@ -329,21 +333,20 @@ def _run_checks(
         sys.exit(1)
 
 
-@check.command(name="fix-all")
-@click.help_option("-h", "--help")
-@click.option("--skip-tests", is_flag=True, help="Skip running tests")
-def check_fix_all(skip_tests: bool) -> None:
-    """Run checks with all fixes applied"""
-    _run_checks(True, False, False, False, skip_tests)  # fix_all=True enables all fixes
-
-
-@cli.command(name="fix-all")
-@click.help_option("-h", "--help")
-@click.option("--skip-tests", is_flag=True, help="Skip running tests")
-def fix_all_command(skip_tests: bool) -> None:
+@app.command("fix-all")
+def fix_all_command(
+    ctx: typer.Context,
+    skip_tests: bool = typer.Option(False, "--skip-tests", help="Skip running tests"),
+    help_flag: bool = typer.Option(
+        False, "-h", "--help", help="Show this message and exit"
+    ),
+) -> None:
     """Run all checks with auto-fixes applied"""
+    if help_flag:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
     _run_checks(True, False, False, False, skip_tests)  # fix_all=True enables all fixes
 
 
 if __name__ == "__main__":
-    cli()
+    app()

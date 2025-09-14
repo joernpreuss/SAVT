@@ -1,4 +1,4 @@
-from .qa import cli
+from .qa import app
 
 if __name__ == "__main__":
-    cli()
+    app()
