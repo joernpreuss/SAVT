@@ -169,7 +169,12 @@ class TestUserWorkflow:
         veto_soup = BeautifulSoup(veto_response.content, "html.parser")
 
         # Verify feature is now vetoed
-        vetoed_pepperoni = veto_soup.find("s", string="Pepperoni")
+        struck_elements = veto_soup.find_all("s")
+        vetoed_pepperoni = None
+        for s_elem in struck_elements:
+            if "Pepperoni" in s_elem.get_text():
+                vetoed_pepperoni = s_elem
+                break
         assert vetoed_pepperoni is not None
 
         # Find unveto link
@@ -182,7 +187,12 @@ class TestUserWorkflow:
         unveto_soup = BeautifulSoup(unveto_response.content, "html.parser")
 
         # Verify feature is back to normal (not struck through)
-        normal_pepperoni = unveto_soup.find("s", string="Pepperoni")
+        struck_elements = unveto_soup.find_all("s")
+        normal_pepperoni = None
+        for s_elem in struck_elements:
+            if "Pepperoni" in s_elem.get_text():
+                normal_pepperoni = s_elem
+                break
         assert normal_pepperoni is None
 
         # Should have veto link available
@@ -211,7 +221,12 @@ class TestUserWorkflow:
         final_soup = BeautifulSoup(final_response.content, "html.parser")
 
         for feature_name in features_to_veto:
-            vetoed_feature = final_soup.find("s", string=feature_name)
+            struck_elements = final_soup.find_all("s")
+            vetoed_feature = None
+            for s_elem in struck_elements:
+                if feature_name in s_elem.get_text():
+                    vetoed_feature = s_elem
+                    break
             assert vetoed_feature is not None, f"{feature_name} should be vetoed"
 
     def test_create_and_veto_workflow(self, client):
@@ -239,7 +254,12 @@ class TestUserWorkflow:
         veto_soup = BeautifulSoup(veto_response.content, "html.parser")
 
         # Verify it's vetoed
-        vetoed_feature = veto_soup.find("s", string="New Feature")
+        struck_elements = veto_soup.find_all("s")
+        vetoed_feature = None
+        for s_elem in struck_elements:
+            if "New Feature" in s_elem.get_text():
+                vetoed_feature = s_elem
+                break
         assert vetoed_feature is not None
 
 

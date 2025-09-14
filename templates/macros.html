@@ -1,6 +1,9 @@
 {% macro veto_display(feature) %}
   {% if feature.vetoed_by|length > 0 %}
-    <s>{{ feature.name }}</s>
+    <s>
+      {{ feature.name }}
+      {% if feature.amount > 1 %}({{ feature.amount }}x){% endif %}
+    </s>
     <span class="veto-count">
       ({{ feature.vetoed_by|length }} veto
       {% if feature.vetoed_by|length != 1 %}s{% endif %}
@@ -8,6 +11,7 @@
     </span>
   {% else %}
     {{ feature.name }}
+    {% if feature.amount > 1 %}({{ feature.amount }}x){% endif %}
   {% endif %}
 {% endmacro %}
 {% macro veto_link(feature, unveto_url, veto_url, target_id) %}
@@ -29,7 +33,10 @@
   <li class="feature-item">
     <div class="feature-content">
       {% if feature.vetoed_by|length > 0 %}
-        <s>{{ feature.name }}</s>
+        <s>
+          {{ feature.name }}
+          {% if feature.amount > 1 %}({{ feature.amount }}x){% endif %}
+        </s>
         <span class="veto-count">
           ({{ feature.vetoed_by|length }} veto
           {% if feature.vetoed_by|length != 1 %}s{% endif %}
@@ -42,6 +49,7 @@
            hx-swap="outerHTML">unveto</a>
       {% else %}
         {{ feature.name }}
+        {% if feature.amount > 1 %}({{ feature.amount }}x){% endif %}
         <a class="veto-link"
            href="/user/anonymous/veto/feature/{{ feature.name }}?feature_id={{ feature.id }}"
            hx-get="/user/anonymous/veto/feature/{{ feature.name }}?feature_id={{ feature.id }}"
@@ -72,7 +80,10 @@
   <li id="feature-{{ feature.id }}" class="feature-item">
     <div class="feature-content">
       {% if feature.vetoed_by|length > 0 %}
-        <s>{{ feature.name }}</s>
+        <s>
+          {{ feature.name }}
+          {% if feature.amount > 1 %}({{ feature.amount }}x){% endif %}
+        </s>
         <span class="veto-count">
           ({{ feature.vetoed_by|length }} veto
           {% if feature.vetoed_by|length != 1 %}s{% endif %}
@@ -86,6 +97,7 @@
            data-feature-id="{{ feature.id }}">unveto</a>
       {% else %}
         {{ feature.name }}
+        {% if feature.amount > 1 %}({{ feature.amount }}x){% endif %}
         <a class="veto-link"
            href="/user/anonymous/veto/item/{{ item_name }}/feature/{{ feature.name }}?feature_id={{ feature.id }}"
            hx-get="/user/anonymous/veto/item/{{ item_name }}/feature/{{ feature.name }}?feature_id={{ feature.id }}"

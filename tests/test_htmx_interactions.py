@@ -192,7 +192,12 @@ class TestDynamicContentUpdates:
         initial_soup = BeautifulSoup(initial_response.content, "html.parser")
 
         # Should show feature as vetoed
-        struck_feature = initial_soup.find("s", string="Pepperoni")
+        struck_elements = initial_soup.find_all("s")
+        struck_feature = None
+        for s_elem in struck_elements:
+            if "Pepperoni" in s_elem.get_text():
+                struck_feature = s_elem
+                break
         assert struck_feature is not None
 
         # Should have unveto link
@@ -224,7 +229,12 @@ class TestDynamicContentUpdates:
         assert "/veto/" in veto_link.get("href")
 
         # Should not be struck through
-        struck_feature = soup.find("s", string="Pepperoni")
+        struck_elements = soup.find_all("s")
+        struck_feature = None
+        for s_elem in struck_elements:
+            if "Pepperoni" in s_elem.get_text():
+                struck_feature = s_elem
+                break
         assert struck_feature is None
 
     def test_feature_creation_updates_page(self, client, sample_data):
@@ -370,7 +380,12 @@ class TestHTMXTargeting:
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Should show both features with different states
-        pepperoni_vetoed = soup.find("s", string="Pepperoni")
+        struck_elements = soup.find_all("s")
+        pepperoni_vetoed = None
+        for s_elem in struck_elements:
+            if "Pepperoni" in s_elem.get_text():
+                pepperoni_vetoed = s_elem
+                break
         mushrooms_text = soup.find(string=lambda text: text and "Mushrooms" in text)
 
         assert pepperoni_vetoed is not None  # Vetoed feature

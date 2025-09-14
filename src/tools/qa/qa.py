@@ -8,7 +8,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-console = Console()
+console = Console(force_terminal=True)
 
 
 def get_single_key() -> str:
@@ -58,16 +58,23 @@ def prompt_fix_skip_quit(issue_type: str) -> str:
 def run_command(cmd: list[str], description: str, show_output: bool = False) -> bool:
     """Run a command and return success status."""
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        if show_output and result.stdout:
-            console.print(result.stdout, style="dim")
+        if show_output:
+            # Let output go directly to terminal to preserve colors
+            result = subprocess.run(cmd, check=True, text=True)
+        else:
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         return result.returncode == 0
     except subprocess.CalledProcessError as e:
         console.print(f"❌ {description} failed", style="red")
-        if e.stdout:
-            console.print(e.stdout, style="dim")
-        if e.stderr:
-            console.print(e.stderr, style="dim")
+        if show_output:
+            # Output was already shown during execution
+            pass
+        else:
+            # Show captured output
+            if e.stdout:
+                print(e.stdout, end="")
+            if e.stderr:
+                print(e.stderr, end="")
         return False
 
 
@@ -301,7 +308,9 @@ def _run_checks(
     # Tests
     if not skip_tests:
         console.print("🧪 Running tests...", style="cyan")
-        success &= run_command(["uv", "run", "pytest"], "Tests", show_output=True)
+        success &= run_command(
+            ["uv", "run", "pytest", "--color=yes"], "Tests", show_output=True
+        )
 
     # Summary
     if fix_all or fix_format or fix_lint or fix_newlines:
