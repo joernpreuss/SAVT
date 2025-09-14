@@ -1,0 +1,31 @@
+{
+  "app_name": "Pizza Ordering Tool",
+  "item_name_singular": "pizza",
+  "feature_name_singular": "topping",
+  "feature_kinds": {
+    "Tomaten": "vegan",
+    "Zwiebeln": "vegan",
+    "Paprika": "vegan",
+    "Champignons": "vegan",
+    "Oliven": "vegan",
+    "Spinat": "vegan",
+    "Rucola": "vegan",
+    "Mais": "vegan",
+    "Basilikum": "vegan",
+    "Oregano": "vegan",
+    "Knoblauch": "vegan",
+    "Tomatensauce": "vegan",
+    "BBQ Sauce": "vegan",
+    "Knoblauchöl": "vegan",
+    "Mozzarella": "vegetarisch",
+    "Gorgonzola": "vegetarisch",
+    "Parmesan": "vegetarisch",
+    "Feta": "vegetarisch",
+    "Pesto": "vegetarisch",
+    "Salami": "fleisch",
+    "Schinken": "fleisch",
+    "Pepperoni": "fleisch",
+    "Hackfleisch": "fleisch",
+    "Thunfisch": "fisch"
+  }
+}

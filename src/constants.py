@@ -9,3 +9,6 @@ MIN_SECRET_KEY_LENGTH: Final = 32
 
 # Network constants
 DEFAULT_PORT: Final = 8000
+
+# Feature constants
+MAX_FEATURE_AMOUNT: Final = 3
