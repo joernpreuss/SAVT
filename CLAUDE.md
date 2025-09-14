@@ -17,6 +17,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - **Package management**: Use `uv add` instead of `pip install`
 - **QA tool**: `./qa check` runs linting, formatting, type checking, template linting, tests
 - **djLint**: Integrated HTML/Jinja2 formatter, ignores J018/J004 (FastAPI-specific)
+- **Ruff format**: Run `ruff format` after every change
 
 ## Important Files
 

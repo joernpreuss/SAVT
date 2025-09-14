@@ -1,21 +1,7 @@
 from fastapi import Form
-from sqlmodel import (
-    JSON,
-    Column,
-    Field,
-    Relationship,
-    SQLModel,
-)
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from .constants import MAX_KIND_LENGTH, MAX_NAME_LENGTH
-
-# later
-# class SVUser(SQLModel, table=True):
-#     """A user of the system."""
-
-#     __tablename__ = "sv_users"
-#     id: int = Field(primary_key=True)
-#     name: str
 
 
 class Item(SQLModel, table=True):  # type: ignore[call-arg]

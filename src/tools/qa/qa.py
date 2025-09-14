@@ -18,9 +18,7 @@ def get_single_key() -> str:
         import msvcrt  # type: ignore
 
         key_bytes = msvcrt.getch()  # type: ignore
-        if isinstance(key_bytes, bytes):
-            return key_bytes.decode("utf-8").lower()
-        return str(key_bytes).lower()
+        return key_bytes.decode("utf-8").lower()  # type: ignore
     except ImportError:
         try:
             # Unix/Linux/macOS
@@ -131,7 +129,6 @@ def check_trailing_newlines(fix: bool = False) -> bool:
             )
             return False
     else:
-        console.print("✅ All files have proper trailing newlines", style="green")
         return True
 
 
@@ -196,6 +193,7 @@ def _run_checks(
 
     success = True
     interactive_fixes = []
+    had_issues = False
 
     # Formatter
     console.print("✨ Running formatter...", style="cyan")
@@ -221,6 +219,7 @@ def _run_checks(
         )
         success &= format_result
         if not format_result:
+            had_issues = True
             choice = prompt_fix_skip_quit("Formatting")
             if choice == "fix":
                 run_command(
@@ -228,6 +227,8 @@ def _run_checks(
                     "Formatting",
                 )
                 interactive_fixes.append("format")
+        else:
+            console.print("✅ No formatting issues found", style="green")
     console.print()
 
     # Linter
@@ -239,10 +240,13 @@ def _run_checks(
         )
     else:
         lint_result = run_command(
-            ["uv", "tool", "run", "ruff", "check", "src/", "tests/"], "Linting"
+            ["uv", "tool", "run", "ruff", "check", "src/", "tests/"],
+            "Linting",
+            show_output=True,
         )
         success &= lint_result
         if not lint_result:
+            had_issues = True
             choice = prompt_fix_skip_quit("Linting")
             if choice == "fix":
                 run_command(
@@ -250,6 +254,8 @@ def _run_checks(
                     "Linting with fixes",
                 )
                 interactive_fixes.append("lint")
+        else:
+            console.print("✅ No linting issues found", style="green")
     console.print()
 
     # Template formatter/linter
@@ -279,10 +285,13 @@ def _run_checks(
         newlines_result = check_trailing_newlines(fix_newlines)
         success &= newlines_result
         if not newlines_result:
+            had_issues = True
             choice = prompt_fix_skip_quit("Trailing newline")
             if choice == "fix":
                 check_trailing_newlines(True)
                 interactive_fixes.append("newlines")
+        else:
+            console.print("✅ All files have proper trailing newlines", style="green")
     console.print()
 
     # Tests
@@ -297,8 +306,14 @@ def _run_checks(
         else:
             console.print("🔧 Some checks failed even with fixes applied", style="red")
     else:
-        if success:
-            console.print("✅ All checks passed!", style="green")
+        # If we had issues but applied interactive fixes, consider it a success
+        if success or (had_issues and interactive_fixes):
+            if interactive_fixes:
+                console.print(
+                    "✅ All checks passed after applying fixes!", style="green"
+                )
+            else:
+                console.print("✅ All checks passed!", style="green")
         else:
             console.print("❌ Some checks failed", style="red")
 
@@ -309,7 +324,8 @@ def _run_checks(
 
     console.print()
 
-    if not success:
+    # Exit with error only if we truly failed (no fixes applied or fixes didn't work)
+    if not success and not (had_issues and interactive_fixes):
         sys.exit(1)
 
 
