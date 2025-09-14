@@ -277,10 +277,23 @@ def _run_checks(
             "Template formatting",
         )
     else:
-        success &= run_command(
+        template_success = run_command(
             ["uv", "run", "djlint", "templates/"],
             "Template linting",
+            show_output=True,
         )
+        if not template_success and not (fix_all or fix_format):
+            had_issues = True
+            choice = prompt_fix_skip_quit("Template")
+            if choice == "fix":
+                console.print("🔧 Fixing template issues...", style="yellow")
+                success &= run_command(
+                    ["uv", "run", "djlint", "templates/", "--reformat"],
+                    "Template formatting",
+                )
+                interactive_fixes.append("template")
+        else:
+            success &= template_success
     console.print()
 
     # Type checker

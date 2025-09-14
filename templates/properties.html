@@ -13,9 +13,7 @@ standalone_feature_item %}
   <body>
     <div class="container">
       <h1>{{ settings.app_name }}</h1>
-      {% if message %}
-        <div class="message">{{ message }}</div>
-      {% endif %}
+      {% if message %}<div class="message">{{ message }}</div>{% endif %}
       <h2>View</h2>
       <div class="instruction">
         Click <strong>[veto]</strong> or <strong>[unveto]</strong>
@@ -26,8 +24,32 @@ standalone_feature_item %}
         <ul id="objects-list">
           {% for item in items %}
             <li>
-              <strong>{{ item.name }}</strong>
-              {% if item.kind %}<span class="kind-badge">({{ item.kind }})</span>{% endif %}
+              <div class="pizza-header">
+                <strong>{{ item.name | truncate_name(40) }}</strong>
+                {% if item.kind %}<span class="kind-badge">({{ item.kind }})</span>{% endif %}
+                <div class="pizza-actions">
+                  <form class="merge-form">
+                    <input type="hidden" name="source_item" value="{{ item.name }}">
+                    <select class="merge-select"
+                            name="target_item"
+                            hx-post="/merge/item"
+                            hx-target="body"
+                            hx-swap="outerHTML"
+                            hx-include="closest form">
+                      <option value="">merge...</option>
+                      {% for other_item in items %}
+                        {% if other_item.name != item.name %}
+                          <option value="{{ other_item.name }}">→ {{ other_item.name | truncate_name(25) }}</option>
+                        {% endif %}
+                      {% endfor %}
+                    </select>
+                  </form>
+                  <button class="split-button"
+                          hx-post="/split/item/{{ item.name }}"
+                          hx-target="body"
+                          hx-swap="outerHTML">split</button>
+                </div>
+              </div>
               <ul>
                 {% for feature in item.features %}{{ item_feature_item_with_move(feature, item.name, items) }}{% endfor %}
               </ul>
