@@ -1,14 +1,12 @@
 from typing import Final, TypedDict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from .constants import HTTP_CONFLICT, HTTP_NOT_FOUND
 from .database import get_session
 from .models import Feature
 from .service import (
-    FeatureAlreadyExistsError,
     create_feature,
     get_features,
     veto_item_feature,
@@ -25,24 +23,16 @@ class FeatureName(BaseModel):
 async def api_create_feature(
     *, session: Session = Depends(get_session), feature_name: FeatureName
 ):
-    try:
-        feature = create_feature(session, Feature(name=feature_name.name))
-        return {"created": feature.model_dump()}
-    except FeatureAlreadyExistsError as e:
-        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
+    feature = create_feature(session, Feature(name=feature_name.name))
+    return {"created": feature.model_dump()}
 
 
 @api_router.post("/users/{user}/properties")
 async def api_user_create_feature(
     *, session: Session = Depends(get_session), user: str, feature_name: FeatureName
 ):
-    try:
-        feature = create_feature(
-            session, Feature(name=feature_name.name, created_by=user)
-        )
-        return {"created": feature.model_dump()}
-    except FeatureAlreadyExistsError as e:
-        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
+    feature = create_feature(session, Feature(name=feature_name.name, created_by=user))
+    return {"created": feature.model_dump()}
 
 
 @api_router.post("/users/{user}/properties/{name}/veto")
@@ -55,7 +45,7 @@ async def api_user_veto_feature(
         return {"vetoed": feature.model_dump()}
     else:
         raise HTTPException(
-            status_code=HTTP_NOT_FOUND, detail=f'Feature "{name}" not found'
+            status_code=status.HTTP_404_NOT_FOUND, detail=f'Feature "{name}" not found'
         )
 
 
@@ -69,7 +59,7 @@ async def api_user_unveto_feature(
         return {"unvetoed": feature.model_dump()}
     else:
         raise HTTPException(
-            status_code=HTTP_NOT_FOUND, detail=f'Feature "{name}" not found'
+            status_code=status.HTTP_404_NOT_FOUND, detail=f'Feature "{name}" not found'
         )
 
 

@@ -130,18 +130,16 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
 
 
 def test_create_feature_conflict(client: TestClient, timestamp_str: str):
-    """Test feature name uniqueness enforcement via API.
+    """Test that duplicate feature names are now allowed via API.
 
     Covers:
-    - FR-2.3: Feature names must be unique within their scope
-    - FR-2.4: System prevents duplicate feature creation (returns 409 error)
+    - Duplicate feature names are allowed for independent veto control
     """
     name = f"dup_feature_{timestamp_str}"
     r1 = client.post("/api/users/alice/properties", json={"name": name})
     assert r1.status_code == 200
     r2 = client.post("/api/users/bob/properties", json={"name": name})
-    assert r2.status_code == 409
-    assert "already exists" in r2.json()["detail"].lower()
+    assert r2.status_code == 200  # Duplicates are now allowed
 
 
 def test_veto_then_unveto_feature(client: TestClient, timestamp_str: str):

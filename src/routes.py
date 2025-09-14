@@ -6,6 +6,7 @@ from fastapi import (
     Depends,
     Form,
     HTTPException,
+    Query,
     Request,
     Response,
     status,
@@ -15,12 +16,10 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
 
 from .config import settings
-from .constants import HTTP_BAD_REQUEST, HTTP_CONFLICT
 from .database import get_session
 from .logging_config import get_logger
 from .models import Feature, Item
 from .service import (
-    FeatureAlreadyExistsError,
     ItemAlreadyExistsError,
     create_feature,
     create_item,
@@ -121,14 +120,16 @@ async def route_create_item(
             item_name=item.name,
             error=str(e),
         )
-        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except ValueError as e:
         logger.warning(
             "Item creation failed - validation error",
             item_name=item.name,
             error=str(e),
         )
-        raise HTTPException(status_code=HTTP_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
@@ -154,16 +155,15 @@ async def route_create_feature(
         logger.info(
             "Feature created successfully via web form", feature_name=feature.name
         )
-    except FeatureAlreadyExistsError as e:
-        logger.warning("Feature creation failed via web form", error=str(e))
-        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
     except ValueError as e:
         logger.warning(
             "Feature creation failed - validation error",
             feature_name=feature.name,
             error=str(e),
         )
-        raise HTTPException(status_code=HTTP_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
@@ -183,11 +183,23 @@ async def route_veto_item_feature(
     user: str,
     item: str | None = None,
     name: str,
+    feature_id: int | None = Query(None),
 ):
     logger.debug(
-        "Processing veto via web form", user=user, feature_name=name, item_name=item
+        "Processing veto via web form",
+        user=user,
+        feature_name=name,
+        item_name=item,
+        feature_id=feature_id,
     )
-    result = veto_item_feature(session, user, name, item, veto=True)
+
+    # Use feature_id if provided, otherwise fallback to name-based lookup
+    if feature_id is not None:
+        from .service import veto_feature_by_id
+
+        result = veto_feature_by_id(session, user, feature_id, veto=True)
+    else:
+        result = veto_item_feature(session, user, name, item, veto=True)
 
     if result:
         logger.info(
@@ -222,15 +234,29 @@ async def route_unveto_item_feature(
     user: str,
     item: str | None = None,
     name: str,
+    feature_id: int | None = Query(None),
 ):
     logger.debug(
-        "Processing unveto via web form", user=user, feature_name=name, item_name=item
+        "Processing unveto via web form",
+        user=user,
+        feature_name=name,
+        item_name=item,
+        feature_id=feature_id,
     )
-    result = veto_item_feature(session, user, name, item, veto=False)
+
+    # Use feature_id if provided, otherwise fallback to name-based lookup
+    if feature_id is not None:
+        from .service import veto_feature_by_id
+
+        result = veto_feature_by_id(session, user, feature_id, veto=False)
+    else:
+        result = veto_item_feature(session, user, name, item, veto=False)
 
     if result:
         logger.info(
-            "Feature unvetoed successfully via web form", feature_name=name, user=user
+            "Feature unvetoed successfully via web form",
+            feature_name=name,
+            user=user,
         )
     else:
         logger.warning(
@@ -260,29 +286,20 @@ async def route_move_feature(
         to_item=target_item,
     )
 
-    try:
-        result = move_feature(session, feature_name, source_item, target_item)
-        if result:
-            logger.info(
-                "Feature moved successfully via web form",
-                feature_name=feature_name,
-                from_item=source_item,
-                to_item=target_item,
-            )
-        else:
-            logger.warning(
-                "Feature move failed - feature not found",
-                feature_name=feature_name,
-                source_item=source_item,
-            )
-    except FeatureAlreadyExistsError as e:
-        logger.warning(
-            "Feature move failed - target conflict",
+    result = move_feature(session, feature_name, source_item, target_item)
+    if result:
+        logger.info(
+            "Feature moved successfully via web form",
             feature_name=feature_name,
-            target_item=target_item,
-            error=str(e),
+            from_item=source_item,
+            to_item=target_item,
         )
-        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
+    else:
+        logger.warning(
+            "Feature move failed - feature not found",
+            feature_name=feature_name,
+            source_item=source_item,
+        )
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:

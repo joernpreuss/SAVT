@@ -1,0 +1,6 @@
+{
+    "profile": "jinja",
+    "format_attribute_template_tags": true,
+    "indent": 2,
+    "ignore": "J018,J004"
+}

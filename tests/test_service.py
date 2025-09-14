@@ -3,7 +3,6 @@ from sqlmodel import Session
 
 from src.models import Feature, Item
 from src.service import (
-    FeatureAlreadyExistsError,
     ItemAlreadyExistsError,
     create_feature,
     create_item,
@@ -68,16 +67,15 @@ def test_create_item_conflict(session: Session, timestamp_str: str):
 
 
 def test_create_feature_conflict(session: Session, timestamp_str: str):
-    """Test feature name uniqueness enforcement.
+    """Test that duplicate feature names are now allowed.
 
     Covers:
-    - FR-2.3: Feature names must be unique within their scope
-    - FR-2.4: System prevents duplicate feature creation (returns 409 error)
+    - Duplicate feature names are allowed for independent veto control
     """
     name = f"feature_{timestamp_str}"
-    create_feature(session, Feature(name=name))
-    with pytest.raises(FeatureAlreadyExistsError):
-        create_feature(session, Feature(name=name))
+    f1 = create_feature(session, Feature(name=name))
+    f2 = create_feature(session, Feature(name=name))  # Should succeed now
+    assert f1.id != f2.id  # Different IDs for same name
 
 
 def test_veto_idempotency(session: Session, timestamp_str: str):

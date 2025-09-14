@@ -1,107 +1,121 @@
-{% from "macros.html" import item_feature_item_with_move, standalone_feature_item %}
-<html>
+{% from "macros.html" import item_feature_item_with_move,
+standalone_feature_item %}
+<html lang="en">
   <head>
     <title>Features</title>
+    <meta name="description"
+          content="{{ settings.app_name }} - Group decision making tool">
+    <meta name="keywords"
+          content="group decisions, voting, veto, {{ settings.property_name_plural_computed }}">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <link rel="stylesheet" href="/static/css/styles.css">
   </head>
   <body>
     <div class="container">
-      <h1>{{settings.app_name}}</h1>
-
+      <h1>{{ settings.app_name }}</h1>
       <h2>View</h2>
       <div class="instruction">
-        Click <strong>[veto]</strong> or <strong>[unveto]</strong> to change {{settings.property_name_plural_computed}} status
+        Click <strong>[veto]</strong> or <strong>[unveto]</strong>
+        to change {{ settings.property_name_plural_computed }} status
       </div>
       <div class="section">
-        <h3>{{settings.object_name_plural_computed.title()}}</h3>
+        <h3>{{ settings.object_name_plural_computed.title() }}</h3>
         <ul id="objects-list">
           {% for item in items %}
-          <li>
-            <strong>{{item.name}}</strong>{% if item.kind %} <span class="kind-badge">({{item.kind}})</span>{% endif %}
-            <ul>
-              {% for feature in item.features %}
-              {{ item_feature_item_with_move(feature, item.name, items) }}
-              {% endfor %}
-            </ul>
-          </li>
+            <li>
+              <strong>{{ item.name }}</strong>
+              {% if item.kind %}<span class="kind-badge">({{ item.kind }})</span>{% endif %}
+              <ul>
+                {% for feature in item.features %}{{ item_feature_item_with_move(feature, item.name, items) }}{% endfor %}
+              </ul>
+            </li>
           {% endfor %}
         </ul>
       </div>
-
       <div class="section">
-        <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}} <span class="standalone-indicator">(Free)</span></h4>
+        <h4>
+          {{ settings.property_name_plural_computed.title() }}
+          without {{ settings.object_name_plural_computed }}
+          <span class="standalone-indicator">(Free)</span>
+        </h4>
         <ul id="standalone-properties">
-          {% for feature in features %}
-          {{ standalone_feature_item(feature, items) }}
-          {% endfor %}
+          {% for feature in features %}{{ standalone_feature_item(feature, items) }}{% endfor %}
         </ul>
       </div>
-
       <h2>Create</h2>
-
       <div class="section">
-        <h3>{{settings.object_name_singular.title()}}</h3>
-        <form
-          method="POST"
-          action="/create/item/"
-          hx-post="/create/item/"
-          hx-target="body"
-          hx-swap="outerHTML"
-          >
-          <label for="item_name">{{settings.object_name_singular.title()}} Name:</label>
-          <input
-            type="text"
-            required
-            name="name"
-            id="item_name"
-            value="{{name}}"
-            placeholder="Enter {{settings.object_name_singular}} name..."
-          />
+        <h3>{{ settings.object_name_singular.title() }}</h3>
+        <form method="post"
+              action="/create/item/"
+              hx-post="/create/item/"
+              hx-target="body"
+              hx-swap="outerHTML">
+          <label for="item_name">
+            {{ settings.object_name_singular.title() }}
+            Name:
+          </label>
+          <input type="text"
+                 required
+                 name="name"
+                 id="item_name"
+                 value="{{ name }}"
+                 placeholder="Enter {{ settings.object_name_singular }} name..." />
           <label for="item_kind">Kind (optional):</label>
-          <input
-            type="text"
-            name="kind"
-            id="item_kind"
-            value="{{kind}}"
-            placeholder="e.g., vegan, vegetarian..."
-          />
-          <button type="submit">Create {{settings.object_name_singular.title()}}</button>
+          <input type="text"
+                 name="kind"
+                 id="item_kind"
+                 value="{{ kind }}"
+                 placeholder="e.g., vegan, vegetarian..." />
+          <button type="submit">
+            Create
+            {{ settings.object_name_singular.title() }}
+          </button>
         </form>
       </div>
-
       <div class="section">
-        <h3>{{settings.property_name_singular.title()}}</h3>
+        <h3>{{ settings.property_name_singular.title() }}</h3>
         <div class="form-description">
-          You can create {{settings.property_name_plural_computed}} that belong to a specific {{settings.object_name_singular}}, or create standalone {{settings.property_name_plural_computed}} that don't belong to any {{settings.object_name_singular}}.
+          You can create {{ settings.property_name_plural_computed }} that belong to
+          a specific {{ settings.object_name_singular }}, or create standalone
+          {{ settings.property_name_plural_computed }} that don't belong to any
+          {{ settings.object_name_singular }}.
         </div>
-        <form
-          method="POST"
-          action="/create/feature/"
-          hx-post="/create/feature/"
-          hx-target="body"
-          hx-swap="outerHTML"
-          >
-          <label for="feature_name">{{settings.property_name_singular.title()}} Name:</label>
-          <input
-            type="text"
-            required
-            name="name"
-            id="feature_name"
-            value="{{name}}"
-            placeholder="Enter {{settings.property_name_singular}} name..."
-          />
-
-          <label for="item_id">Add to {{settings.object_name_singular}} (optional):</label>
+        <form method="post"
+              action="/create/feature/"
+              hx-post="/create/feature/"
+              hx-target="body"
+              hx-swap="outerHTML">
+          <label for="feature_name">
+            {{ settings.property_name_singular.title() }}
+            Name:
+          </label>
+          <input type="text"
+                 required
+                 name="name"
+                 id="feature_name"
+                 value="{{ name }}"
+                 placeholder="Enter {{ settings.property_name_singular }} name..." />
+          <label for="item_id">
+            Add to {{ settings.object_name_singular }}
+            (optional):
+          </label>
           <select name="item_id" id="item_id">
-            <option value="">[No {{settings.object_name_singular}} - Free]</option>
-            {% for item in items %} {% if item.id == item_id %}
-            <option value="{{item.id}}" selected>{{item.name}}</option>
-            {% else %}
-            <option value="{{item.id}}">{{item.name}}</option>
-            {% endif %} {% endfor %}
+            <option value="">
+              [No {{ settings.object_name_singular }}
+              - Free]
+            </option>
+            {% for item in items %}
+              {% if item.id == item_id %}
+                <option value="{{ item.id }}" selected>{{ item.name }}</option>
+              {% else %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+              {% endif %}
+            {% endfor %}
           </select>
-          <button type="submit">Create {{settings.property_name_singular.title()}}</button>
+          <button type="submit">
+            Create
+            {{ settings.property_name_singular.title() }}
+          </button>
         </form>
       </div>
     </div>
