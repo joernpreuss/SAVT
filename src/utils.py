@@ -32,6 +32,121 @@ def truncate_name(name: str, max_length: int = MAX_NAME_LENGTH) -> str:
     return f"{name[:first_chars]}...{name[-last_chars:]}"
 
 
+def smart_shorten_name(name: str, max_length: int = MAX_NAME_LENGTH) -> str:
+    """Intelligently shorten complex merged names with better logic.
+
+    Handles cases like "TestPizza2-1-TestPizza1-3-TestPizza1-2" by:
+    1. Detecting repeated base names and consolidating them
+    2. Using abbreviations for common patterns
+    3. Falling back to regular truncation if needed
+
+    Args:
+        name: The name to shorten
+        max_length: Maximum allowed length
+
+    Returns:
+        Shortened name that's more readable than simple truncation
+    """
+    if len(name) <= max_length:
+        return name
+
+    # Strategy 1: Try to consolidate repeated base names
+    # Example: "TestPizza2-1-TestPizza1-3-TestPizza1-2" -> "TestPizza+3merged"
+    shortened = _consolidate_repeated_names(name, max_length)
+    if len(shortened) <= max_length:
+        return shortened
+
+    # Strategy 2: Use abbreviations for common patterns
+    # Example: "VeryLongPizzaNameHere-Merge-AnotherLong" -> "VLPNameHere+ALong"
+    shortened = _abbreviate_long_parts(name, max_length)
+    if len(shortened) <= max_length:
+        return shortened
+
+    # Strategy 3: Fall back to regular truncation
+    return truncate_name(name, max_length)
+
+
+def _consolidate_repeated_names(name: str, max_length: int) -> str:
+    """Consolidate repeated base names in merged item names."""
+    import re
+    from collections import Counter
+
+    # Split on common separators used in merges
+    parts = re.split(r"[-_+]", name)
+
+    if len(parts) < 3:  # Not a complex merge, skip
+        return name
+
+    # Count base names (ignoring trailing numbers)
+    base_names = []
+    for part in parts:
+        # Remove trailing numbers like "-1", "-2", etc.
+        base = re.sub(r"-?\d+$", "", part)
+        if base:  # Only add non-empty bases
+            base_names.append(base)
+
+    if not base_names:
+        return name
+
+    base_counts = Counter(base_names)
+
+    # If we have repeated base names, consolidate them
+    most_common_base, count = base_counts.most_common(1)[0]
+
+    if count > 1:
+        # Use the most common base + merge indicator
+        other_bases = [base for base in base_counts.keys() if base != most_common_base]
+
+        if other_bases:
+            # Format: "MainBase+2others" or "MainBase+AnotherBase"
+            if len(other_bases) == 1:
+                other_name = other_bases[0][:10]  # Limit other name length
+                consolidated = f"{most_common_base}+{other_name}"
+            else:
+                consolidated = f"{most_common_base}+{len(other_bases)}others"
+        else:
+            # All parts are the same base
+            consolidated = f"{most_common_base}x{count}"
+
+        return consolidated
+
+    return name
+
+
+def _abbreviate_long_parts(name: str, max_length: int) -> str:
+    """Create abbreviations for long parts of a name."""
+    import re
+
+    # Split on common separators
+    parts = re.split(r"([-_+])", name)
+
+    abbreviated_parts = []
+
+    for part in parts:
+        if part in ["-", "_", "+"]:  # Keep separators
+            abbreviated_parts.append(part)
+        elif len(part) > 8:  # Abbreviate long parts
+            # Create abbreviation: take first letter of each capital + first few chars
+            capitals = re.findall(r"[A-Z]", part)
+            if len(capitals) > 1:
+                # CamelCase: "TestPizza" -> "TP"
+                abbrev = "".join(capitals)
+            else:
+                # Single word: "verylongname" -> "verylong"
+                abbrev = part[:6]
+            abbreviated_parts.append(abbrev)
+        else:
+            abbreviated_parts.append(part)
+
+    result = "".join(abbreviated_parts)
+
+    # If still too long, truncate
+    if len(result) > max_length:
+        return truncate_name(result, max_length)
+
+    return result
+
+
 def apply_veto_to_feature(
     session,
     feature,

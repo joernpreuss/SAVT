@@ -2,16 +2,13 @@ from collections.abc import Sequence
 from typing import Final
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import (
-    Session,
-    select,
-)
+from sqlmodel import Session, select
 
 from .constants import MAX_FEATURE_AMOUNT, MAX_NAME_LENGTH
 from .logging_config import get_logger
 from .logging_utils import log_database_operation, log_user_action
 from .models import Feature, Item
-from .utils import apply_veto_to_feature, truncate_name
+from .utils import apply_veto_to_feature, smart_shorten_name
 
 logger: Final = get_logger(__name__)
 
@@ -323,9 +320,9 @@ def move_feature(
                 "Feature partially moved",
                 feature_name=feature_name,
                 amount_moved=amount_to_move,
-                remaining_at_source=source_feature.amount
-                if source_feature.amount > 0
-                else 0,
+                remaining_at_source=(
+                    source_feature.amount if source_feature.amount > 0 else 0
+                ),
                 target_total=target_feature.amount,
             )
 
@@ -474,9 +471,9 @@ def merge_items(
             if "partially moved" in (message or ""):
                 partial_moves.append(feature.name)
 
-    # Create new concatenated name with truncation handling
+    # Create new concatenated name with smart shortening handling
     base_name = f"{source_item_name}-{target_item_name}"
-    base_name = truncate_name(base_name)
+    base_name = smart_shorten_name(base_name)
 
     new_item_name = base_name
     counter = 2
@@ -484,7 +481,7 @@ def merge_items(
         # For numbered versions, we need to account for the number suffix
         suffix = f"-{counter}"
         max_base_length = MAX_NAME_LENGTH - len(suffix)
-        truncated_base = truncate_name(base_name, max_base_length)
+        truncated_base = smart_shorten_name(base_name, max_base_length)
         new_item_name = f"{truncated_base}{suffix}"
         counter += 1
 
@@ -579,7 +576,7 @@ def split_item(
                 for i in range(1, total_amount + 1):
                     # Generate unique name with numbering
                     base_name = f"{source_item_name}-{i}"
-                    base_name = truncate_name(base_name)
+                    base_name = smart_shorten_name(base_name)
 
                     new_item_name = base_name
                     counter = 2
@@ -588,7 +585,7 @@ def split_item(
                     while get_item(session, new_item_name) is not None:
                         suffix = f"-{counter}"
                         max_base_length = MAX_NAME_LENGTH - len(suffix)
-                        truncated_base = truncate_name(base_name, max_base_length)
+                        truncated_base = smart_shorten_name(base_name, max_base_length)
                         new_item_name = f"{truncated_base}{suffix}"
                         counter += 1
 
@@ -618,16 +615,16 @@ def split_item(
         return (
             [],
             f"Item '{source_item_name}' has only one unique topping with amount 1 - "
-            f"cannot split",
+            + "cannot split",
         )
 
     created_items = []
 
     # Create new item for each unique feature
     for feature_name, total_amount in feature_groups.items():
-        # Generate unique name with duplicate prevention and truncation
+        # Generate unique name with duplicate prevention and smart shortening
         base_name = f"{source_item_name}-{feature_name}"
-        base_name = truncate_name(base_name)
+        base_name = smart_shorten_name(base_name)
 
         new_item_name = base_name
         counter = 2
@@ -637,7 +634,7 @@ def split_item(
             # For numbered versions, account for the number suffix
             suffix = f"-{counter}"
             max_base_length = MAX_NAME_LENGTH - len(suffix)
-            truncated_base = truncate_name(base_name, max_base_length)
+            truncated_base = smart_shorten_name(base_name, max_base_length)
             new_item_name = f"{truncated_base}{suffix}"
             counter += 1
 
