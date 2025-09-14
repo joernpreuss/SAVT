@@ -216,7 +216,12 @@ class TestVetoFunctionality:
         veto_soup = BeautifulSoup(veto_response.content, "html.parser")
 
         # Property should now be struck through and have unveto link
-        struck_property = veto_soup.find("s", string=property_name)
+        struck_elements = veto_soup.find_all("s")
+        struck_property = None
+        for s_elem in struck_elements:
+            if property_name in s_elem.get_text():
+                struck_property = s_elem
+                break
         assert struck_property is not None
 
         # Should have unveto link
@@ -248,7 +253,12 @@ class TestVetoFunctionality:
         assert "/veto/" in veto_link.get("href")
 
         # Property name should not be struck through
-        struck_property = unveto_soup.find("s", string="Standalone")
+        struck_elements = unveto_soup.find_all("s")
+        struck_property = None
+        for s_elem in struck_elements:
+            if "Standalone" in s_elem.get_text():
+                struck_property = s_elem
+                break
         assert struck_property is None
 
 
