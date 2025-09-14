@@ -11,6 +11,7 @@ from .constants import MAX_FEATURE_AMOUNT, MAX_NAME_LENGTH
 from .logging_config import get_logger
 from .logging_utils import log_database_operation, log_user_action
 from .models import Feature, Item
+from .utils import apply_veto_to_feature, truncate_name
 
 logger: Final = get_logger(__name__)
 
@@ -227,56 +228,7 @@ def veto_item_feature(
     logger.debug("Found feature for action", action=action, feature=feature)
 
     if feature:
-        vetoed_by_set = set(feature.vetoed_by)
-        original_vetoed_by = set(feature.vetoed_by)
-
-        if veto:
-            vetoed_by_set.add(user)
-        else:
-            vetoed_by_set.discard(user)
-
-        # Only update if there's a change
-        if original_vetoed_by != vetoed_by_set:
-            feature.vetoed_by = sorted(vetoed_by_set)
-
-            logger.debug(
-                "Updating feature vetoed_by",
-                from_vetoed_by=sorted(original_vetoed_by),
-                to_vetoed_by=feature.vetoed_by,
-            )
-            session.commit()
-            session.refresh(feature)
-
-            log_database_operation(
-                operation="update",
-                table="Feature",
-                success=True,
-                feature_name=feature.name,
-                feature_id=feature.id,
-                action=action,
-            )
-
-            log_user_action(
-                action=f"{action}_feature",
-                user=user,
-                feature_name=feature.name,
-                item_name=item_name,
-                vetoed_by_count=len(feature.vetoed_by),
-            )
-
-            logger.info(
-                "Feature action completed successfully",
-                action=action,
-                user=user,
-                feature_name=feature.name,
-            )
-        else:
-            logger.debug(
-                "No change needed for action",
-                action=action,
-                user=user,
-                feature_name=feature.name,
-            )
+        apply_veto_to_feature(session, feature, user, veto, item_name=item_name)
     else:
         logger.warning(
             f"Feature not found for {action}",
@@ -454,56 +406,7 @@ def veto_feature_by_id(
     logger.debug("Found feature for action", action=action, feature=feature)
 
     if feature:
-        vetoed_by_set = set(feature.vetoed_by)
-        original_vetoed_by = set(feature.vetoed_by)
-
-        if veto:
-            vetoed_by_set.add(user)
-        else:
-            vetoed_by_set.discard(user)
-
-        # Only update if there's a change
-        if original_vetoed_by != vetoed_by_set:
-            feature.vetoed_by = sorted(vetoed_by_set)
-
-            logger.debug(
-                "Updating feature vetoed_by",
-                from_vetoed_by=sorted(original_vetoed_by),
-                to_vetoed_by=feature.vetoed_by,
-            )
-            session.commit()
-            session.refresh(feature)
-
-            log_database_operation(
-                operation="update",
-                table="Feature",
-                success=True,
-                feature_name=feature.name,
-                feature_id=feature.id,
-                action=action,
-            )
-
-            log_user_action(
-                action=f"{action}_feature",
-                user=user,
-                feature_name=feature.name,
-                feature_id=feature_id,
-                vetoed_by_count=len(feature.vetoed_by),
-            )
-
-            logger.info(
-                "Feature action completed successfully",
-                action=action,
-                user=user,
-                feature_name=feature.name,
-            )
-        else:
-            logger.debug(
-                "No change needed for action",
-                action=action,
-                user=user,
-                feature_name=feature.name,
-            )
+        apply_veto_to_feature(session, feature, user, veto, feature_id=feature_id)
     else:
         logger.warning(
             f"Feature not found for {action}",
@@ -511,3 +414,267 @@ def veto_feature_by_id(
         )
 
     return feature
+
+
+def merge_items(
+    session: Session,
+    source_item_name: str,
+    target_item_name: str,
+) -> tuple[Item | None, str | None]:
+    """Merge all features from source item into target item, then delete source.
+
+    Args:
+        session: Database session
+        source_item_name: Name of item to merge from (will be deleted)
+        target_item_name: Name of item to merge into (will remain)
+
+    Returns:
+        Tuple of (target item or None, user message or None)
+    """
+    logger.debug(
+        "Merging items",
+        source_item=source_item_name,
+        target_item=target_item_name,
+    )
+
+    # Get both items
+    source_item = get_item(session, source_item_name)
+    if not source_item:
+        return None, f"Source item '{source_item_name}' not found"
+
+    target_item = get_item(session, target_item_name)
+    if not target_item:
+        return None, f"Target item '{target_item_name}' not found"
+
+    if source_item.id == target_item.id:
+        return None, "Cannot merge an item with itself"
+
+    # Get all features from source item
+    source_features = list(source_item.features)
+
+    if not source_features:
+        # No features to merge, just delete the empty source item
+        session.delete(source_item)
+        session.commit()
+        return (
+            target_item,
+            f"Empty item '{source_item_name}' merged into '{target_item_name}'",
+        )
+
+    moved_features = []
+    partial_moves = []
+
+    # Move each feature from source to target
+    for feature in source_features:
+        result, message = move_feature(
+            session, feature.name, source_item_name, target_item_name
+        )
+        if result:
+            moved_features.append(feature.name)
+            if "partially moved" in (message or ""):
+                partial_moves.append(feature.name)
+
+    # Create new concatenated name with truncation handling
+    base_name = f"{source_item_name}-{target_item_name}"
+    base_name = truncate_name(base_name)
+
+    new_item_name = base_name
+    counter = 2
+    while get_item(session, new_item_name) is not None:
+        # For numbered versions, we need to account for the number suffix
+        suffix = f"-{counter}"
+        max_base_length = MAX_NAME_LENGTH - len(suffix)
+        truncated_base = truncate_name(base_name, max_base_length)
+        new_item_name = f"{truncated_base}{suffix}"
+        counter += 1
+
+    # Update target item name
+    target_item.name = new_item_name
+    session.add(target_item)
+
+    # Delete the source item (should be empty now or have only partial remainders)
+    session.refresh(source_item)  # Refresh to see current state
+    remaining_features = list(source_item.features)
+
+    if not remaining_features:
+        session.delete(source_item)
+        session.commit()
+
+        if partial_moves:
+            moved_count = len(moved_features)
+            partial_count = len(partial_moves)
+            message = (
+                f"'{source_item_name}' merged into '{new_item_name}' "
+                f"({moved_count} features moved, {partial_count} partial)"
+            )
+        else:
+            message = f"'{source_item_name}' merged completely into '{new_item_name}'"
+    else:
+        # Some features remained due to capacity limits
+        remaining_names = [f.name for f in remaining_features]
+        message = (
+            f"'{source_item_name}' partially merged into '{new_item_name}' - "
+            f"{', '.join(remaining_names)} remain"
+        )
+
+    log_database_operation(
+        operation="merge_items",
+        table="Item",
+        success=True,
+        source_item_name=source_item_name,
+        target_item_name=new_item_name,
+        features_moved=len(moved_features),
+    )
+
+    logger.info(
+        "Items merged successfully",
+        source_item=source_item_name,
+        target_item=new_item_name,
+        features_moved=len(moved_features),
+    )
+
+    return target_item, message
+
+
+def split_item(
+    session: Session,
+    source_item_name: str,
+) -> tuple[list[Item], str | None]:
+    """Split an item into separate items, one for each unique feature.
+
+    Args:
+        session: Database session
+        source_item_name: Name of item to split
+
+    Returns:
+        Tuple of (list of new items, user message or None)
+    """
+    logger.debug("Splitting item", source_item=source_item_name)
+
+    # Get source item
+    source_item = get_item(session, source_item_name)
+    if not source_item:
+        return [], f"Item '{source_item_name}' not found"
+
+    # Get all features grouped by name
+    features = source_item.features
+    if len(features) == 0:
+        return [], f"Item '{source_item_name}' has no features to split"
+
+    # Group features by name (combine amounts)
+    feature_groups: dict[str, int] = {}
+    for feature in features:
+        if feature.name in feature_groups:
+            feature_groups[feature.name] += feature.amount
+        else:
+            feature_groups[feature.name] = feature.amount
+
+    if len(feature_groups) <= 1:
+        # Special case: single topping with amount > 1
+        if len(feature_groups) == 1:
+            feature_name, total_amount = next(iter(feature_groups.items()))
+            if total_amount > 1:
+                # Split into individual pizzas with amount 1 each
+                created_items = []
+                for i in range(1, total_amount + 1):
+                    # Generate unique name with numbering
+                    base_name = f"{source_item_name}-{i}"
+                    base_name = truncate_name(base_name)
+
+                    new_item_name = base_name
+                    counter = 2
+
+                    # Check if name already exists and add number if needed
+                    while get_item(session, new_item_name) is not None:
+                        suffix = f"-{counter}"
+                        max_base_length = MAX_NAME_LENGTH - len(suffix)
+                        truncated_base = truncate_name(base_name, max_base_length)
+                        new_item_name = f"{truncated_base}{suffix}"
+                        counter += 1
+
+                    new_item = create_item(
+                        session, Item(name=new_item_name, kind=source_item.kind)
+                    )
+
+                    # Add the feature with amount 1
+                    new_feature = Feature(
+                        name=feature_name,
+                        amount=1,
+                        item_id=new_item.id,
+                        created_by=source_item.created_by,
+                    )
+                    session.add(new_feature)
+                    created_items.append(new_item)
+
+                # Delete the original item
+                session.delete(source_item)
+                session.commit()
+
+                message = (
+                    f"Split '{source_item_name}' into {total_amount} individual pizzas"
+                )
+                return created_items, message
+
+        return (
+            [],
+            f"Item '{source_item_name}' has only one unique topping with amount 1 - "
+            f"cannot split",
+        )
+
+    created_items = []
+
+    # Create new item for each unique feature
+    for feature_name, total_amount in feature_groups.items():
+        # Generate unique name with duplicate prevention and truncation
+        base_name = f"{source_item_name}-{feature_name}"
+        base_name = truncate_name(base_name)
+
+        new_item_name = base_name
+        counter = 2
+
+        # Check if name already exists and add number if needed
+        while get_item(session, new_item_name) is not None:
+            # For numbered versions, account for the number suffix
+            suffix = f"-{counter}"
+            max_base_length = MAX_NAME_LENGTH - len(suffix)
+            truncated_base = truncate_name(base_name, max_base_length)
+            new_item_name = f"{truncated_base}{suffix}"
+            counter += 1
+
+        new_item = create_item(session, Item(name=new_item_name, kind=source_item.kind))
+
+        # Add the feature to the new item
+        new_feature = Feature(
+            name=feature_name,
+            amount=min(total_amount, MAX_FEATURE_AMOUNT),
+            item_id=new_item.id,
+            created_by=None,  # Could inherit from original features
+        )
+        create_feature(session, new_feature)
+        created_items.append(new_item)
+
+    # Delete the original item
+    session.delete(source_item)
+    session.commit()
+
+    item_names = [item.name for item in created_items]
+    message = (
+        f"'{source_item_name}' split into {len(created_items)} items: "
+        f"{', '.join(item_names)}"
+    )
+
+    log_database_operation(
+        operation="split_item",
+        table="Item",
+        success=True,
+        source_item_name=source_item_name,
+        new_items_count=len(created_items),
+    )
+
+    logger.info(
+        "Item split successfully",
+        source_item=source_item_name,
+        new_items_count=len(created_items),
+    )
+
+    return created_items, message

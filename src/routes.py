@@ -25,14 +25,26 @@ from .service import (
     create_item,
     get_features,
     get_items,
+    merge_items,
     move_feature,
+    split_item,
     veto_item_feature,
 )
+from .utils import truncate_name
 
 logger: Final = get_logger(__name__)
 
 router: Final = APIRouter()
 templates: Final = Jinja2Templates(directory="templates/")
+
+
+# Add custom filter for name truncation
+def truncate_name_filter(name: str, max_length: int = 30) -> str:
+    """Jinja2 filter wrapper for truncate_name utility function."""
+    return truncate_name(name, max_length)
+
+
+templates.env.filters["truncate_name"] = truncate_name_filter
 
 
 def _filter_standalone_features(features):
@@ -307,6 +319,67 @@ async def route_move_feature(
             feature_name=feature_name,
             source_item=source_item,
         )
+
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        return _render_full_page_response(request, session, message=message)
+
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/merge/item")
+async def route_merge_items(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    source_item: str = Form(...),
+    target_item: str = Form(...),
+):
+    logger.debug(
+        "Merging items via web form",
+        source_item=source_item,
+        target_item=target_item,
+    )
+
+    result, message = merge_items(session, source_item, target_item)
+    if result:
+        logger.info(
+            "Items merged successfully via web form",
+            source_item=source_item,
+            target_item=target_item,
+        )
+    else:
+        logger.warning(
+            "Item merge failed",
+            source_item=source_item,
+            target_item=target_item,
+        )
+
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        return _render_full_page_response(request, session, message=message)
+
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/split/item/{item_name}")
+async def route_split_item(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    item_name: str,
+):
+    logger.debug("Splitting item via web form", item_name=item_name)
+
+    new_items, message = split_item(session, item_name)
+    if new_items:
+        logger.info(
+            "Item split successfully via web form",
+            item_name=item_name,
+            new_items_count=len(new_items),
+        )
+    else:
+        logger.warning("Item split failed", item_name=item_name)
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
