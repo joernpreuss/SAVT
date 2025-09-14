@@ -2,6 +2,8 @@
 
 Pure Python Suggestion And Veto Tool
 
+> **Experimental AI-Assisted Development**: This project serves as an experiment in AI-assisted coding, exploring deliberate architectural choices like pure Python (avoiding JS/TS), server-side rendering with HTMX, modern development tooling (uv, modern type hints), and comprehensive requirement tracing. Many decisions were made intentionally to test specific approaches and patterns.
+
 ## Overview
 
 SAVT is a collaborative decision-making tool originally designed as a proof of concept for ordering pizza together. The system allows users to:
@@ -16,6 +18,11 @@ While initially built for pizza ordering, the flexible object-property model mak
 
 SAVT is built with **pure Python** to avoid JavaScript/TypeScript complexity, using server-side rendering with HTMX for dynamic interactions without page reloads.
 
+**Key Architecture:**
+- **Feature IDs**: Uses `feature.id` for unique identification (allows duplicate feature names)
+- **Veto System**: Users can independently veto/unveto features using unique IDs
+- **HTMX Integration**: Dynamic UI updates without JavaScript complexity
+
 ## Development
 
 ### Prerequisites
@@ -26,7 +33,7 @@ SAVT is built with **pure Python** to avoid JavaScript/TypeScript complexity, us
 
 **Key Technologies:**
 - **FastAPI** + **SQLModel** - Modern Python web framework with type-safe database
-- **Jinja2** + **HTMX** - Server-side templating with dynamic interactions  
+- **Jinja2** + **HTMX** - Server-side templating with dynamic interactions
 - **pytest** + **structlog** - Testing and structured logging
 
 Dependencies are managed via `pyproject.toml` with exact version pinning for reproducibility.
@@ -81,7 +88,7 @@ PROPERTY_NAME_PLURAL="children"    # Override automatic "childs"
 
 **Example Configurations:**
 - **Pizza ordering**: `pizza` → `pizzas`, `topping` → `toppings`
-- **Feature voting**: `feature` → `features`, `aspect` → `aspects` 
+- **Feature voting**: `feature` → `features`, `aspect` → `aspects`
 - **Event planning**: `event` → `events`, `option` → `options`
 - **Product design**: `product` → `products`, `component` → `components`
 - **Library system**: `book` → `books`, `category` → `categories` (override needed)
@@ -97,7 +104,7 @@ Tests reference requirements in their docstrings using a simple pattern:
 ```python
 def test_create_property_conflict(session: Session, timestamp_str: str):
     """Test property name uniqueness enforcement.
-    
+
     Covers:
     - FR-2.3: Property names must be unique within their scope
     - FR-2.4: System prevents duplicate property creation (returns 409 error)
@@ -180,7 +187,7 @@ SAVT includes a comprehensive structured logging system with different loggers f
 
 ### Log Types
 
-- **API Requests**: `GET /api/endpoint - 200 (15.2ms)` 
+- **API Requests**: `GET /api/endpoint - 200 (15.2ms)`
 - **User Actions**: `User action: veto_property by anonymous`
 - **Database Operations**: `Database create on SVObject succeeded`
 - **System Events**: `Application startup` with hostname/IP
@@ -207,7 +214,7 @@ logger.warning("Validation failed", field="name", value="", error="cannot be emp
 logger.debug("Processing request", method="POST", path="/veto", user="anonymous")
 
 # Legacy specialized loggers (still available)
-log_user_action("create_property", user="anonymous", object_name="Pizza") 
+log_user_action("create_property", user="anonymous", object_name="Pizza")
 log_database_operation("create", "SVObject", success=True, object_id=123)
 ```
 
