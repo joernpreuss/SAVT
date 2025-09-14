@@ -114,10 +114,17 @@ class TestPartialUpdates:
         root_ul = soup.find("ul", id="objects-list")
         assert root_ul is not None
 
-        # Should not contain other page elements
+        # Should not contain main page elements
         assert soup.find("h1") is None
-        assert soup.find("form") is None
         assert soup.find("script") is None
+
+        # Small move forms are OK in fragments
+        soup.find_all("form", class_="move-form")
+        # But not main creation forms
+        creation_forms = soup.find_all(
+            "form", action=lambda x: x and ("/create/" in x if x else False)
+        )
+        assert len(creation_forms) == 0
 
     def test_unveto_returns_objects_fragment(self, client, sample_data):
         """Test unveto action returns only objects list fragment."""
@@ -138,9 +145,16 @@ class TestPartialUpdates:
         root_ul = soup.find("ul", id="objects-list")
         assert root_ul is not None
 
-        # Should not contain other page elements
+        # Should not contain main page elements
         assert soup.find("h1") is None
-        assert soup.find("form") is None
+
+        # Small move forms are OK in fragments
+        soup.find_all("form", class_="move-form")
+        # But not main creation forms
+        creation_forms = soup.find_all(
+            "form", action=lambda x: x and ("/create/" in x if x else False)
+        )
+        assert len(creation_forms) == 0
 
     def test_standalone_veto_returns_standalone_fragment(self, client, sample_data):
         """Test standalone feature veto returns only standalone features fragment."""
@@ -153,10 +167,17 @@ class TestPartialUpdates:
         root_ul = soup.find("ul", id="standalone-properties")
         assert root_ul is not None
 
-        # Should not contain other page elements
+        # Should not contain main page elements
         assert soup.find("h1") is None
-        assert soup.find("form") is None
         assert soup.find(id="objects-list") is None
+
+        # Small move forms are OK in fragments
+        soup.find_all("form", class_="move-form")
+        # But not main creation forms
+        creation_forms = soup.find_all(
+            "form", action=lambda x: x and ("/create/" in x if x else False)
+        )
+        assert len(creation_forms) == 0
 
 
 class TestDynamicContentUpdates:

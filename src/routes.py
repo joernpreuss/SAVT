@@ -1,6 +1,15 @@
 from typing import Final
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Cookie,
+    Depends,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
@@ -17,6 +26,7 @@ from .service import (
     create_item,
     get_features,
     get_items,
+    move_feature,
     veto_item_feature,
 )
 
@@ -72,6 +82,7 @@ def _render_fragment_response(request: Request, session: Session, item: str | No
             "fragments/standalone_properties.html",
             {
                 "features": standalone_features,
+                "items": list(items),
                 "settings": settings,
             },
         )
@@ -229,5 +240,52 @@ async def route_unveto_item_feature(
     # If HTMX request, return updated fragment
     if "HX-Request" in request.headers:
         return _render_fragment_response(request, session, item)
+
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/move/feature/{feature_name}")
+async def route_move_feature(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    feature_name: str,
+    source_item: str | None = Form(None),
+    target_item: str | None = Form(None),
+):
+    logger.debug(
+        "Moving feature via web form",
+        feature_name=feature_name,
+        from_item=source_item,
+        to_item=target_item,
+    )
+
+    try:
+        result = move_feature(session, feature_name, source_item, target_item)
+        if result:
+            logger.info(
+                "Feature moved successfully via web form",
+                feature_name=feature_name,
+                from_item=source_item,
+                to_item=target_item,
+            )
+        else:
+            logger.warning(
+                "Feature move failed - feature not found",
+                feature_name=feature_name,
+                source_item=source_item,
+            )
+    except FeatureAlreadyExistsError as e:
+        logger.warning(
+            "Feature move failed - target conflict",
+            feature_name=feature_name,
+            target_item=target_item,
+            error=str(e),
+        )
+        raise HTTPException(status_code=HTTP_CONFLICT, detail=str(e)) from e
+
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        return _render_full_page_response(request, session)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

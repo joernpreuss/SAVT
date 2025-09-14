@@ -246,3 +246,97 @@ def veto_item_feature(
         )
 
     return feature
+
+
+def move_feature(
+    session: Session,
+    feature_name: str,
+    source_item_name: str | None,
+    target_item_name: str | None,
+) -> Feature | None:
+    """Move a feature from one item to another (or to/from standalone).
+
+    Args:
+        session: Database session
+        feature_name: Name of the feature to move
+        source_item_name: Current item name (None for standalone features)
+        target_item_name: Target item name (None to make it standalone)
+
+    Returns:
+        The moved feature or None if not found
+    """
+    logger.debug(
+        "Moving feature",
+        feature_name=feature_name,
+        from_item=source_item_name,
+        to_item=target_item_name,
+    )
+
+    # Get source item ID
+    source_item_id = None
+    if source_item_name:
+        source_item = get_item(session, source_item_name)
+        if source_item:
+            source_item_id = source_item.id
+        else:
+            logger.warning("Source item not found", item_name=source_item_name)
+            return None
+
+    # Get target item ID
+    target_item_id = None
+    if target_item_name:
+        target_item = get_item(session, target_item_name)
+        if target_item:
+            target_item_id = target_item.id
+        else:
+            logger.warning("Target item not found", item_name=target_item_name)
+            return None
+
+    # Find the feature to move
+    feature = get_feature(session, feature_name, source_item_id)
+    if not feature:
+        logger.warning(
+            "Feature not found for move",
+            feature_name=feature_name,
+            source_item_name=source_item_name,
+        )
+        return None
+
+    # Check if target already has feature with same name
+    existing_feature = get_feature(session, feature_name, target_item_id)
+    if existing_feature:
+        logger.warning(
+            "Feature move failed - target already has feature with same name",
+            feature_name=feature_name,
+            target_item_name=target_item_name,
+        )
+        target_type = "item" if target_item_name else "standalone"
+        raise FeatureAlreadyExistsError(
+            f"Target {target_type} already has feature '{feature_name}'"
+        )
+
+    # Move the feature
+    old_item_id = feature.item_id
+    feature.item_id = target_item_id
+
+    session.commit()
+    session.refresh(feature)
+
+    log_database_operation(
+        operation="move",
+        table="Feature",
+        success=True,
+        feature_name=feature.name,
+        feature_id=feature.id,
+        from_item_id=old_item_id,
+        to_item_id=target_item_id,
+    )
+
+    logger.info(
+        "Feature moved successfully",
+        feature_name=feature.name,
+        from_item=source_item_name,
+        to_item=target_item_name,
+    )
+
+    return feature
