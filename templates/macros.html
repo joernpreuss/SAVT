@@ -1,98 +1,118 @@
-
 {% macro veto_display(feature) %}
   {% if feature.vetoed_by|length > 0 %}
-  <s>{{feature.name}}</s>
-  <span class="veto-count">({{feature.vetoed_by|length}} veto{% if feature.vetoed_by|length != 1 %}s{% endif %})</span>
+    <s>{{ feature.name }}</s>
+    <span class="veto-count">
+      ({{ feature.vetoed_by|length }} veto
+      {% if feature.vetoed_by|length != 1 %}s{% endif %}
+      )
+    </span>
   {% else %}
-  {{feature.name}}
+    {{ feature.name }}
   {% endif %}
 {% endmacro %}
-
 {% macro veto_link(feature, unveto_url, veto_url, target_id) %}
   {% if feature.vetoed_by|length > 0 %}
-  <a class="unveto-link" href="{{unveto_url}}" hx-get="{{unveto_url}}" hx-target="{{target_id}}" hx-swap="outerHTML">unveto</a>
+    <a class="unveto-link"
+       href="{{ unveto_url }}"
+       hx-get="{{ unveto_url }}"
+       hx-target="{{ target_id }}"
+       hx-swap="outerHTML">unveto</a>
   {% else %}
-  <a class="veto-link" href="{{veto_url}}" hx-get="{{veto_url}}" hx-target="{{target_id}}" hx-swap="outerHTML">veto</a>
+    <a class="veto-link"
+       href="{{ veto_url }}"
+       hx-get="{{ veto_url }}"
+       hx-target="{{ target_id }}"
+       hx-swap="outerHTML">veto</a>
   {% endif %}
 {% endmacro %}
-
 {% macro standalone_feature_item(feature, items=None) %}
-<li class="feature-item">
-  <div class="feature-content">
-    {% if feature.vetoed_by|length > 0 %}
-    <s>{{feature.name}}</s>
-    <span class="veto-count">({{feature.vetoed_by|length}} veto{% if feature.vetoed_by|length != 1 %}s{% endif %})</span>
-    <a
-      class="unveto-link"
-      href="/user/anonymous/unveto/feature/{{feature.name}}"
-      hx-get="/user/anonymous/unveto/feature/{{feature.name}}"
-      hx-target="#standalone-properties"
-      hx-swap="outerHTML"
-      >unveto</a>
-    {% else %}
-    {{feature.name}}
-    <a
-      class="veto-link"
-      href="/user/anonymous/veto/feature/{{feature.name}}"
-      hx-get="/user/anonymous/veto/feature/{{feature.name}}"
-      hx-target="#standalone-properties"
-      hx-swap="outerHTML"
-      >veto</a>
-    {% endif %}
-  </div>
-  <div class="feature-actions">
-    {% if items %}
-    <form class="move-form">
-      <input type="hidden" name="source_item" value="">
-      <select name="target_item" class="move-select"
-              hx-post="/move/feature/{{feature.name}}"
-              hx-trigger="change"
-              hx-target="body"
-              hx-swap="outerHTML"
-              hx-include="closest form">
-        <option value="">move...</option>
-        {% for item in items %}
-        <option value="{{item.name}}">{{item.name}}</option>
-        {% endfor %}
-      </select>
-    </form>
-    {% endif %}
-  </div>
-</li>
+  <li class="feature-item">
+    <div class="feature-content">
+      {% if feature.vetoed_by|length > 0 %}
+        <s>{{ feature.name }}</s>
+        <span class="veto-count">
+          ({{ feature.vetoed_by|length }} veto
+          {% if feature.vetoed_by|length != 1 %}s{% endif %}
+          )
+        </span>
+        <a class="unveto-link"
+           href="/user/anonymous/unveto/feature/{{ feature.name }}?feature_id={{ feature.id }}"
+           hx-get="/user/anonymous/unveto/feature/{{ feature.name }}?feature_id={{ feature.id }}"
+           hx-target="#standalone-properties"
+           hx-swap="outerHTML">unveto</a>
+      {% else %}
+        {{ feature.name }}
+        <a class="veto-link"
+           href="/user/anonymous/veto/feature/{{ feature.name }}?feature_id={{ feature.id }}"
+           hx-get="/user/anonymous/veto/feature/{{ feature.name }}?feature_id={{ feature.id }}"
+           hx-target="#standalone-properties"
+           hx-swap="outerHTML">veto</a>
+      {% endif %}
+    </div>
+    <div class="feature-actions">
+      {% if items %}
+        <form class="move-form">
+          <input type="hidden" name="source_item" value="">
+          <select name="target_item"
+                  class="move-select"
+                  hx-post="/move/feature/{{ feature.name }}"
+                  hx-trigger="change"
+                  hx-target="body"
+                  hx-swap="outerHTML"
+                  hx-include="closest form">
+            <option value="">move...</option>
+            {% for item in items %}<option value="{{ item.name }}">{{ item.name }}</option>{% endfor %}
+          </select>
+        </form>
+      {% endif %}
+    </div>
+  </li>
 {% endmacro %}
-
 {% macro item_feature_item_with_move(feature, item_name, items=None) %}
-<li id="feature-{{feature.id}}" class="feature-item">
-  <div class="feature-content">
-    {% if feature.vetoed_by|length > 0 %}
-    <s>{{feature.name}}</s>
-    <span class="veto-count">({{feature.vetoed_by|length}} veto{% if feature.vetoed_by|length != 1 %}s{% endif %})</span>
-    <a class="unveto-link" href="/user/anonymous/unveto/item/{{item_name}}/feature/{{feature.name}}" hx-get="/user/anonymous/unveto/item/{{item_name}}/feature/{{feature.name}}" hx-target="#objects-list" hx-swap="outerHTML">unveto</a>
-    {% else %}
-    {{feature.name}}
-    <a class="veto-link" href="/user/anonymous/veto/item/{{item_name}}/feature/{{feature.name}}" hx-get="/user/anonymous/veto/item/{{item_name}}/feature/{{feature.name}}" hx-target="#objects-list" hx-swap="outerHTML">veto</a>
-    {% endif %}
-  </div>
-  <div class="feature-actions">
-    {% if items %}
-    <form class="move-form">
-      <input type="hidden" name="source_item" value="{{item_name}}">
-      <select name="target_item" class="move-select"
-              hx-post="/move/feature/{{feature.name}}"
-              hx-trigger="change"
-              hx-target="body"
-              hx-swap="outerHTML"
-              hx-include="closest form">
-        <option value="">move...</option>
-        <option value="">free</option>
-        {% for item in items %}
-        {% if item.name != item_name %}
-        <option value="{{item.name}}">{{item.name}}</option>
-        {% endif %}
-        {% endfor %}
-      </select>
-    </form>
-    {% endif %}
-  </div>
-</li>
+  <li id="feature-{{ feature.id }}" class="feature-item">
+    <div class="feature-content">
+      {% if feature.vetoed_by|length > 0 %}
+        <s>{{ feature.name }}</s>
+        <span class="veto-count">
+          ({{ feature.vetoed_by|length }} veto
+          {% if feature.vetoed_by|length != 1 %}s{% endif %}
+          )
+        </span>
+        <a class="unveto-link"
+           href="/user/anonymous/unveto/item/{{ item_name }}/feature/{{ feature.name }}?feature_id={{ feature.id }}"
+           hx-get="/user/anonymous/unveto/item/{{ item_name }}/feature/{{ feature.name }}?feature_id={{ feature.id }}"
+           hx-target="#objects-list"
+           hx-swap="outerHTML"
+           data-feature-id="{{ feature.id }}">unveto</a>
+      {% else %}
+        {{ feature.name }}
+        <a class="veto-link"
+           href="/user/anonymous/veto/item/{{ item_name }}/feature/{{ feature.name }}?feature_id={{ feature.id }}"
+           hx-get="/user/anonymous/veto/item/{{ item_name }}/feature/{{ feature.name }}?feature_id={{ feature.id }}"
+           hx-target="#objects-list"
+           hx-swap="outerHTML"
+           data-feature-id="{{ feature.id }}">veto</a>
+      {% endif %}
+    </div>
+    <div class="feature-actions">
+      {% if items %}
+        <form class="move-form">
+          <input type="hidden" name="source_item" value="{{ item_name }}">
+          <select name="target_item"
+                  class="move-select"
+                  hx-post="/move/feature/{{ feature.name }}"
+                  hx-trigger="change"
+                  hx-target="body"
+                  hx-swap="outerHTML"
+                  hx-include="closest form">
+            <option value="">move...</option>
+            <option value="">free</option>
+            {% for item in items %}
+              {% if item.name != item_name %}<option value="{{ item.name }}">{{ item.name }}</option>{% endif %}
+            {% endfor %}
+          </select>
+        </form>
+      {% endif %}
+    </div>
+  </li>
 {% endmacro %}

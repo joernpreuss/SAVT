@@ -21,6 +21,10 @@ This file contains additional development-specific guidance not covered in the R
 - **Pre-commit Hooks**: `.pre-commit-config.yaml` runs linting/formatting before commits
 - **VS Code Settings**: `.vscode/settings.json` configures automatic formatting and linting
 - **Setup pre-commit**: `uv add --dev pre-commit && pre-commit install` (optional but recommended)
+- **HTML/Jinja2 Formatting**: djLint integrated into QA tool with `.djlintrc` config
+  - Ignores J018 (url_for pattern) - FastAPI doesn't use Flask's url_for
+  - Ignores J004 (static url_for pattern) - FastAPI serves static files differently
+  - Enforces HTML best practices (lang attribute, meta tags, lowercase form methods)
 
 
 ## Architecture Notes

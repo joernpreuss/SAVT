@@ -205,8 +205,8 @@ class TestVetoFunctionality:
         assert veto_link is not None
 
         veto_url = veto_link.get("href")
-        # Extract property name from URL
-        property_name = veto_url.split("/")[-1]
+        # Extract property name from URL (handle query parameters)
+        property_name = veto_url.split("/")[-1].split("?")[0]
 
         # Veto the property
         veto_response = client.get(veto_url)

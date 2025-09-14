@@ -170,6 +170,20 @@ def _run_checks(
         )
     console.print()
 
+    # Template formatter/linter
+    console.print("🎨 Running template formatter...", style="blue")
+    if fix_format:
+        success &= run_command(
+            ["uv", "run", "djlint", "templates/", "--reformat"],
+            "Template formatting",
+        )
+    else:
+        success &= run_command(
+            ["uv", "run", "djlint", "templates/"],
+            "Template linting",
+        )
+    console.print()
+
     # Type checker
     console.print("🔎 Running type checker...", style="blue")
     success &= run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")

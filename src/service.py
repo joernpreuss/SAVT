@@ -122,6 +122,13 @@ def get_feature(
     return feature  # type: ignore[no-any-return]
 
 
+def get_feature_by_id(session: Session, feature_id: int) -> Feature | None:
+    statement: Final = select(Feature).where(Feature.id == feature_id)
+    results: Final = session.exec(statement)
+    feature: Final = results.first()
+    return feature  # type: ignore[no-any-return]
+
+
 def create_feature(session: Session, feature: Feature) -> Feature:
     logger.debug(
         "Creating feature", feature_name=feature.name, created_by=feature.created_by
@@ -130,38 +137,28 @@ def create_feature(session: Session, feature: Feature) -> Feature:
     # Validate name using common validation function
     _validate_name(feature.name, "Feature")
 
-    same_name_feature: Final = get_feature(session, feature.name, feature.item_id)
+    # Allow duplicate features - users can veto them separately
+    _commit_and_refresh(session, feature)
 
-    if not same_name_feature:
-        _commit_and_refresh(session, feature)
+    log_database_operation(
+        operation="create",
+        table="Feature",
+        success=True,
+        feature_name=feature.name,
+        feature_id=feature.id,
+        created_by=feature.created_by,
+    )
 
-        log_database_operation(
-            operation="create",
-            table="Feature",
-            success=True,
+    if feature.created_by:
+        log_user_action(
+            action="create_feature",
+            user=feature.created_by,
             feature_name=feature.name,
             feature_id=feature.id,
-            created_by=feature.created_by,
         )
 
-        if feature.created_by:
-            log_user_action(
-                action="create_feature",
-                user=feature.created_by,
-                feature_name=feature.name,
-                feature_id=feature.id,
-            )
-
-        logger.info("Feature created successfully", feature_name=feature.name)
-        return feature
-
-    else:
-        logger.warning(
-            "Feature creation failed - already exists", feature_name=feature.name
-        )
-        raise FeatureAlreadyExistsError(
-            f"Feature with name '{feature.name}' already exists"
-        )
+    logger.info("Feature created successfully", feature_name=feature.name)
+    return feature
 
 
 def veto_item_feature(
@@ -302,18 +299,7 @@ def move_feature(
         )
         return None
 
-    # Check if target already has feature with same name
-    existing_feature = get_feature(session, feature_name, target_item_id)
-    if existing_feature:
-        logger.warning(
-            "Feature move failed - target already has feature with same name",
-            feature_name=feature_name,
-            target_item_name=target_item_name,
-        )
-        target_type = "item" if target_item_name else "standalone"
-        raise FeatureAlreadyExistsError(
-            f"Target {target_type} already has feature '{feature_name}'"
-        )
+    # Allow duplicate feature names - users can veto them separately
 
     # Move the feature
     old_item_id = feature.item_id
@@ -338,5 +324,74 @@ def move_feature(
         from_item=source_item_name,
         to_item=target_item_name,
     )
+
+    return feature
+
+
+def veto_feature_by_id(
+    session: Session, user: str, feature_id: int, veto: bool = True
+) -> Feature | None:
+    action = "veto" if veto else "unveto"
+    logger.debug(f"Processing {action} for user={user}, feature_id={feature_id}")
+
+    feature = get_feature_by_id(session, feature_id)
+    logger.debug("Found feature for action", action=action, feature=feature)
+
+    if feature:
+        vetoed_by_set = set(feature.vetoed_by)
+        original_vetoed_by = set(feature.vetoed_by)
+
+        if veto:
+            vetoed_by_set.add(user)
+        else:
+            vetoed_by_set.discard(user)
+
+        # Only update if there's a change
+        if original_vetoed_by != vetoed_by_set:
+            feature.vetoed_by = sorted(vetoed_by_set)
+
+            logger.debug(
+                "Updating feature vetoed_by",
+                from_vetoed_by=sorted(original_vetoed_by),
+                to_vetoed_by=feature.vetoed_by,
+            )
+            session.commit()
+            session.refresh(feature)
+
+            log_database_operation(
+                operation="update",
+                table="Feature",
+                success=True,
+                feature_name=feature.name,
+                feature_id=feature.id,
+                action=action,
+            )
+
+            log_user_action(
+                action=f"{action}_feature",
+                user=user,
+                feature_name=feature.name,
+                feature_id=feature_id,
+                vetoed_by_count=len(feature.vetoed_by),
+            )
+
+            logger.info(
+                "Feature action completed successfully",
+                action=action,
+                user=user,
+                feature_name=feature.name,
+            )
+        else:
+            logger.debug(
+                "No change needed for action",
+                action=action,
+                user=user,
+                feature_name=feature.name,
+            )
+    else:
+        logger.warning(
+            f"Feature not found for {action}",
+            extra={"feature_id": feature_id, "user": user},
+        )
 
     return feature
