@@ -40,6 +40,17 @@ h4 {
   margin-bottom: 15px;
 }
 
+.message {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #f39c12;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
 .instruction {
   background: #e8f4f8;
   padding: 15px;

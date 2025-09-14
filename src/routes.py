@@ -41,7 +41,10 @@ def _filter_standalone_features(features):
 
 
 def _render_full_page_response(
-    request: Request, session: Session, item_id: str | int | None = None
+    request: Request,
+    session: Session,
+    item_id: str | int | None = None,
+    message: str | None = None,
 ):
     """Render the full features page with both items and standalone features."""
     features: Final = get_features(session)
@@ -56,6 +59,7 @@ def _render_full_page_response(
             "items": list(items),
             "item_id": item_id,
             "settings": settings,
+            "message": message,
         },
     )
 
@@ -151,9 +155,10 @@ async def route_create_feature(
         created_by=feature.created_by,
     )
     try:
-        create_feature(session, feature)
+        created_feature, message = create_feature(session, feature)
         logger.info(
-            "Feature created successfully via web form", feature_name=feature.name
+            "Feature created successfully via web form",
+            feature_name=created_feature.name,
         )
     except ValueError as e:
         logger.warning(
@@ -167,7 +172,9 @@ async def route_create_feature(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(request, session, feature.item_id)
+        return _render_full_page_response(
+            request, session, created_feature.item_id, message
+        )
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -286,7 +293,7 @@ async def route_move_feature(
         to_item=target_item,
     )
 
-    result = move_feature(session, feature_name, source_item, target_item)
+    result, message = move_feature(session, feature_name, source_item, target_item)
     if result:
         logger.info(
             "Feature moved successfully via web form",
@@ -303,6 +310,6 @@ async def route_move_feature(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(request, session)
+        return _render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

@@ -66,16 +66,61 @@ def test_create_item_conflict(session: Session, timestamp_str: str):
         create_item(session, Item(name=name))
 
 
-def test_create_feature_conflict(session: Session, timestamp_str: str):
-    """Test that duplicate feature names are now allowed.
+def test_create_feature_combination(session: Session, timestamp_str: str):
+    """Test that duplicate feature names are combined instead of creating duplicates.
 
     Covers:
-    - Duplicate feature names are allowed for independent veto control
+    - Duplicate feature names combine their amounts
+    - Combined features maintain the same ID
     """
     name = f"feature_{timestamp_str}"
-    f1 = create_feature(session, Feature(name=name))
-    f2 = create_feature(session, Feature(name=name))  # Should succeed now
-    assert f1.id != f2.id  # Different IDs for same name
+    f1, msg1 = create_feature(session, Feature(name=name, amount=1))
+    f2, msg2 = create_feature(session, Feature(name=name, amount=1))  # Should combine
+    assert f1.id == f2.id  # Same ID - combined, not separate
+    assert f2.amount == 2  # Amount should be combined (1 + 1 = 2)
+    assert msg1 is None  # First creation should have no message
+    assert msg2 is None  # No capping occurred
+
+
+def test_create_feature_maximum_amount(session: Session, timestamp_str: str):
+    """Test that feature amounts are capped at maximum.
+
+    Covers:
+    - Feature amounts cannot exceed MAX_FEATURE_AMOUNT (3)
+    - Excess amounts are silently ignored
+    """
+    name = f"feature_{timestamp_str}"
+    # Create feature at max amount
+    f1, msg1 = create_feature(session, Feature(name=name, amount=3))
+    assert f1.amount == 3
+    assert msg1 is None  # No message for first creation
+
+    # Try to add more - should stay at max
+    f2, msg2 = create_feature(session, Feature(name=name, amount=1))
+    assert f1.id == f2.id  # Same feature
+    assert f2.amount == 3  # Still at maximum
+    assert msg2 is not None  # Should have capping message
+    assert "already at maximum amount" in msg2
+
+
+def test_create_feature_with_capping_message(session: Session, timestamp_str: str):
+    """Test that capping generates user-visible messages.
+
+    Covers:
+    - User gets message when amounts are capped during combination
+    """
+    name = f"feature_{timestamp_str}"
+    # Create feature with amount 2
+    f1, msg1 = create_feature(session, Feature(name=name, amount=2))
+    assert f1.amount == 2
+    assert msg1 is None  # First creation should have no message
+
+    # Try to add 2 more - should be capped at 3 and show message
+    f2, msg2 = create_feature(session, Feature(name=name, amount=2))
+    assert f1.id == f2.id  # Same feature
+    assert f2.amount == 3  # Should be capped at maximum
+    assert msg2 is not None  # Should have capping message
+    assert "amount capped at maximum (3x)" in msg2
 
 
 def test_veto_idempotency(session: Session, timestamp_str: str):

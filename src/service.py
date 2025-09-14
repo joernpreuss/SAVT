@@ -7,7 +7,7 @@ from sqlmodel import (
     select,
 )
 
-from .constants import MAX_NAME_LENGTH
+from .constants import MAX_FEATURE_AMOUNT, MAX_NAME_LENGTH
 from .logging_config import get_logger
 from .logging_utils import log_database_operation, log_user_action
 from .models import Feature, Item
@@ -129,7 +129,7 @@ def get_feature_by_id(session: Session, feature_id: int) -> Feature | None:
     return feature  # type: ignore[no-any-return]
 
 
-def create_feature(session: Session, feature: Feature) -> Feature:
+def create_feature(session: Session, feature: Feature) -> tuple[Feature, str | None]:
     logger.debug(
         "Creating feature", feature_name=feature.name, created_by=feature.created_by
     )
@@ -137,7 +137,48 @@ def create_feature(session: Session, feature: Feature) -> Feature:
     # Validate name using common validation function
     _validate_name(feature.name, "Feature")
 
-    # Allow duplicate features - users can veto them separately
+    # Check if feature with same name and item_id already exists
+    existing_feature: Final = get_feature(session, feature.name, feature.item_id)
+
+    if existing_feature:
+        # Calculate new amount, capping at MAX_FEATURE_AMOUNT
+        new_amount = min(existing_feature.amount + feature.amount, MAX_FEATURE_AMOUNT)
+        was_capped = (existing_feature.amount + feature.amount) > MAX_FEATURE_AMOUNT
+
+        if new_amount > existing_feature.amount:
+            # Update existing feature amount
+            existing_feature.amount = new_amount
+            session.add(existing_feature)
+            session.commit()
+            session.refresh(existing_feature)
+
+            logger.info(
+                "Feature amount increased",
+                feature_name=feature.name,
+                old_amount=existing_feature.amount - feature.amount,
+                new_amount=new_amount,
+            )
+
+            if was_capped:
+                message = (
+                    f"{feature.name} amount capped at maximum ({MAX_FEATURE_AMOUNT}x)"
+                )
+                return existing_feature, message
+            else:
+                return existing_feature, None
+        else:
+            # Already at maximum amount
+            logger.info(
+                "Feature already at maximum amount",
+                feature_name=feature.name,
+                amount=existing_feature.amount,
+            )
+            message = (
+                f"{feature.name} is already at maximum amount ({MAX_FEATURE_AMOUNT}x)"
+            )
+            return existing_feature, message
+
+    # Create new feature if none exists
     _commit_and_refresh(session, feature)
 
     log_database_operation(
@@ -158,7 +199,7 @@ def create_feature(session: Session, feature: Feature) -> Feature:
         )
 
     logger.info("Feature created successfully", feature_name=feature.name)
-    return feature
+    return feature, None
 
 
 def veto_item_feature(
@@ -250,8 +291,12 @@ def move_feature(
     feature_name: str,
     source_item_name: str | None,
     target_item_name: str | None,
-) -> Feature | None:
+) -> tuple[Feature | None, str | None]:
     """Move a feature from one item to another (or to/from standalone).
+
+    This function moves a feature and combines it with existing features of the
+    same name at the target location. If the combination would exceed the maximum
+    amount, only the amount that fits is moved, and the excess stays at the source.
 
     Args:
         session: Database session
@@ -260,7 +305,7 @@ def move_feature(
         target_item_name: Target item name (None to make it standalone)
 
     Returns:
-        The moved feature or None if not found
+        Tuple of (moved/combined feature or None, user message or None)
     """
     logger.debug(
         "Moving feature",
@@ -277,7 +322,7 @@ def move_feature(
             source_item_id = source_item.id
         else:
             logger.warning("Source item not found", item_name=source_item_name)
-            return None
+            return None, f"Source item '{source_item_name}' not found"
 
     # Get target item ID
     target_item_id = None
@@ -287,45 +332,116 @@ def move_feature(
             target_item_id = target_item.id
         else:
             logger.warning("Target item not found", item_name=target_item_name)
-            return None
+            return None, f"Target item '{target_item_name}' not found"
 
     # Find the feature to move
-    feature = get_feature(session, feature_name, source_item_id)
-    if not feature:
+    source_feature = get_feature(session, feature_name, source_item_id)
+    if not source_feature:
         logger.warning(
             "Feature not found for move",
             feature_name=feature_name,
             source_item_name=source_item_name,
         )
-        return None
+        return None, f"Feature '{feature_name}' not found"
 
-    # Allow duplicate feature names - users can veto them separately
+    # Check if target already has this feature
+    target_feature = get_feature(session, feature_name, target_item_id)
 
-    # Move the feature
-    old_item_id = feature.item_id
-    feature.item_id = target_item_id
+    if target_feature:
+        # Calculate how much can be moved without exceeding the maximum
+        available_space = MAX_FEATURE_AMOUNT - target_feature.amount
+        amount_to_move = min(source_feature.amount, available_space)
 
-    session.commit()
-    session.refresh(feature)
+        if amount_to_move > 0:
+            # Move the calculated amount
+            target_feature.amount += amount_to_move
+            source_feature.amount -= amount_to_move
 
-    log_database_operation(
-        operation="move",
-        table="Feature",
-        success=True,
-        feature_name=feature.name,
-        feature_id=feature.id,
-        from_item_id=old_item_id,
-        to_item_id=target_item_id,
-    )
+            # If source feature has no amount left, delete it
+            if source_feature.amount == 0:
+                session.delete(source_feature)
+            else:
+                session.add(source_feature)
 
-    logger.info(
-        "Feature moved successfully",
-        feature_name=feature.name,
-        from_item=source_item_name,
-        to_item=target_item_name,
-    )
+            session.add(target_feature)
+            session.commit()
+            session.refresh(target_feature)
 
-    return feature
+            logger.info(
+                "Feature partially moved",
+                feature_name=feature_name,
+                amount_moved=amount_to_move,
+                remaining_at_source=source_feature.amount
+                if source_feature.amount > 0
+                else 0,
+                target_total=target_feature.amount,
+            )
+
+            log_database_operation(
+                operation="move_partial",
+                table="Feature",
+                success=True,
+                feature_name=feature_name,
+                feature_id=target_feature.id,
+                from_item_id=source_item_id,
+                to_item_id=target_item_id,
+                amount_moved=amount_to_move,
+            )
+
+            remaining = source_feature.amount if source_feature.amount > 0 else 0
+            if remaining > 0:
+                target_display = target_item_name or "Free"
+                source_display = source_item_name or "Free"
+                message = (
+                    f"{feature_name} partially moved to {target_display} - "
+                    f"{remaining}x remains at {source_display}"
+                )
+            else:
+                target_display = target_item_name or "Free"
+                message = f"{feature_name} moved completely to {target_display}"
+            return target_feature, message
+        else:
+            # Target is already at maximum, nothing can be moved
+            logger.info(
+                "Feature already at maximum - no move possible",
+                feature_name=feature_name,
+                target_amount=target_feature.amount,
+            )
+            target_display = target_item_name or "Free"
+            message = (
+                f"{feature_name} at {target_display} is already at maximum "
+                f"({MAX_FEATURE_AMOUNT}x) - nothing moved"
+            )
+            return target_feature, message
+    else:
+        # No existing feature at target - move entire feature
+        old_item_id = source_feature.item_id
+        source_feature.item_id = target_item_id
+        session.add(source_feature)
+        session.commit()
+        session.refresh(source_feature)
+
+        log_database_operation(
+            operation="move_full",
+            table="Feature",
+            success=True,
+            feature_name=feature_name,
+            feature_id=source_feature.id,
+            from_item_id=old_item_id,
+            to_item_id=target_item_id,
+        )
+
+        logger.info(
+            "Feature moved completely",
+            feature_name=feature_name,
+            from_item=source_item_name,
+            to_item=target_item_name,
+            amount=source_feature.amount,
+        )
+
+        target_display = target_item_name or "Free"
+        message = f"{feature_name} ({source_feature.amount}x) moved to {target_display}"
+        return source_feature, message
 
 
 def veto_feature_by_id(
