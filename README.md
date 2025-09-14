@@ -2,7 +2,7 @@
 
 Pure Python Suggestion And Veto Tool
 
-> **Experimental AI-Assisted Development**: This project serves as an experiment in AI-assisted coding, exploring deliberate architectural choices like pure Python (avoiding JS/TS), server-side rendering with HTMX, modern development tooling (uv, modern type hints), and comprehensive requirement tracing. Many decisions were made intentionally to test specific approaches and patterns.
+> **Experimental AI-Assisted Development**: This project serves as an experiment in AI-assisted coding, exploring deliberate architectural choices like pure Python (no JS/TS), server-side HTML but with HTMX for dynamic interactions, modern tooling (uv, type hints), and comprehensive requirement tracing. Many decisions were made intentionally to test specific approaches and patterns.
 
 ## Overview
 
@@ -16,22 +16,25 @@ While initially built for pizza ordering, the flexible object-property model mak
 
 ## Technical Approach
 
-SAVT is built with **pure Python** to avoid JavaScript/TypeScript complexity, using server-side rendering with HTMX for dynamic interactions without page reloads.
+SAVT is built with **pure Python** to avoid JavaScript/TypeScript complexity, using **server-side HTML generation with HTMX for dynamic interactions**. This means all HTML is generated on the server using Jinja2 templates, while HTMX enables partial page updates and interactive features without writing JavaScript.
 
 **Key Architecture:**
+
 - **Feature IDs**: Uses `feature.id` for unique identification (allows duplicate feature names)
 - **Veto System**: Users can independently veto/unveto features using unique IDs
-- **HTMX Integration**: Dynamic UI updates without JavaScript complexity
+- **No-JavaScript Architecture**: HTMX provides SPA-like interactions (partial updates, form submissions) while keeping all logic in Python
 
 ## Development
 
 ### Prerequisites
 
 **System Requirements:**
+
 - Python 3.12+ (pinned via `.python-version`)
 - `uv` package manager: `pip install uv`
 
 **Key Technologies:**
+
 - **FastAPI** + **SQLModel** - Modern Python web framework with type-safe database
 - **Jinja2** + **HTMX** - Server-side templating with dynamic interactions
 - **pytest** + **structlog** - Testing and structured logging
@@ -65,11 +68,13 @@ uv tool install ruff mypy
 The app terminology is fully configurable for different use cases. **Plural forms are automatically generated** by adding "s" to singular forms, so you usually only need to set the singular terms:
 
 **Pizza Ordering Example:**
+
 ```bash
 cp .env.pizza .env  # Use pizza/toppings terminology
 ```
 
 **Simple Configuration (Auto-Pluralization):**
+
 ```bash
 # In your .env file:
 APP_NAME="My Voting Tool"
@@ -78,6 +83,7 @@ PROPERTY_NAME_SINGULAR="feature"   # Automatically becomes "features"
 ```
 
 **Override for Irregular Plurals:**
+
 ```bash
 # When the simple "add s" rule doesn't work:
 OBJECT_NAME_SINGULAR="category"
@@ -87,6 +93,7 @@ PROPERTY_NAME_PLURAL="children"    # Override automatic "childs"
 ```
 
 **Example Configurations:**
+
 - **Pizza ordering**: `pizza` → `pizzas`, `topping` → `toppings`
 - **Feature voting**: `feature` → `features`, `aspect` → `aspects`
 - **Event planning**: `event` → `events`, `option` → `options`
@@ -137,6 +144,7 @@ uv run pytest --requirements-only
 ```
 
 **Sample Output:**
+
 ```
 Requirements Coverage
   FR-1.1:
@@ -219,11 +227,13 @@ log_database_operation("create", "SVObject", success=True, object_id=123)
 ```
 
 **Development output:**
+
 ```
 2024-01-01T10:00:00 [info     ] Object created                 object_name=Pizza object_id=123 user=anonymous
 ```
 
 **Production output (JSON):**
+
 ```json
 {"timestamp": "2024-01-01T10:00:00.123Z", "level": "info", "event": "Object created", "object_name": "Pizza", "object_id": 123, "user": "anonymous", "logger": "src.routes"}
 ```
