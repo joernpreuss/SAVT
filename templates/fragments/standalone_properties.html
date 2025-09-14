@@ -1,6 +1,6 @@
 {% from "macros.html" import standalone_feature_item %}
 <ul id="standalone-properties">
   {% for feature in features %}
-  {{ standalone_feature_item(feature) }}
+  {{ standalone_feature_item(feature, items) }}
   {% endfor %}
 </ul>

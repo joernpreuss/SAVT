@@ -1,4 +1,4 @@
-{% from "macros.html" import item_feature_item, standalone_feature_item %}
+{% from "macros.html" import item_feature_item_with_move, standalone_feature_item %}
 <html>
   <head>
     <title>Features</title>
@@ -21,7 +21,7 @@
             <strong>{{item.name}}</strong>{% if item.kind %} <span class="kind-badge">({{item.kind}})</span>{% endif %}
             <ul>
               {% for feature in item.features %}
-              {{ item_feature_item(feature, item.name) }}
+              {{ item_feature_item_with_move(feature, item.name, items) }}
               {% endfor %}
             </ul>
           </li>
@@ -30,10 +30,10 @@
       </div>
 
       <div class="section">
-        <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}} <span class="standalone-indicator">(Standalone)</span></h4>
+        <h4>{{settings.property_name_plural_computed.title()}} without {{settings.object_name_plural_computed}} <span class="standalone-indicator">(Free)</span></h4>
         <ul id="standalone-properties">
           {% for feature in features %}
-          {{ standalone_feature_item(feature) }}
+          {{ standalone_feature_item(feature, items) }}
           {% endfor %}
         </ul>
       </div>
@@ -94,7 +94,7 @@
 
           <label for="item_id">Add to {{settings.object_name_singular}} (optional):</label>
           <select name="item_id" id="item_id">
-            <option value="">[No {{settings.object_name_singular}} - Standalone]</option>
+            <option value="">[No {{settings.object_name_singular}} - Free]</option>
             {% for item in items %} {% if item.id == item_id %}
             <option value="{{item.id}}" selected>{{item.name}}</option>
             {% else %}
