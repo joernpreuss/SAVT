@@ -13,6 +13,9 @@ standalone_feature_item %}
   <body>
     <div class="container">
       <h1>{{ settings.app_name }}</h1>
+      {% if message %}
+        <div class="message">{{ message }}</div>
+      {% endif %}
       <h2>View</h2>
       <div class="instruction">
         Click <strong>[veto]</strong> or <strong>[unveto]</strong>

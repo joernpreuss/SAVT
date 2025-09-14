@@ -23,16 +23,18 @@ class FeatureName(BaseModel):
 async def api_create_feature(
     *, session: Session = Depends(get_session), feature_name: FeatureName
 ):
-    feature = create_feature(session, Feature(name=feature_name.name))
-    return {"created": feature.model_dump()}
+    feature, message = create_feature(session, Feature(name=feature_name.name))
+    return {"created": feature.model_dump(), "message": message}
 
 
 @api_router.post("/users/{user}/properties")
 async def api_user_create_feature(
     *, session: Session = Depends(get_session), user: str, feature_name: FeatureName
 ):
-    feature = create_feature(session, Feature(name=feature_name.name, created_by=user))
-    return {"created": feature.model_dump()}
+    feature, message = create_feature(
+        session, Feature(name=feature_name.name, created_by=user)
+    )
+    return {"created": feature.model_dump(), "message": message}
 
 
 @api_router.post("/users/{user}/properties/{name}/veto")
