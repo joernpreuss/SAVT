@@ -201,8 +201,7 @@ button:hover {
 
 /* Shared styling for small action select dropdowns */
 .action-select,
-.move-select,
-.merge-select {
+.move-select {
   width: auto;
   min-width: 90px;
   padding: 4px 6px;
@@ -215,17 +214,37 @@ button:hover {
   vertical-align: middle;
 }
 
+.merge-select {
+  width: auto;
+  min-width: 90px;
+  padding: 4px 6px;
+  font-size: 12px;
+  margin-bottom: 0;
+  background: #f8f9fa;
+  border: 0.5px solid #dee2e6;
+  color: #6c757d;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
 .action-select:hover,
-.move-select:hover,
-.merge-select:hover {
+.move-select:hover {
   background: #e9ecef;
   border-color: #adb5bd;
 }
 
+.merge-select:hover {
+  background: #e9ecef;
+}
+
 .action-select:focus,
-.move-select:focus,
-.merge-select:focus {
+.move-select:focus {
   border-color: #86b7fe;
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+.merge-select:focus {
+  outline: none;
   box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
 }
 
@@ -292,6 +311,6 @@ button:hover {
   display: inline;
   margin: 0;
   padding: 0;
-  border: none;
+  border: none !important;
   background: none;
 }
