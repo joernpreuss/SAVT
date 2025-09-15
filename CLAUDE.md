@@ -19,6 +19,13 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - **djLint**: Integrated HTML/Jinja2 formatter, ignores J018/J004 (FastAPI-specific)
 - **Ruff format**: Run `ruff format` after every change
 
+## Git Workflow
+
+- **NEVER execute `git commit`** - Only the user commits code
+- **NEVER execute `git push`** - Only the user pushes changes
+- **Provide commit messages only** - Claude suggests commit messages, user reviews and commits
+- **No automatic git operations** - All git commands must be explicitly requested by user
+
 ## Important Files
 
 - `src/service.py` - Business logic
