@@ -38,6 +38,7 @@ SAVT is built with **pure Python** to avoid JavaScript/TypeScript complexity, us
 - **FastAPI** + **SQLModel** - Modern Python web framework with type-safe database
 - **Jinja2** + **HTMX** - Server-side templating with dynamic interactions
 - **pytest** + **structlog** - Testing and structured logging
+- **PostgreSQL** + **SQLite** - Configurable database backend (SQLite default, PostgreSQL for production)
 
 Dependencies are managed via `pyproject.toml` with exact version pinning for reproducibility.
 
@@ -183,11 +184,43 @@ tests/                       # Test files with requirements traceability
 └── test_*.py               # Test files with FR/BR references in docstrings
 ```
 
+### Database Configuration
+
+SAVT supports both SQLite and PostgreSQL databases:
+
+**SQLite (Default)**
+```bash
+# Uses SQLite by default (no setup required)
+uv run uvicorn src.main:app --reload
+```
+
+**PostgreSQL (Production Ready)**
+```bash
+# Quick setup with Docker
+./scripts/postgres.sh setup
+
+# Or manually
+docker compose up -d postgres
+cp .env.postgres .env
+uv run uvicorn src.main:app --reload
+```
+
+**PostgreSQL Management**
+```bash
+./scripts/postgres.sh start      # Start PostgreSQL container
+./scripts/postgres.sh status     # Check status and health
+./scripts/postgres.sh shell      # Connect to database shell
+./scripts/postgres.sh logs       # View container logs
+./scripts/postgres.sh reset      # Reset database (DELETE ALL DATA)
+```
+
+See [POSTGRESQL.md](./POSTGRESQL.md) for complete setup guide and troubleshooting.
+
 ### Deployment
 
 - **Docker build**: `docker build -t savt .`
 - **Docker run**: `docker run -p 8000:8000 --env-file .env savt`
-- **Docker Compose**: `docker-compose up --build`
+- **Docker Compose**: `docker compose up --build`
 
 ## Logging System
 
