@@ -5,7 +5,6 @@ from fastapi import (
     Cookie,
     Depends,
     Form,
-    HTTPException,
     Query,
     Request,
     Response,
@@ -23,16 +22,17 @@ from ..application.feature_service import (
 )
 from ..application.item_operations_service import merge_items, move_feature, split_item
 from ..application.item_service import (
-    ItemAlreadyExistsError,
     create_item,
     get_item,
     get_items,
 )
 from ..config import settings
+from ..domain.exceptions import DomainError
 from ..infrastructure.database.database import get_session
 from ..infrastructure.database.models import Feature, Item
 from ..logging_config import get_logger
 from ..utils import truncate_name
+from .error_handlers import handle_domain_error, handle_validation_error
 
 logger: Final = get_logger(__name__)
 
@@ -159,22 +159,21 @@ async def route_create_item(
     try:
         create_item(session, item)
         logger.info("Item created successfully via web form", item_name=item.name)
-    except ItemAlreadyExistsError as e:
+    except DomainError as e:
         logger.warning(
-            "Item creation failed - already exists",
+            "Item creation failed - domain error",
             item_name=item.name,
             error=str(e),
+            error_type=type(e).__name__,
         )
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
+        raise handle_domain_error(e) from e
     except ValueError as e:
         logger.warning(
             "Item creation failed - validation error",
             item_name=item.name,
             error=str(e),
         )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        ) from e
+        raise handle_validation_error(e) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
@@ -201,15 +200,21 @@ async def route_create_feature(
             "Feature created successfully via web form",
             feature_name=created_feature.name,
         )
+    except DomainError as e:
+        logger.warning(
+            "Feature creation failed - domain error",
+            feature_name=feature.name,
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+        raise handle_domain_error(e) from e
     except ValueError as e:
         logger.warning(
             "Feature creation failed - validation error",
             feature_name=feature.name,
             error=str(e),
         )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        ) from e
+        raise handle_validation_error(e) from e
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Error - {{ settings.app_name }}</title>
+    <meta name="description" content="{{ settings.app_name }} - Error">
+    <meta name="keywords" content="error, {{ settings.app_name }}">
+    <link rel="stylesheet" href="/static/css/styles.css">
+  </head>
+  <body>
+    <div class="container">
+      <h1>{{ settings.app_name }}</h1>
+      <div class="error-message">
+        <h2>Something went wrong</h2>
+        <p>{{ error_message }}</p>
+        <a href="/" class="button">Go Back to Home</a>
+      </div>
+    </div>
+  </body>
+</html>
