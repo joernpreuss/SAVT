@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from ..application.service import (
+from ..application.feature_service import (
     create_feature,
     get_features,
     veto_item_feature,

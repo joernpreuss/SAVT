@@ -30,7 +30,13 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 After EVERY change:
 1. Run `./qa check` immediately
 2. Fix ALL issues until it's 100% green
-3. Only then proceed with next changes
+3. **Check for redundancy** - Always verify no unused files or duplicate code exists:
+   - **Unused files** - Search for imports to verify files are still referenced
+   - **Duplicate code** - Look for similar functions across modules (validation, helpers)
+   - **Dead code** - Delete unused implementations and imports
+   - **Validate** - Run `./qa check` after cleanup to ensure no broken imports
+4. **Suggest commit message** - Provide concise commit message summarizing the changes
+5. Only then proceed with next changes
 
 **Never work with a broken QA check.**
 
@@ -45,7 +51,9 @@ After EVERY change:
 
 ## Important Files
 
-- `src/application/service.py` - Business logic
+- `src/application/item_service.py` - Item CRUD operations
+- `src/application/feature_service.py` - Feature CRUD and veto operations
+- `src/application/item_operations_service.py` - Complex operations (merge/split/move)
 - `src/presentation/routes.py` - HTML routes
 - `src/presentation/api_routes.py` - JSON API
 - `src/domain/entities.py` - Pure domain entities (dataclasses)

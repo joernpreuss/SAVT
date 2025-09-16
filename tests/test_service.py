@@ -1,13 +1,12 @@
 import pytest
 from sqlmodel import Session
 
-from src.application.service import (
-    ItemAlreadyExistsError,
+from src.application.feature_service import (
     create_feature,
-    create_item,
     get_feature,
     veto_item_feature,
 )
+from src.application.item_service import ItemAlreadyExistsError, create_item
 from src.infrastructure.database.models import Feature, Item
 
 
