@@ -317,9 +317,10 @@ class TestFormSubmission:
         standalone_list = soup.find("ul", id="standalone-properties")
 
         # Check the feature appears in the standalone list
-        feature_text = standalone_list.find(
-            string=lambda text: text and "New Standalone" in text
-        )
+        def _contains_new_standalone(text) -> bool:
+            return text is not None and "New Standalone" in str(text)
+
+        feature_text = standalone_list.find(string=_contains_new_standalone)
         assert feature_text is not None
 
 
