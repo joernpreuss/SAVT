@@ -21,6 +21,10 @@
        hx-get="{{ unveto_url }}"
        hx-target="{{ target_id }}"
        hx-swap="outerHTML"
+       role="button"
+       tabindex="0"
+       aria-label="Remove veto from {{ feature.name }}"
+       hx-trigger="click, keydown[key=='Enter']"
        {{ extra_attrs|safe }}>unveto</a>
   {% else %}
     <a class="veto-link"
@@ -28,6 +32,10 @@
        hx-get="{{ veto_url }}"
        hx-target="{{ target_id }}"
        hx-swap="outerHTML"
+       role="button"
+       tabindex="0"
+       aria-label="Veto {{ feature.name }}"
+       hx-trigger="click, keydown[key=='Enter']"
        {{ extra_attrs|safe }}>veto</a>
   {% endif %}
 {% endmacro %}
@@ -50,7 +58,8 @@
                   hx-trigger="change"
                   hx-target="body"
                   hx-swap="outerHTML"
-                  hx-include="closest form">
+                  hx-include="closest form"
+                  aria-label="Move {{ feature.name }} to a different item">
             <option value="">move...</option>
             {% for item in items %}<option value="{{ item.name }}">{{ item.name }}</option>{% endfor %}
           </select>
@@ -79,7 +88,8 @@
                   hx-trigger="change"
                   hx-target="body"
                   hx-swap="outerHTML"
-                  hx-include="closest form">
+                  hx-include="closest form"
+                  aria-label="Move {{ feature.name }} to a different item">
             <option value="">move...</option>
             <option value="">free</option>
             {% for item in items %}
