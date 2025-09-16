@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from .database import get_session
-from .models import Feature
-from .service import (
+from ..application.service import (
     create_feature,
     get_features,
     veto_item_feature,
 )
+from ..infrastructure.database.database import get_session
+from ..infrastructure.database.models import Feature
 
 api_router: Final = APIRouter(prefix="/api")
 

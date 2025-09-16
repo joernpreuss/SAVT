@@ -15,11 +15,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
 
-from .config import settings
-from .database import get_session
-from .logging_config import get_logger
-from .models import Feature, Item
-from .service import (
+from ..application.service import (
     ItemAlreadyExistsError,
     create_feature,
     create_item,
@@ -30,7 +26,11 @@ from .service import (
     split_item,
     veto_item_feature,
 )
-from .utils import truncate_name
+from ..config import settings
+from ..infrastructure.database.database import get_session
+from ..infrastructure.database.models import Feature, Item
+from ..logging_config import get_logger
+from ..utils import truncate_name
 
 logger: Final = get_logger(__name__)
 
@@ -214,7 +214,7 @@ async def route_veto_item_feature(
 
     # Use feature_id if provided, otherwise fallback to name-based lookup
     if feature_id is not None:
-        from .service import veto_feature_by_id
+        from ..application.service import veto_feature_by_id
 
         result = veto_feature_by_id(session, user, feature_id, veto=True)
     else:
@@ -265,7 +265,7 @@ async def route_unveto_item_feature(
 
     # Use feature_id if provided, otherwise fallback to name-based lookup
     if feature_id is not None:
-        from .service import veto_feature_by_id
+        from ..application.service import veto_feature_by_id
 
         result = veto_feature_by_id(session, user, feature_id, veto=False)
     else:

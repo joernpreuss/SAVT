@@ -4,6 +4,11 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 
 ## Key Architecture
 
+- **Layered Architecture** - Domain-driven design with clean separation of concerns
+  - **Domain**: `src/domain/` - Pure business entities, constants, exceptions (no dependencies)
+  - **Application**: `src/application/` - Business logic and services
+  - **Infrastructure**: `src/infrastructure/database/` - Database persistence, SQLModel mapping
+  - **Presentation**: `src/presentation/` - API and web routes
 - **FastAPI + SQLModel** - Python web framework with type-safe database
 - **Jinja2 + HTMX** - Server-side templates with dynamic interactions (no JS)
 - **Feature IDs**: Use `feature.id` for unique identification, not `feature.name` (allows duplicate names)
@@ -20,6 +25,17 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - **djLint**: Integrated HTML/Jinja2 formatter, ignores J018/J004 (FastAPI-specific)
 - **Ruff format**: Run `ruff format` after every change
 
+## Development Protocol
+
+After EVERY change:
+1. Run `./qa check` immediately
+2. Fix ALL issues until it's 100% green
+3. Only then proceed with next changes
+
+**Never work with a broken QA check.**
+
+`./qa check` is not a gate at the end - it's a compass throughout development.
+
 ## Git Workflow
 
 - **NEVER execute `git commit`** - Only the user commits code
@@ -29,8 +45,10 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 
 ## Important Files
 
-- `src/service.py` - Business logic
-- `src/routes.py` - HTML routes
-- `src/api_routes.py` - JSON API
+- `src/application/service.py` - Business logic
+- `src/presentation/routes.py` - HTML routes
+- `src/presentation/api_routes.py` - JSON API
+- `src/domain/entities.py` - Pure domain entities (dataclasses)
+- `src/infrastructure/database/models.py` - SQLModel persistence models
 - `templates/macros.html` - Jinja2 macros for veto/unveto functionality
 - `.djlintrc` - HTML formatter config

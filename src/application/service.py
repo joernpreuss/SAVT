@@ -4,11 +4,11 @@ from typing import Final
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from .domain.constants import MAX_FEATURE_AMOUNT, MAX_NAME_LENGTH
-from .logging_config import get_logger
-from .logging_utils import log_database_operation, log_user_action
-from .models import Feature, Item
-from .utils import apply_veto_to_feature, smart_shorten_name
+from ..domain.constants import MAX_FEATURE_AMOUNT, MAX_NAME_LENGTH
+from ..infrastructure.database.models import Feature, Item
+from ..logging_config import get_logger
+from ..logging_utils import log_database_operation, log_user_action
+from ..utils import apply_veto_to_feature, smart_shorten_name
 
 logger: Final = get_logger(__name__)
 

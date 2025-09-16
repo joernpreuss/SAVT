@@ -1,7 +1,9 @@
 from fastapi import Form
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from .domain.constants import MAX_FEATURE_AMOUNT, MAX_KIND_LENGTH, MAX_NAME_LENGTH
+from ...domain.constants import MAX_FEATURE_AMOUNT, MAX_KIND_LENGTH, MAX_NAME_LENGTH
+from ...domain.entities import Feature as DomainFeature
+from ...domain.entities import Item as DomainItem
 
 
 class Item(SQLModel, table=True):  # type: ignore[call-arg]
@@ -19,6 +21,25 @@ class Item(SQLModel, table=True):  # type: ignore[call-arg]
     @classmethod
     def as_form(cls, name: str = Form(...), kind: str | None = Form(None)) -> "Item":
         return cls(name=name, kind=kind)
+
+    @classmethod
+    def from_domain(cls, domain_item: DomainItem) -> "Item":
+        """Convert domain entity to persistence model."""
+        return cls(
+            id=domain_item.id,
+            name=domain_item.name,
+            kind=domain_item.kind,
+            created_by=domain_item.created_by,
+        )
+
+    def to_domain(self) -> DomainItem:
+        """Convert persistence model to domain entity."""
+        return DomainItem(
+            id=self.id,
+            name=self.name,
+            kind=self.kind,
+            created_by=self.created_by,
+        )
 
 
 class Feature(SQLModel, table=True):  # type: ignore[call-arg]
@@ -51,4 +72,27 @@ class Feature(SQLModel, table=True):  # type: ignore[call-arg]
             name=name,
             amount=amount,
             item_id=item_id if isinstance(item_id, int) else None,
+        )
+
+    @classmethod
+    def from_domain(cls, domain_feature: DomainFeature) -> "Feature":
+        """Convert domain entity to persistence model."""
+        return cls(
+            id=domain_feature.id,
+            name=domain_feature.name,
+            amount=domain_feature.amount,
+            created_by=domain_feature.created_by,
+            vetoed_by=domain_feature.vetoed_by or [],
+            item_id=domain_feature.item_id,
+        )
+
+    def to_domain(self) -> DomainFeature:
+        """Convert persistence model to domain entity."""
+        return DomainFeature(
+            id=self.id,
+            name=self.name,
+            amount=self.amount,
+            created_by=self.created_by,
+            vetoed_by=self.vetoed_by,
+            item_id=self.item_id,
         )

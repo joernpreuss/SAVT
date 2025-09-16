@@ -8,9 +8,9 @@ from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from src.database import get_session
+from src.infrastructure.database.database import get_session
+from src.infrastructure.database.models import Feature, Item
 from src.main import app
-from src.models import Feature, Item
 
 
 @pytest.fixture(name="client")
