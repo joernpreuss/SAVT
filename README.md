@@ -4,25 +4,27 @@ Pure Python Suggestion And Veto Tool
 
 > **Experimental AI-Assisted Development**: This project serves as an experiment in AI-assisted coding, exploring deliberate architectural choices like pure Python (no JS/TS), server-side HTML but with HTMX for dynamic interactions, modern tooling (uv, type hints), and comprehensive requirement tracing. Many decisions were made intentionally to test specific approaches and patterns.
 
+Built with **uv** - the modern, fast Python package manager that's significantly faster than pip with better dependency resolution and built-in virtual environment management. uv replaces pip, pip-tools, virtualenv, and pyenv in one tool.
+
 ## Overview
 
 SAVT is a collaborative decision-making tool originally designed as a proof of concept for ordering pizza together. The system allows users to:
 
-- Create **objects** (like pizzas or any item requiring group decisions)
-- Suggest **properties** for those objects (like toppings: salami, mushrooms, extra cheese)
-- **Veto** properties they don't want, enabling democratic consensus-building
+- Create objects (like pizzas or any item requiring group decisions)
+- Suggest properties for those objects (like toppings: salami, mushrooms, extra cheese)
+- Veto properties they don't want, enabling democratic consensus-building
 
 While initially built for pizza ordering, the flexible object-property model makes it suitable for any group decision-making scenario where suggestions and vetoes help reach consensus.
 
 ## Technical Approach
 
-SAVT is built with **pure Python** to avoid JavaScript/TypeScript complexity, using **server-side HTML generation with HTMX for dynamic interactions**. This means all HTML is generated on the server using Jinja2 templates, while HTMX enables partial page updates and interactive features without writing JavaScript.
+SAVT is built with pure Python to avoid JavaScript/TypeScript complexity, using server-side HTML generation with HTMX for dynamic interactions. This means all HTML is generated on the server using Jinja2 templates, while HTMX enables partial page updates and interactive features without writing JavaScript.
 
 **Key Architecture:**
 
-- **Feature IDs**: Uses `feature.id` for unique identification (allows duplicate feature names)
-- **Veto System**: Users can independently veto/unveto features using unique IDs
-- **No-JavaScript Architecture**: HTMX provides SPA-like interactions (partial updates, form submissions) while keeping all logic in Python
+- Feature IDs: Uses `feature.id` for unique identification (allows duplicate feature names)
+- Veto System: Users can independently veto/unveto features using unique IDs
+- No-JavaScript Architecture: HTMX provides SPA-like interactions (partial updates, form submissions) while keeping all logic in Python
 
 ## Development
 
@@ -31,14 +33,14 @@ SAVT is built with **pure Python** to avoid JavaScript/TypeScript complexity, us
 **System Requirements:**
 
 - Python 3.12+ (pinned via `.python-version`)
-- `uv` package manager: `pip install uv`
+- uv - Install with: `pip install uv`
 
 **Key Technologies:**
 
-- **FastAPI** + **SQLModel** - Modern Python web framework with type-safe database
-- **Jinja2** + **HTMX** - Server-side templating with dynamic interactions
-- **pytest** + **structlog** - Testing and structured logging
-- **PostgreSQL** + **SQLite** - Configurable database backend (SQLite default, PostgreSQL for production)
+- FastAPI + SQLModel - Modern Python web framework with type-safe database
+- Jinja2 + HTMX - Server-side templating with dynamic interactions
+- pytest + structlog - Testing and structured logging
+- PostgreSQL + SQLite - Configurable database backend (SQLite default, PostgreSQL for production)
 
 Dependencies are managed via `pyproject.toml` with exact version pinning for reproducibility.
 
@@ -54,13 +56,13 @@ uv tool install ruff mypy
 
 ### Development Commands
 
-- **Start server**: `uv run uvicorn src.main:app --reload --host 0.0.0.0`
-- **Run tests**: `uv run pytest`
-- **Test with docstrings**: `uv run pytest --show-docstrings` (displays test requirements during execution)
-- **Requirements coverage**: `uv run pytest -v` (shows FR/BR coverage in verbose mode)
-- **Requirements only**: `uv run pytest --requirements-report -q` (coverage without running tests)
-- **All checks**: `./scripts/check.sh` (or `./scripts/check.sh --fix` to auto-fix)
-- **Individual tools**: `uv tool run ruff check src/`, `uv tool run mypy src/`
+- Start server: `uv run uvicorn src.main:app --reload --host 0.0.0.0`
+- Run tests: `uv run pytest`
+- Test with docstrings: `uv run pytest --show-docstrings` (displays test requirements during execution)
+- Requirements coverage: `uv run pytest -v` (shows FR/BR coverage in verbose mode)
+- Requirements only: `uv run pytest --requirements-report -q` (coverage without running tests)
+- All checks: `./scripts/check.sh` (or `./scripts/check.sh --fix` to auto-fix)
+- Individual tools: `uv tool run ruff check src/`, `uv tool run mypy src/`
 
 **Code Style:** 88-character lines, Python 3.12+ modern typing (`dict[str, int]` not `Dict[str, int]`)
 
@@ -122,11 +124,11 @@ def test_create_property_conflict(session: Session, timestamp_str: str):
 
 ### Coverage Features
 
-- **Automatic extraction** from docstrings using regex patterns (`FR-X.Y`, `BR-X.Y`)
-- **Real-time reporting** during test execution
-- **Coverage analysis** showing which requirements are tested
-- **Git-friendly** - no external databases, all embedded in code
-- **Developer-friendly** - integrates seamlessly with existing pytest workflows
+- Automatic extraction from docstrings using regex patterns (`FR-X.Y`, `BR-X.Y`)
+- Real-time reporting during test execution
+- Coverage analysis showing which requirements are tested
+- Git-friendly - no external databases, all embedded in code
+- Developer-friendly - integrates seamlessly with existing pytest workflows
 
 ### Usage Examples
 
@@ -218,9 +220,9 @@ See [POSTGRESQL.md](./POSTGRESQL.md) for complete setup guide and troubleshootin
 
 ### Deployment
 
-- **Docker build**: `docker build -t savt .`
-- **Docker run**: `docker run -p 8000:8000 --env-file .env savt`
-- **Docker Compose**: `docker compose up --build`
+- Docker build: `docker build -t savt .`
+- Docker run: `docker run -p 8000:8000 --env-file .env savt`
+- Docker Compose: `docker compose up --build`
 
 ## Logging System
 
@@ -228,18 +230,18 @@ SAVT includes a comprehensive structured logging system with different loggers f
 
 ### Log Types
 
-- **API Requests**: `GET /api/endpoint - 200 (15.2ms)`
-- **User Actions**: `User action: veto_property by anonymous`
-- **Database Operations**: `Database create on SVObject succeeded`
-- **System Events**: `Application startup` with hostname/IP
-- **Validation Errors**: `Validation failed for field 'name': too short`
+- API Requests: `GET /api/endpoint - 200 (15.2ms)`
+- User Actions: `User action: veto_property by anonymous`
+- Database Operations: `Database create on SVObject succeeded`
+- System Events: `Application startup` with hostname/IP
+- Validation Errors: `Validation failed for field 'name': too short`
 
 ### Configuration
 
-- **Development**: Rich console output with syntax highlighting
-- **Production**: File logging to `logs/savt.log` + console
-- **Security**: Sensitive fields (passwords, tokens) automatically redacted as `[REDACTED]`
-- **Performance**: Third-party loggers (SQLAlchemy, Uvicorn) are filtered to reduce noise
+- Development: Rich console output with syntax highlighting
+- Production: File logging to `logs/savt.log` + console
+- Security: Sensitive fields (passwords, tokens) automatically redacted as `[REDACTED]`
+- Performance: Third-party loggers (SQLAlchemy, Uvicorn) are filtered to reduce noise
 
 ### Usage in Code
 
