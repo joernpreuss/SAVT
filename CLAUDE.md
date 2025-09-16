@@ -11,7 +11,8 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 
 ## Development Standards
 
-- **Python**: 4 spaces (PEP 8), modern type hints (e.g., `list[str]` not `List[str]`)
+- **Python**: 4 spaces (PEP 8)
+- **Python type hints**: **ALWAYS use modern type hints** (e.g., `list[str]`, `dict[str, Any]`, `int | None` not `List[str]`, `Dict[str, Any]`, `Optional[int]`, `Union[int, None]`)
 - **HTML/CSS/JS**: 2 spaces (web standard, defined in `.editorconfig`)
 - **File endings**: All files must end with newline (enforced by `.editorconfig` and QA tool)
 - **Package management**: Use `uv add` instead of `pip install`

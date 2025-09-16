@@ -2,7 +2,7 @@ import logging
 import sys
 from typing import Final
 
-from .constants import MAX_NAME_LENGTH
+from .domain.constants import MAX_NAME_LENGTH
 
 logger: Final = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
