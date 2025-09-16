@@ -393,3 +393,16 @@ input:focus {
 .skip-link:focus {
   top: 6px;
 }
+
+/* Undo link styling */
+.undo-link {
+  color: #3498db !important;
+  text-decoration: underline !important;
+  font-weight: 600;
+  margin-left: 5px;
+}
+
+.undo-link:hover {
+  color: #2980b9 !important;
+  background: none !important;
+}

@@ -1,3 +1,4 @@
+# pyright: reportImportCycles=false
 from collections.abc import Sequence
 from typing import Final
 
@@ -8,7 +9,6 @@ from ..infrastructure.database.models import Feature
 from ..logging_config import get_logger
 from ..logging_utils import log_database_operation, log_user_action
 from ..utils import apply_veto_to_feature
-from .item_service import get_item
 
 logger: Final = get_logger(__name__)
 
@@ -168,6 +168,9 @@ def veto_item_feature(
 
     item_id = None
     if item_name:
+        # Import here to avoid circular imports
+        from .item_service import get_item
+
         item = get_item(session=session, name=item_name)
         logger.debug("Found item for action", action=action, item=item)
         if item:
@@ -225,6 +228,22 @@ def delete_feature(session: Session, feature_id: int) -> bool:
     if not feature:
         logger.warning("Feature deletion failed - not found", feature_id=feature_id)
         return False
+
+    # Store for undo before deletion
+    feature_copy = Feature(
+        name=feature.name,
+        amount=feature.amount,
+        created_by=feature.created_by,
+        vetoed_by=feature.vetoed_by.copy(),
+        item_id=feature.item_id,
+    )
+    # Store the original ID for undo reference
+    feature_copy.id = feature.id
+
+    # Import here to avoid circular imports
+    from .undo_service import store_deleted_feature
+
+    store_deleted_feature(feature_copy)
 
     # Delete the feature
     session.delete(feature)

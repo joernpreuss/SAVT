@@ -202,8 +202,8 @@ class RequirementChangeDetector:
                 print(f"   - {test}")
             print()
             print(
-                f'💡 Consider running: `uv run pytest -k "'
-                f'{"|".join(changes["affected_tests"][:5])}" -v`'
+                '💡 Consider running: `uv run pytest -k "'
+                + f'{"|".join(changes["affected_tests"][:5])}" -v`'
             )
         else:
             print("ℹ️  No tests directly affected by requirement changes")

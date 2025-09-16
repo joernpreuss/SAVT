@@ -1,3 +1,4 @@
+# pyright: reportImportCycles=false
 from collections.abc import Sequence
 from typing import Final
 
@@ -5,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from ..domain.constants import MAX_NAME_LENGTH
-from ..infrastructure.database.models import Item
+from ..infrastructure.database.models import Feature, Item
 from ..logging_config import get_logger
 from ..logging_utils import log_database_operation
 
@@ -110,6 +111,25 @@ def delete_item(session: Session, item_name: str) -> bool:
     if not item:
         logger.warning("Item deletion failed - not found", item_name=item_name)
         return False
+
+    # Store for undo before deletion
+    features_copy = [
+        Feature(
+            name=f.name,
+            amount=f.amount,
+            created_by=f.created_by,
+            vetoed_by=f.vetoed_by.copy(),
+            item_id=f.item_id,
+        )
+        for f in item.features
+    ]
+
+    item_copy = Item(name=item.name, kind=item.kind, created_by=item.created_by)
+
+    # Import here to avoid circular imports
+    from .undo_service import store_deleted_item
+
+    store_deleted_item(item_copy, features_copy)
 
     # Move all features to standalone (set item_id to None)
     for feature in item.features:
