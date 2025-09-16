@@ -9,6 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # Ensure terminology matches tests (e.g., placeholder expects "Pizza-1, Pizza-2")
+      OBJECT_NAME_SINGULAR: pizza
+      PROPERTY_NAME_SINGULAR: topping
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -39,6 +43,16 @@ jobs:
 
       - name: Run tests
         run: uv run pytest --verbose
+
+      - name: Sanity check terminology settings
+        run: |
+          echo "Verifying settings in CI..."
+          uv run python - <<'PY'
+          from src.config import settings
+          print('object_name_singular=', settings.object_name_singular)
+          print('property_name_singular=', settings.property_name_singular)
+          assert settings.object_name_singular == 'pizza', 'Expected OBJECT_NAME_SINGULAR to be pizza'
+          PY
 
       - name: Test server startup
         run: |
