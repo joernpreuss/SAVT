@@ -28,6 +28,7 @@ from ..application.item_service import (
     get_item,
     get_items,
 )
+from ..application.undo_service import undo_feature_deletion, undo_item_deletion
 from ..config import settings
 from ..domain.exceptions import DomainError
 from ..infrastructure.database.database import get_session
@@ -67,7 +68,7 @@ def _get_next_default_item_name(session: Session) -> str:
         counter += 1
 
 
-def _render_full_page_response(
+def render_full_page_response(
     request: Request,
     session: Session,
     item_id: str | int | None = None,
@@ -130,7 +131,7 @@ async def list_features(
     item_id: str | None = Cookie(default=None),
 ):
     logger.info("Debug item_id", item_id=item_id)
-    return _render_full_page_response(request, session, item_id)
+    return render_full_page_response(request, session, item_id)
 
 
 @router.post("/create/item/")
@@ -179,7 +180,7 @@ async def route_create_item(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(request, session, item_id)
+        return render_full_page_response(request, session, item_id)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -220,7 +221,7 @@ async def route_create_feature(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(
+        return render_full_page_response(
             request, session, created_feature.item_id, message
         )
 
@@ -354,7 +355,7 @@ async def route_move_feature(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(request, session, message=message)
+        return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -389,7 +390,7 @@ async def route_merge_items(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(request, session, message=message)
+        return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -415,7 +416,7 @@ async def route_split_item(
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(request, session, message=message)
+        return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -433,14 +434,19 @@ async def route_delete_item(
     result = delete_item(session, item_name)
     if result:
         logger.info("Item deleted successfully via web form", item_name=item_name)
-        message = f"{settings.object_name_singular.title()} '{item_name}' deleted"
+        undo_link = (
+            f"<a href='/undo/item/{item_name}' hx-post='/undo/item/{item_name}' "
+            f"hx-target='body' hx-swap='outerHTML' class='undo-link'>Undo</a>"
+        )
+        obj_name = settings.object_name_singular.title()
+        message = f"{obj_name} '{item_name}' deleted. {undo_link}"
     else:
         logger.warning("Item deletion failed", item_name=item_name)
         message = f"{settings.object_name_singular.title()} '{item_name}' not found"
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(request, session, message=message)
+        return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -458,13 +464,62 @@ async def route_delete_feature(
     result = delete_feature(session, feature_id)
     if result:
         logger.info("Feature deleted successfully via web form", feature_id=feature_id)
-        message = f"{settings.property_name_singular.title()} deleted successfully"
+        undo_url = f"/undo/feature/{feature_id}"
+        undo_link = (
+            f"<a href='{undo_url}' hx-post='{undo_url}' "
+            f"hx-target='body' hx-swap='outerHTML' class='undo-link'>Undo</a>"
+        )
+        message = f"{settings.property_name_singular.title()} deleted. {undo_link}"
     else:
         logger.warning("Feature deletion failed", feature_id=feature_id)
         message = f"{settings.property_name_singular.title()} not found"
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
-        return _render_full_page_response(request, session, message=message)
+        return render_full_page_response(request, session, message=message)
+
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/undo/item/{item_name}")
+async def route_undo_item_deletion(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    item_name: str,
+):
+    logger.debug("Undoing item deletion via web form", item_name=item_name)
+
+    success, message = undo_item_deletion(session, item_name)
+    if success:
+        logger.info("Item deletion undone successfully", item_name=item_name)
+    else:
+        logger.warning("Item undo failed", item_name=item_name, message=message)
+
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        return render_full_page_response(request, session, message=message)
+
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/undo/feature/{feature_id}")
+async def route_undo_feature_deletion(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    feature_id: int,
+):
+    logger.debug("Undoing feature deletion via web form", feature_id=feature_id)
+
+    success, message = undo_feature_deletion(session, feature_id)
+    if success:
+        logger.info("Feature deletion undone successfully", feature_id=feature_id)
+    else:
+        logger.warning("Feature undo failed", feature_id=feature_id, message=message)
+
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

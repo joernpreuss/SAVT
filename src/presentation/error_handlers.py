@@ -1,4 +1,5 @@
 """Centralized error handling for the presentation layer."""
+# pyright: reportImportCycles=false
 
 from typing import Any
 
@@ -99,12 +100,12 @@ def render_error_response(
     request: Request, error_message: str, status_code: int = 400
 ) -> HTMLResponse:
     """Render error response for HTML requests."""
-    from .routes import _render_full_page_response, get_session
+    from .routes import get_session, render_full_page_response
 
     # For HTML responses, show the error message on the main page
     try:
         session = next(get_session())
-        response = _render_full_page_response(request, session, message=error_message)
+        response = render_full_page_response(request, session, message=error_message)
         response.status_code = status_code
         return response
     except Exception:
