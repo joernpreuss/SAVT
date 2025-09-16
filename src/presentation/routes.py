@@ -16,6 +16,7 @@ from sqlmodel import Session
 
 from ..application.feature_service import (
     create_feature,
+    delete_feature,
     get_features,
     veto_feature_by_id,
     veto_item_feature,
@@ -23,6 +24,7 @@ from ..application.feature_service import (
 from ..application.item_operations_service import merge_items, move_feature, split_item
 from ..application.item_service import (
     create_item,
+    delete_item,
     get_item,
     get_items,
 )
@@ -410,6 +412,56 @@ async def route_split_item(
         )
     else:
         logger.warning("Item split failed", item_name=item_name)
+
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        return _render_full_page_response(request, session, message=message)
+
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.delete("/delete/item/{item_name}")
+@router.post("/delete/item/{item_name}")
+async def route_delete_item(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    item_name: str,
+):
+    logger.debug("Deleting item via web form", item_name=item_name)
+
+    result = delete_item(session, item_name)
+    if result:
+        logger.info("Item deleted successfully via web form", item_name=item_name)
+        message = f"{settings.object_name_singular.title()} '{item_name}' deleted"
+    else:
+        logger.warning("Item deletion failed", item_name=item_name)
+        message = f"{settings.object_name_singular.title()} '{item_name}' not found"
+
+    # If HTMX request, return full page
+    if "HX-Request" in request.headers:
+        return _render_full_page_response(request, session, message=message)
+
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.delete("/delete/feature/{feature_id}")
+@router.post("/delete/feature/{feature_id}")
+async def route_delete_feature(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    feature_id: int,
+):
+    logger.debug("Deleting feature via web form", feature_id=feature_id)
+
+    result = delete_feature(session, feature_id)
+    if result:
+        logger.info("Feature deleted successfully via web form", feature_id=feature_id)
+        message = f"{settings.property_name_singular.title()} deleted successfully"
+    else:
+        logger.warning("Feature deletion failed", feature_id=feature_id)
+        message = f"{settings.property_name_singular.title()} not found"
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:

@@ -303,6 +303,29 @@ button:hover {
   background: #7f8c8d;
 }
 
+.delete-button {
+  background: #e74c3c;
+  color: white;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-left: 5px;
+  min-width: 24px;
+}
+
+.delete-button:hover {
+  background: #c0392b;
+}
+
+.delete-button:focus {
+  outline: 2px solid #e74c3c;
+  outline-offset: 2px;
+}
+
 .merge-form {
   display: inline;
   margin: 0;
