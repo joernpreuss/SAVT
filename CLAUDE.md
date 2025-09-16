@@ -5,10 +5,10 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 ## Key Architecture
 
 - **Layered Architecture** - Domain-driven design with clean separation of concerns
-  - **Domain**: `src/domain/` - Pure business entities, constants, exceptions (no dependencies)
-  - **Application**: `src/application/` - Business logic and services
-  - **Infrastructure**: `src/infrastructure/database/` - Database persistence, SQLModel mapping
-  - **Presentation**: `src/presentation/` - API and web routes
+  - Domain: `src/domain/` - Pure business entities, constants, exceptions (no dependencies)
+  - Application: `src/application/` - Business logic and services
+  - Infrastructure: `src/infrastructure/database/` - Database persistence, SQLModel mapping
+  - Presentation: `src/presentation/` - API and web routes
 - **FastAPI + SQLModel** - Python web framework with type-safe database
 - **Jinja2 + HTMX** - Server-side templates with dynamic interactions (no JS)
 - **Feature IDs**: Use `feature.id` for unique identification, not `feature.name` (allows duplicate names)
@@ -16,38 +16,36 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 
 ## Development Standards
 
-- **Python**: 4 spaces (PEP 8)
-- **Python type hints**: **ALWAYS use modern type hints** (e.g., `list[str]`, `dict[str, Any]`, `int | None` not `List[str]`, `Dict[str, Any]`, `Optional[int]`, `Union[int, None]`)
-- **HTML/CSS/JS**: 2 spaces (web standard, defined in `.editorconfig`)
-- **File endings**: All files must end with newline (enforced by `.editorconfig` and QA tool)
-- **Package management**: Use `uv add` instead of `pip install`
-- **QA tool**: `./qa check` runs linting, formatting, type checking, template linting, tests
-- **djLint**: Integrated HTML/Jinja2 formatter, ignores J018/J004 (FastAPI-specific)
-- **Ruff format**: Run `ruff format` after every change
+- Python: 4 spaces (PEP 8), modern type hints (`list[str]`, `int | None` not `List[str]`, `Optional[int]`)
+- HTML/CSS/JS: 2 spaces (web standard, defined in `.editorconfig`)
+- File endings: All files must end with newline (enforced by `.editorconfig` and QA tool)
+- Package management: Use `uv add` instead of `pip install` (faster, better dependency resolution)
+- QA tool: `./qa check` runs linting, formatting, type checking, template linting, tests
+- djLint: Integrated HTML/Jinja2 formatter, ignores J018/J004 (FastAPI-specific)
+- Ruff format: Run `ruff format` after every change
 
 ## Development Protocol
 
-After EVERY change:
+**After EVERY change:**
+
 1. Run `./qa check` immediately
 2. Fix ALL issues until it's 100% green
-3. **Check for redundancy** - Always verify no unused files or duplicate code exists:
-   - **Unused files** - Search for imports to verify files are still referenced
-   - **Duplicate code** - Look for similar functions across modules (validation, helpers)
-   - **Dead code** - Delete unused implementations and imports
-   - **Validate** - Run `./qa check` after cleanup to ensure no broken imports
-4. **Suggest commit message** - Provide concise commit message summarizing the changes
+3. Check for redundancy - Always verify no unused files or duplicate code exists:
+   - Unused files - Search for imports to verify files are still referenced
+   - Duplicate code - Look for similar functions across modules (validation, helpers)
+   - Dead code - Delete unused implementations and imports
+   - Validate - Run `./qa check` after cleanup to ensure no broken imports
+4. Suggest commit message - Provide concise commit message summarizing the changes
 5. Only then proceed with next changes
 
-**Never work with a broken QA check.**
-
-`./qa check` is not a gate at the end - it's a compass throughout development.
+**Never work with a broken QA check.** `./qa check` is not a gate at the end - it's a compass throughout development.
 
 ## Git Workflow
 
-- **NEVER execute `git commit`** - Only the user commits code
-- **NEVER execute `git push`** - Only the user pushes changes
-- **Provide commit messages only** - Claude suggests commit messages, user reviews and commits
-- **No automatic git operations** - All git commands must be explicitly requested by user
+- NEVER execute `git commit` - Only the user commits code
+- NEVER execute `git push` - Only the user pushes changes
+- Provide commit messages only - Claude suggests commit messages, user reviews and commits
+- No automatic git operations - All git commands must be explicitly requested by user
 
 ## Important Files
 
