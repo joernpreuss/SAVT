@@ -3,7 +3,7 @@ from collections.abc import Generator
 from sqlalchemy.future import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
-from .config import settings
+from ...config import settings
 
 # from sqlmodel.pool import StaticPool
 

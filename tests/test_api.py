@@ -9,7 +9,7 @@ from rich.logging import RichHandler
 from rich.syntax import Syntax
 from sqlmodel import Session
 
-from src.database import get_session
+from src.infrastructure.database.database import get_session
 from src.main import app
 
 

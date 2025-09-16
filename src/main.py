@@ -5,13 +5,13 @@ from typing import Final
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .api_routes import api_router
 from .config import settings
-from .database import get_main_engine, init_db
+from .infrastructure.database.database import get_main_engine, init_db
 from .logging_config import get_logger, setup_logging
 from .logging_utils import log_system_info
 from .middleware import log_requests_middleware
-from .routes import router
+from .presentation.api_routes import api_router
+from .presentation.routes import router
 
 
 @asynccontextmanager
