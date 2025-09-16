@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-def run_command(cmd, description, suppress_output=False):
+def _run_command(cmd, description, suppress_output=False):
     """Run a command and handle errors."""
     print(f"🔄 {description}...")
     try:
@@ -49,7 +49,7 @@ def main():
         print("   ⚠️  Warning: Could not check for changes\n")
 
     # Regenerate coverage report
-    success = run_command(
+    success = _run_command(
         ["uv", "run", "python", "pytreqt/tools/generate_coverage_report.py"],
         "2️⃣  Regenerating TEST_COVERAGE.md",
         suppress_output=True,
@@ -59,7 +59,7 @@ def main():
         sys.exit(1)
 
     # Run tests with requirements coverage
-    success = run_command(
+    success = _run_command(
         ["uv", "run", "pytest", "-q"], "3️⃣  Running tests with requirements coverage"
     )
 

@@ -29,12 +29,12 @@ class DeletedFeature(NamedTuple):
 _deleted_items: dict[str, DeletedItem] = {}
 _deleted_features: dict[int, DeletedFeature] = {}
 
-UNDO_TIMEOUT_SECONDS = 30
+_UNDO_TIMEOUT_SECONDS = 30
 
 
 def _cleanup_expired_deletions() -> None:
     """Remove expired deletions from memory."""
-    cutoff = datetime.now() - timedelta(seconds=UNDO_TIMEOUT_SECONDS)
+    cutoff = datetime.now() - timedelta(seconds=_UNDO_TIMEOUT_SECONDS)
 
     # Clean up expired items
     expired_items = [

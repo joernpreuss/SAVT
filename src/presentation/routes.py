@@ -44,12 +44,12 @@ templates: Final = Jinja2Templates(directory="templates/")
 
 
 # Add custom filter for name truncation
-def truncate_name_filter(name: str, max_length: int = 30) -> str:
+def _truncate_name_filter(name: str, max_length: int = 30) -> str:
     """Jinja2 filter wrapper for truncate_name utility function."""
     return truncate_name(name, max_length)
 
 
-templates.env.filters["truncate_name"] = truncate_name_filter
+templates.env.filters["truncate_name"] = _truncate_name_filter
 
 
 def _filter_standalone_features(features):

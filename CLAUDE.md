@@ -35,7 +35,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
    - Duplicate code - Look for similar functions across modules (validation, helpers)
    - Dead code - Delete unused implementations and imports
    - Validate - Run `./qa check` after cleanup to ensure no broken imports
-4. Suggest commit message - Provide concise commit message summarizing the changes
+4. **ALWAYS provide commit message** - After completing any task, provide a concise commit message summarizing the changes
 5. Only then proceed with next changes
 
 **Never work with a broken QA check.** `./qa check` is not a gate at the end - it's a compass throughout development.

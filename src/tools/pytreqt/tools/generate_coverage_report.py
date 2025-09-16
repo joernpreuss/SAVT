@@ -10,7 +10,7 @@ from collections import defaultdict
 from pathlib import Path
 
 
-def extract_requirements_from_specs():
+def _extract_requirements_from_specs():
     """Extract all defined requirements from REQUIREMENTS.md."""
     requirements_file = Path("specs/spec/REQUIREMENTS.md")
     if not requirements_file.exists():
@@ -31,7 +31,7 @@ def extract_requirements_from_specs():
     return requirements
 
 
-def get_test_coverage():
+def _get_test_coverage():
     """Run pytest to get requirements coverage data."""
     try:
         # Run pytest with requirements analysis only
@@ -70,7 +70,7 @@ def get_test_coverage():
         return {}
 
 
-def get_previous_coverage():
+def _get_previous_coverage():
     """Get previous coverage data from existing report."""
     coverage_file = Path("specs/reports/TEST_COVERAGE.md")
     if not coverage_file.exists():
@@ -114,7 +114,7 @@ def get_previous_coverage():
         return None
 
 
-def coverage_changed(previous, current):
+def _coverage_changed(previous, current):
     """Check if coverage data has meaningfully changed."""
     if not previous:
         return True
@@ -128,16 +128,16 @@ def coverage_changed(previous, current):
     )
 
 
-def generate_coverage_matrix():
+def _generate_coverage_matrix():
     """Generate the complete coverage matrix."""
     print("Extracting requirements from specifications...")
-    all_requirements = extract_requirements_from_specs()
+    all_requirements = _extract_requirements_from_specs()
 
     print("Analyzing test coverage...")
-    test_coverage = get_test_coverage()
+    test_coverage = _get_test_coverage()
 
     # Get previous coverage to check if it changed
-    previous_coverage = get_previous_coverage()
+    previous_coverage = _get_previous_coverage()
     current_coverage_data = {
         "total_requirements": len(all_requirements),
         "tested_requirements": len(test_coverage),
@@ -147,7 +147,7 @@ def generate_coverage_matrix():
     }
 
     # Only update timestamp if coverage actually changed
-    if coverage_changed(previous_coverage, current_coverage_data):
+    if _coverage_changed(previous_coverage, current_coverage_data):
         timestamp = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
     else:
         timestamp = (
@@ -259,7 +259,7 @@ def main():
         sys.exit(1)
 
     # Generate the report
-    report_content = generate_coverage_matrix()
+    report_content = _generate_coverage_matrix()
     if not report_content:
         print("Failed to generate coverage report")
         sys.exit(1)
@@ -274,7 +274,7 @@ def main():
     print(f"✅ Coverage report generated: {coverage_file}")
     print(
         "📊 Coverage summary: "
-        + f"{len(extract_requirements_from_specs())} total requirements"
+        + f"{len(_extract_requirements_from_specs())} total requirements"
     )
 
 
