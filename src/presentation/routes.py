@@ -15,17 +15,14 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
 
-from ..application.service import (
-    ItemAlreadyExistsError,
+from ..application.feature_service import (
     create_feature,
-    create_item,
     get_features,
-    get_items,
-    merge_items,
-    move_feature,
-    split_item,
+    veto_feature_by_id,
     veto_item_feature,
 )
+from ..application.item_operations_service import merge_items, move_feature, split_item
+from ..application.item_service import ItemAlreadyExistsError, create_item, get_items
 from ..config import settings
 from ..infrastructure.database.database import get_session
 from ..infrastructure.database.models import Feature, Item
@@ -214,8 +211,6 @@ async def route_veto_item_feature(
 
     # Use feature_id if provided, otherwise fallback to name-based lookup
     if feature_id is not None:
-        from ..application.service import veto_feature_by_id
-
         result = veto_feature_by_id(session, user, feature_id, veto=True)
     else:
         result = veto_item_feature(session, user, name, item, veto=True)
@@ -265,8 +260,6 @@ async def route_unveto_item_feature(
 
     # Use feature_id if provided, otherwise fallback to name-based lookup
     if feature_id is not None:
-        from ..application.service import veto_feature_by_id
-
         result = veto_feature_by_id(session, user, feature_id, veto=False)
     else:
         result = veto_item_feature(session, user, name, item, veto=False)
