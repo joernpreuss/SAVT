@@ -142,7 +142,6 @@ input, select {
 }
 
 input:focus, select:focus {
-  outline: none;
   border-color: #3498db;
   box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
@@ -302,9 +301,6 @@ button:hover {
 
 .split-button:hover {
   background: #7f8c8d;
-}
-
-  /* Inherits all .action-select styles above */
 }
 
 .merge-form {
