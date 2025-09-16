@@ -92,3 +92,40 @@ def create_item(session: Session, item: Item) -> Item:
     else:
         logger.warning("Item creation failed - already exists", item_name=item.name)
         raise ItemAlreadyExistsError(f"Item with name '{item.name}' already exists")
+
+
+def delete_item(session: Session, item_name: str) -> bool:
+    """Delete an item and move its features to standalone.
+
+    Args:
+        session: Database session
+        item_name: Name of the item to delete
+
+    Returns:
+        True if item was deleted, False if not found
+    """
+    logger.debug("Deleting item", item_name=item_name)
+
+    item: Final = get_item(session, item_name)
+    if not item:
+        logger.warning("Item deletion failed - not found", item_name=item_name)
+        return False
+
+    # Move all features to standalone (set item_id to None)
+    for feature in item.features:
+        feature.item_id = None
+        session.add(feature)
+
+    # Delete the item
+    session.delete(item)
+    session.commit()
+
+    log_database_operation(
+        operation="delete",
+        table="Item",
+        success=True,
+        item_name=item_name,
+        item_id=item.id,
+    )
+    logger.info("Item deleted successfully", item_name=item_name, item_id=item.id)
+    return True

@@ -65,6 +65,13 @@
           </select>
         </form>
       {% endif %}
+      <button class="delete-button"
+              hx-post="/delete/feature/{{ feature.id }}"
+              hx-target="body"
+              hx-swap="outerHTML"
+              hx-confirm="Delete {{ feature.name }}?"
+              aria-label="Delete {{ feature.name }}"
+              title="Delete this feature">×</button>
     </div>
   </li>
 {% endmacro %}
@@ -98,6 +105,13 @@
           </select>
         </form>
       {% endif %}
+      <button class="delete-button"
+              hx-post="/delete/feature/{{ feature.id }}"
+              hx-target="body"
+              hx-swap="outerHTML"
+              hx-confirm="Delete {{ feature.name }}?"
+              aria-label="Delete {{ feature.name }}"
+              title="Delete this feature">×</button>
     </div>
   </li>
 {% endmacro %}

@@ -103,6 +103,13 @@ standalone_feature_item %}
                           hx-swap="outerHTML"
                           aria-label="Split {{ item.name }} into separate items"
                           title="Split this {{ settings.object_name_singular }} into separate items">split</button>
+                  <button class="delete-button"
+                          hx-post="/delete/item/{{ item.name }}"
+                          hx-target="body"
+                          hx-swap="outerHTML"
+                          hx-confirm="Delete {{ item.name }}? Its {{ settings.property_name_plural_computed }} will become standalone."
+                          aria-label="Delete {{ item.name }}"
+                          title="Delete this {{ settings.object_name_singular }}">×</button>
                 </div>
               </div>
               <ul>

@@ -207,3 +207,37 @@ def veto_feature_by_id(
         )
 
     return feature
+
+
+def delete_feature(session: Session, feature_id: int) -> bool:
+    """Delete a feature by ID.
+
+    Args:
+        session: Database session
+        feature_id: ID of the feature to delete
+
+    Returns:
+        True if feature was deleted, False if not found
+    """
+    logger.debug("Deleting feature", feature_id=feature_id)
+
+    feature: Final = get_feature_by_id(session, feature_id)
+    if not feature:
+        logger.warning("Feature deletion failed - not found", feature_id=feature_id)
+        return False
+
+    # Delete the feature
+    session.delete(feature)
+    session.commit()
+
+    log_database_operation(
+        operation="delete",
+        table="Feature",
+        success=True,
+        feature_name=feature.name,
+        feature_id=feature_id,
+    )
+    logger.info(
+        "Feature deleted successfully", feature_name=feature.name, feature_id=feature_id
+    )
+    return True
