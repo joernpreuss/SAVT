@@ -314,3 +314,63 @@ button:hover {
   border: none !important;
   background: none;
 }
+
+/* Error Toast */
+.error-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #e74c3c;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  font-weight: 500;
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Accessibility: Focus indicators */
+a:focus,
+button:focus,
+select:focus,
+input:focus {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Enhanced focus for veto/unveto links */
+.veto-link:focus,
+.unveto-link:focus {
+  background: #3498db !important;
+  color: white !important;
+  outline: 2px solid #2980b9;
+}
+
+/* Skip to main content link for screen readers */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #3498db;
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 3px;
+}
+
+.skip-link:focus {
+  top: 6px;
+}

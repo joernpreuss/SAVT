@@ -13,6 +13,31 @@ standalone_feature_item %}
       htmx.config.defaultSwapStyle = 'outerHTML swap:0s settle:0s';
       htmx.config.scrollBehavior = 'instant';
 
+      // Error handling utility
+      function showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-toast';
+        errorDiv.textContent = message;
+        document.body.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 5000);
+      }
+
+      // Global HTMX error handling
+      document.addEventListener('htmx:responseError', function(e) {
+        console.error('HTMX Response Error:', e.detail);
+        showError('Network error - please try again');
+      });
+
+      document.addEventListener('htmx:timeout', function(e) {
+        console.error('HTMX Timeout:', e.detail);
+        showError('Request timed out - please try again');
+      });
+
+      document.addEventListener('htmx:sendError', function(e) {
+        console.error('HTMX Send Error:', e.detail);
+        showError('Connection failed - check your internet connection');
+      });
+
       // Preserve scroll position on body swaps
       document.addEventListener('htmx:beforeSwap', function(e) {
         if (e.target === document.body) {
@@ -35,8 +60,12 @@ standalone_feature_item %}
     <link rel="stylesheet" href="/static/css/styles.css">
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div class="container">
-      <h1>{{ settings.app_name }}</h1>
+      <header>
+        <h1>{{ settings.app_name }}</h1>
+      </header>
+      <main id="main-content">
       {% if message %}<div class="message">{{ message }}</div>{% endif %}
       <h2>View</h2>
       <div class="instruction">
@@ -58,7 +87,9 @@ standalone_feature_item %}
                           hx-post="/merge/item"
                           hx-target="body"
                           hx-swap="outerHTML"
-                          hx-include="previous input[name='source_item']">
+                          hx-include="previous input[name='source_item']"
+                          aria-label="Merge {{ item.name }} with another {{ settings.object_name_singular }}"
+                          title="Select a {{ settings.object_name_singular }} to merge with">
                     <option value="">merge...</option>
                     {% for other_item in items %}
                       {% if other_item.name != item.name %}
@@ -69,7 +100,9 @@ standalone_feature_item %}
                   <button class="split-button"
                           hx-post="/split/item/{{ item.name }}"
                           hx-target="body"
-                          hx-swap="outerHTML">split</button>
+                          hx-swap="outerHTML"
+                          aria-label="Split {{ item.name }} into separate items"
+                          title="Split this {{ settings.object_name_singular }} into separate items">split</button>
                 </div>
               </div>
               <ul>
@@ -172,6 +205,7 @@ standalone_feature_item %}
           </button>
         </form>
       </div>
+      </main>
     </div>
   </body>
 </html>
