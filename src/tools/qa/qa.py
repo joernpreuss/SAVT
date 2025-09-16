@@ -11,7 +11,7 @@ from rich.console import Console
 console = Console(force_terminal=True)
 
 
-def get_single_key() -> str:
+def _get_single_key() -> str:
     """Get a single keypress without requiring Enter."""
     try:
         # Windows
@@ -38,13 +38,13 @@ def get_single_key() -> str:
             return input().strip().lower()[:1] or "s"
 
 
-def prompt_fix_skip_quit(issue_type: str) -> str:
+def _prompt_fix_skip_quit(issue_type: str) -> str:
     """Prompt user for fix/skip/quit choice and handle the response."""
     console.print(
         f"{issue_type} issues found. Press: (f)ix, (s)kip, or (q)uit",
         style="yellow",
     )
-    choice = get_single_key()
+    choice = _get_single_key()
     console.print(f"[{choice}]")
 
     if choice == "q":
@@ -55,7 +55,7 @@ def prompt_fix_skip_quit(issue_type: str) -> str:
     return "skip"
 
 
-def run_command(cmd: list[str], description: str, show_output: bool = False) -> bool:
+def _run_command(cmd: list[str], description: str, show_output: bool = False) -> bool:
     """Run a command and return success status."""
     try:
         if show_output:
@@ -78,7 +78,7 @@ def run_command(cmd: list[str], description: str, show_output: bool = False) -> 
         return False
 
 
-def check_trailing_newlines(fix: bool = False) -> bool:
+def _check_trailing_newlines(fix: bool = False) -> bool:
     """Check and optionally fix trailing newlines."""
     extensions = [
         "*.py",
@@ -209,11 +209,11 @@ def _run_checks(
     # Formatter
     console.print("✨ Running formatter...", style="cyan")
     if fix_format:
-        success &= run_command(
+        success &= _run_command(
             ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Formatting"
         )
     else:
-        format_result = run_command(
+        format_result = _run_command(
             [
                 "uv",
                 "tool",
@@ -231,9 +231,9 @@ def _run_checks(
         success &= format_result
         if not format_result:
             had_issues = True
-            choice = prompt_fix_skip_quit("Formatting")
+            choice = _prompt_fix_skip_quit("Formatting")
             if choice == "fix":
-                run_command(
+                _run_command(
                     ["uv", "tool", "run", "ruff", "format", "src/", "tests/"],
                     "Formatting",
                 )
@@ -245,12 +245,12 @@ def _run_checks(
     # Linter
     console.print("🔍 Running linter...", style="cyan")
     if fix_lint:
-        success &= run_command(
+        success &= _run_command(
             ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"],
             "Linting with fixes",
         )
     else:
-        lint_result = run_command(
+        lint_result = _run_command(
             ["uv", "tool", "run", "ruff", "check", "src/", "tests/"],
             "Linting",
             show_output=True,
@@ -258,9 +258,9 @@ def _run_checks(
         success &= lint_result
         if not lint_result:
             had_issues = True
-            choice = prompt_fix_skip_quit("Linting")
+            choice = _prompt_fix_skip_quit("Linting")
             if choice == "fix":
-                run_command(
+                _run_command(
                     ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"],
                     "Linting with fixes",
                 )
@@ -272,22 +272,22 @@ def _run_checks(
     # Template formatter/linter
     console.print("🎨 Running template formatter...", style="cyan")
     if fix_format:
-        success &= run_command(
+        success &= _run_command(
             ["uv", "run", "djlint", "templates/", "--reformat"],
             "Template formatting",
         )
     else:
-        template_success = run_command(
+        template_success = _run_command(
             ["uv", "run", "djlint", "templates/"],
             "Template linting",
             show_output=True,
         )
         if not template_success and not (fix_all or fix_format):
             had_issues = True
-            choice = prompt_fix_skip_quit("Template")
+            choice = _prompt_fix_skip_quit("Template")
             if choice == "fix":
                 console.print("🔧 Fixing template issues...", style="yellow")
-                success &= run_command(
+                success &= _run_command(
                     ["uv", "run", "djlint", "templates/", "--reformat"],
                     "Template formatting",
                 )
@@ -298,21 +298,21 @@ def _run_checks(
 
     # Type checker
     console.print("🔎 Running type checker...", style="cyan")
-    success &= run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")
+    success &= _run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")
     console.print()
 
     # Trailing newlines
     console.print("📄 Checking file endings...", style="cyan")
     if fix_newlines:
-        success &= check_trailing_newlines(fix_newlines)
+        success &= _check_trailing_newlines(fix_newlines)
     else:
-        newlines_result = check_trailing_newlines(fix_newlines)
+        newlines_result = _check_trailing_newlines(fix_newlines)
         success &= newlines_result
         if not newlines_result:
             had_issues = True
-            choice = prompt_fix_skip_quit("Trailing newline")
+            choice = _prompt_fix_skip_quit("Trailing newline")
             if choice == "fix":
-                check_trailing_newlines(True)
+                _check_trailing_newlines(True)
                 interactive_fixes.append("newlines")
         else:
             console.print("✅ All files have proper trailing newlines", style="green")
@@ -321,7 +321,7 @@ def _run_checks(
     # Tests
     if not skip_tests:
         console.print("🧪 Running tests...", style="cyan")
-        success &= run_command(
+        success &= _run_command(
             ["uv", "run", "pytest", "--color=yes"], "Tests", show_output=True
         )
 
