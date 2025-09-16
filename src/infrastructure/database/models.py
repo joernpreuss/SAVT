@@ -7,7 +7,7 @@ from ...domain.entities import Item as DomainItem
 
 
 class Item(SQLModel, table=True):  # type: ignore[call-arg]
-    """An item with features. Can be a pizza with toppings."""
+    """An item with features. Can be a pizza with toppings, event with options, etc."""
 
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True, min_length=1, max_length=MAX_NAME_LENGTH)
@@ -19,7 +19,7 @@ class Item(SQLModel, table=True):  # type: ignore[call-arg]
     features: list["Feature"] = Relationship(back_populates="item")
 
     @classmethod
-    def as_form(cls, name: str = Form(...), kind: str | None = Form(None)) -> "Item":
+    def as_form(cls, name: str = Form(""), kind: str | None = Form(None)) -> "Item":
         return cls(name=name, kind=kind)
 
     @classmethod
@@ -43,7 +43,7 @@ class Item(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class Feature(SQLModel, table=True):  # type: ignore[call-arg]
-    """A feature of an item. Can be a topping of a pizza."""
+    """A feature of an item. Can be a topping of a pizza, option of an event, etc."""
 
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True, min_length=1, max_length=MAX_NAME_LENGTH)

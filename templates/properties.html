@@ -8,6 +8,30 @@ standalone_feature_item %}
     <meta name="keywords"
           content="group decisions, voting, veto, {{ settings.property_name_plural_computed }}">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script>
+      // Configure HTMX to preserve scroll position on swaps
+      htmx.config.defaultSwapStyle = 'outerHTML swap:0s settle:0s';
+      htmx.config.scrollBehavior = 'instant';
+
+      // Preserve scroll position on body swaps
+      document.addEventListener('htmx:beforeSwap', function(e) {
+        if (e.target === document.body) {
+          e.detail.shouldSwap = true;
+          // Store current scroll position
+          sessionStorage.setItem('scrollPosition', window.scrollY);
+        }
+      });
+
+      document.addEventListener('htmx:afterSwap', function(e) {
+        if (e.target === document.body) {
+          // Restore scroll position
+          const scrollPos = sessionStorage.getItem('scrollPosition');
+          if (scrollPos !== null) {
+            window.scrollTo(0, parseInt(scrollPos));
+          }
+        }
+      });
+    </script>
     <link rel="stylesheet" href="/static/css/styles.css">
   </head>
   <body>
@@ -28,22 +52,20 @@ standalone_feature_item %}
                 <strong>{{ item.name | truncate_name(40) }}</strong>
                 {% if item.kind %}<span class="kind-badge">({{ item.kind }})</span>{% endif %}
                 <div class="pizza-actions">
-                  <form class="merge-form">
-                    <input type="hidden" name="source_item" value="{{ item.name }}">
-                    <select class="merge-select"
-                            name="target_item"
-                            hx-post="/merge/item"
-                            hx-target="body"
-                            hx-swap="outerHTML"
-                            hx-include="closest form">
-                      <option value="">merge...</option>
-                      {% for other_item in items %}
-                        {% if other_item.name != item.name %}
-                          <option value="{{ other_item.name }}">→ {{ other_item.name | truncate_name(25) }}</option>
-                        {% endif %}
-                      {% endfor %}
-                    </select>
-                  </form>
+                  <input type="hidden" name="source_item" value="{{ item.name }}">
+                  <select class="merge-select"
+                          name="target_item"
+                          hx-post="/merge/item"
+                          hx-target="body"
+                          hx-swap="outerHTML"
+                          hx-include="previous input[name='source_item']">
+                    <option value="">merge...</option>
+                    {% for other_item in items %}
+                      {% if other_item.name != item.name %}
+                        <option value="{{ other_item.name }}">→ {{ other_item.name | truncate_name(25) }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
                   <button class="split-button"
                           hx-post="/split/item/{{ item.name }}"
                           hx-target="body"
@@ -80,16 +102,15 @@ standalone_feature_item %}
             Name:
           </label>
           <input type="text"
-                 required
                  name="name"
                  id="item_name"
-                 value="{{ name }}"
-                 placeholder="Enter {{ settings.object_name_singular }} name..." />
+                 value="{{ item_name or '' }}"
+                 placeholder="Enter {{ settings.object_name_singular }} name or leave blank for {{ settings.object_name_singular.title() }}-1, {{ settings.object_name_singular.title() }}-2, etc." />
           <label for="item_kind">Kind (optional):</label>
           <input type="text"
                  name="kind"
                  id="item_kind"
-                 value="{{ kind }}"
+                 value=""
                  placeholder="e.g., vegan, vegetarian..." />
           <button type="submit">
             Create
@@ -118,7 +139,7 @@ standalone_feature_item %}
                  required
                  name="name"
                  id="feature_name"
-                 value="{{ name }}"
+                 value=""
                  placeholder="Enter {{ settings.property_name_singular }} name..." />
           <label for="feature_amount">Amount:</label>
           <input type="number"

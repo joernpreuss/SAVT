@@ -287,10 +287,16 @@ class TestUIAccessibility:
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Check required attributes
+        # Check input attributes (name inputs now have auto-generated defaults)
         name_inputs = soup.find_all("input", {"name": "name"})
         for input_elem in name_inputs:
-            assert input_elem.get("required") is not None
+            # Item name input is now optional (auto-generated Pizza-1, Pizza-2, etc.)
+            if input_elem.get("id") == "item_name":
+                assert input_elem.get("required") is None  # Not required anymore
+                assert "Pizza-1, Pizza-2" in input_elem.get("placeholder")
+            else:
+                # Feature name inputs should still be required
+                assert input_elem.get("required") is not None
             assert input_elem.get("placeholder") is not None
             assert input_elem.get("id") is not None
 

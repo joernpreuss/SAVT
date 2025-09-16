@@ -325,11 +325,11 @@ def split_item(
             feature_groups[feature.name] = feature.amount
 
     if len(feature_groups) <= 1:
-        # Special case: single topping with amount > 1
+        # Special case: single feature with amount > 1
         if len(feature_groups) == 1:
             feature_name, total_amount = next(iter(feature_groups.items()))
             if total_amount > 1:
-                # Split into individual pizzas with amount 1 each
+                # Split into individual items with amount 1 each
                 created_items = []
                 for i in range(1, total_amount + 1):
                     # Generate unique name with numbering
@@ -366,13 +366,13 @@ def split_item(
                 session.commit()
 
                 message = (
-                    f"Split '{source_item_name}' into {total_amount} individual pizzas"
+                    f"Split '{source_item_name}' into {total_amount} individual items"
                 )
                 return created_items, message
 
         return (
             [],
-            f"Item '{source_item_name}' has only one unique topping with amount 1 - "
+            f"Item '{source_item_name}' has only one unique feature with amount 1 - "
             + "cannot split",
         )
 
