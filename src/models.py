@@ -1,7 +1,7 @@
 from fastapi import Form
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from .constants import MAX_FEATURE_AMOUNT, MAX_KIND_LENGTH, MAX_NAME_LENGTH
+from .domain.constants import MAX_FEATURE_AMOUNT, MAX_KIND_LENGTH, MAX_NAME_LENGTH
 
 
 class Item(SQLModel, table=True):  # type: ignore[call-arg]
