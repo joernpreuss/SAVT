@@ -22,7 +22,12 @@ from ..application.feature_service import (
     veto_item_feature,
 )
 from ..application.item_operations_service import merge_items, move_feature, split_item
-from ..application.item_service import ItemAlreadyExistsError, create_item, get_items
+from ..application.item_service import (
+    ItemAlreadyExistsError,
+    create_item,
+    get_item,
+    get_items,
+)
 from ..config import settings
 from ..infrastructure.database.database import get_session
 from ..infrastructure.database.models import Feature, Item
@@ -49,6 +54,17 @@ def _filter_standalone_features(features):
     return [feature for feature in features if feature.item_id is None]
 
 
+def _get_next_default_item_name(session: Session) -> str:
+    """Get the next available {object_name}-N name."""
+    counter = 1
+    base_name = settings.object_name_singular.title()
+    while True:
+        candidate_name = f"{base_name}-{counter}"
+        if get_item(session, candidate_name) is None:
+            return candidate_name
+        counter += 1
+
+
 def _render_full_page_response(
     request: Request,
     session: Session,
@@ -60,6 +76,9 @@ def _render_full_page_response(
     items: Final = get_items(session)
     standalone_features = _filter_standalone_features(features)
 
+    # Get the next available default name for the item name field
+    next_default_name = _get_next_default_item_name(session)
+
     return templates.TemplateResponse(
         request,
         "properties.html",
@@ -69,6 +88,7 @@ def _render_full_page_response(
             "item_id": item_id,
             "settings": settings,
             "message": message,
+            "item_name": next_default_name,  # Pre-populate the item name field only
         },
     )
 
@@ -119,6 +139,18 @@ async def route_create_item(
     item: Item = Depends(Item.as_form),
     response: Response,
 ):
+    # Generate default name if empty
+    if not item.name or item.name.strip() == "":
+        # Find the next available {object_name}-N name
+        base_name = settings.object_name_singular.title()
+        counter = 1
+        while True:
+            candidate_name = f"{base_name}-{counter}"
+            if get_item(session, candidate_name) is None:
+                item.name = candidate_name
+                break
+            counter += 1
+
     logger.debug("Creating item via web form", item_name=item.name)
 
     item_id = item.id

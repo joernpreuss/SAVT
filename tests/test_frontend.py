@@ -358,8 +358,9 @@ class TestHTMLValidation:
 
         # Check form inputs have proper attributes
         name_input = soup.find("input", {"name": "name"})
-        assert name_input.get("required") is not None
+        # Name input is now optional (auto-generated names like Pizza-1, Pizza-2)
         assert name_input.get("placeholder") is not None
+        assert "Pizza-1, Pizza-2" in name_input.get("placeholder")
 
         # Check buttons have proper text
         buttons = soup.find_all("button", type="submit")
