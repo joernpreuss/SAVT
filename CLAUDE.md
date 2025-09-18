@@ -35,8 +35,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
    - Duplicate code - Look for similar functions across modules (validation, helpers)
    - Dead code - Delete unused implementations and imports
    - Validate - Run `./qa check` after cleanup to ensure no broken imports
-4. **ALWAYS provide commit message** - After completing any task, provide a concise commit message summarizing the changes
-5. Only then proceed with next changes
+4. Only then proceed with next changes
 
 **Never work with a broken QA check.** `./qa check` is not a gate at the end - it's a compass throughout development.
 
@@ -44,7 +43,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 
 - NEVER execute `git commit` - Only the user commits code
 - NEVER execute `git push` - Only the user pushes changes
-- Provide commit messages only - Claude suggests commit messages, user reviews and commits
+- Use "cm" keyword for commit messages - Type "commit" to get a suggested commit message for current changes
 - No automatic git operations - All git commands must be explicitly requested by user
 
 ## Important Files
