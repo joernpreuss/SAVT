@@ -20,7 +20,55 @@ from src.infrastructure.database.models import Item
 
 async def _create_test_session() -> AsyncSession:
     """Create a fresh async session for each test."""
-    async_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    import os
+    import uuid
+
+    if os.getenv("TEST_DATABASE") == "postgresql":
+        # Use PostgreSQL for integration tests
+        base_url = os.getenv(
+            "DATABASE_URL", "postgresql://user:password@localhost:5432/savt"
+        )
+        async_url = base_url.replace("postgresql://", "postgresql+asyncpg://")
+
+        # For parallel tests, use unique database name per test
+        worker_id = os.getenv("PYTEST_XDIST_WORKER", "main")
+        unique_id = str(uuid.uuid4())[:8]
+
+        # Replace only the database name at the end of the URL
+        if async_url.endswith("/savt"):
+            async_url = async_url[:-5] + f"/savt_test_{worker_id}_{unique_id}"
+        elif async_url.endswith("/savt_test"):
+            async_url = async_url[:-10] + f"/savt_test_{worker_id}_{unique_id}"
+        else:
+            async_url = f"{async_url}_test_{worker_id}_{unique_id}"
+
+        # Create the test database first
+        import asyncpg
+
+        try:
+            # Extract connection info
+            from urllib.parse import urlparse
+
+            parsed = urlparse(async_url)
+
+            # Connect to default postgres database to create test database
+            admin_url = f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port}/postgres"
+            admin_conn = await asyncpg.connect(admin_url)
+
+            test_db_name = parsed.path[1:]  # Remove leading slash
+            await admin_conn.execute(f'CREATE DATABASE "{test_db_name}"')
+            await admin_conn.close()
+        except Exception:
+            pass  # Database might already exist
+
+        async_engine = create_async_engine(
+            async_url,
+            pool_size=2,  # Smaller pool for test databases
+            max_overflow=5,
+        )
+    else:
+        # Default: in-memory SQLite (each test gets its own memory database)
+        async_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
     # Create tables
     async with async_engine.begin() as conn:
