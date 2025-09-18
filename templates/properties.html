@@ -66,151 +66,151 @@ standalone_feature_item %}
         <h1>{{ settings.app_name }}</h1>
       </header>
       <main id="main-content">
-      {% if message %}<div class="message">{{ message | safe }}</div>{% endif %}
-      <h2>View</h2>
-      <div class="instruction">
-        Click <strong>[veto]</strong> or <strong>[unveto]</strong>
-        to change {{ settings.property_name_plural_computed }} status
-      </div>
-      <div class="section">
-        <h3>{{ settings.object_name_plural_computed.title() }}</h3>
-        <ul id="objects-list">
-          {% for item in items %}
-            <li>
-              <div class="pizza-header">
-                <strong>{{ item.name | truncate_name(40) }}</strong>
-                {% if item.kind %}<span class="kind-badge">({{ item.kind }})</span>{% endif %}
-                <div class="pizza-actions">
-                  <input type="hidden" name="source_item" value="{{ item.name }}">
-                  <select class="merge-select"
-                          name="target_item"
-                          hx-post="/merge/item"
-                          hx-target="body"
-                          hx-swap="outerHTML"
-                          hx-include="previous input[name='source_item']"
-                          aria-label="Merge {{ item.name }} with another {{ settings.object_name_singular }}"
-                          title="Select a {{ settings.object_name_singular }} to merge with">
-                    <option value="">merge...</option>
-                    {% for other_item in items %}
-                      {% if other_item.name != item.name %}
-                        <option value="{{ other_item.name }}">→ {{ other_item.name | truncate_name(25) }}</option>
-                      {% endif %}
-                    {% endfor %}
-                  </select>
-                  <button class="split-button"
-                          hx-post="/split/item/{{ item.name }}"
-                          hx-target="body"
-                          hx-swap="outerHTML"
-                          aria-label="Split {{ item.name }} into separate items"
-                          title="Split this {{ settings.object_name_singular }} into separate items">split</button>
-                  <button class="delete-button"
-                          hx-post="/delete/item/{{ item.name }}"
-                          hx-target="body"
-                          hx-swap="outerHTML"
-                          aria-label="Delete {{ item.name }}"
-                          title="Delete this {{ settings.object_name_singular }}">×</button>
-                </div>
-              </div>
-              <ul>
-                {% for feature in item.features %}{{ item_feature_item_with_move(feature, item.name, items) }}{% endfor %}
-              </ul>
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-      <div class="section">
-        <h4>
-          {{ settings.property_name_plural_computed.title() }}
-          without {{ settings.object_name_plural_computed }}
-          <span class="standalone-indicator">(Free)</span>
-        </h4>
-        <ul id="standalone-properties">
-          {% for feature in features %}{{ standalone_feature_item(feature, items) }}{% endfor %}
-        </ul>
-      </div>
-      <h2>Create</h2>
-      <div class="section">
-        <h3>{{ settings.object_name_singular.title() }}</h3>
-        <form method="post"
-              action="/create/item/"
-              hx-post="/create/item/"
-              hx-target="body"
-              hx-swap="outerHTML">
-          <label for="item_name">
-            {{ settings.object_name_singular.title() }}
-            Name:
-          </label>
-          <input type="text"
-                 name="name"
-                 id="item_name"
-                 value="{{ item_name or '' }}"
-                 placeholder="Enter {{ settings.object_name_singular }} name or leave blank for {{ settings.object_name_singular.title() }}-1, {{ settings.object_name_singular.title() }}-2, etc." />
-          <label for="item_kind">Kind (optional):</label>
-          <input type="text"
-                 name="kind"
-                 id="item_kind"
-                 value=""
-                 placeholder="e.g., vegan, vegetarian..." />
-          <button type="submit">
-            Create
-            {{ settings.object_name_singular.title() }}
-          </button>
-        </form>
-      </div>
-      <div class="section">
-        <h3>{{ settings.property_name_singular.title() }}</h3>
-        <div class="form-description">
-          You can create {{ settings.property_name_plural_computed }} that belong to
-          a specific {{ settings.object_name_singular }}, or create standalone
-          {{ settings.property_name_plural_computed }} that don't belong to any
-          {{ settings.object_name_singular }}.
+        {% if message %}<div class="message">{{ message | safe }}</div>{% endif %}
+        <h2>View</h2>
+        <div class="instruction">
+          Click <strong>[veto]</strong> or <strong>[unveto]</strong>
+          to change {{ settings.property_name_plural_computed }} status
         </div>
-        <form method="post"
-              action="/create/feature/"
-              hx-post="/create/feature/"
-              hx-target="body"
-              hx-swap="outerHTML">
-          <label for="feature_name">
-            {{ settings.property_name_singular.title() }}
-            Name:
-          </label>
-          <input type="text"
-                 required
-                 name="name"
-                 id="feature_name"
-                 value=""
-                 placeholder="Enter {{ settings.property_name_singular }} name..." />
-          <label for="feature_amount">Amount:</label>
-          <input type="number"
-                 name="amount"
-                 id="feature_amount"
-                 value="1"
-                 min="1"
-                 max="3"
-                 required />
-          <label for="item_id">
-            Add to {{ settings.object_name_singular }}
-            (optional):
-          </label>
-          <select name="item_id" id="item_id">
-            <option value="">
-              [No {{ settings.object_name_singular }}
-              - Free]
-            </option>
+        <div class="section">
+          <h3>{{ settings.object_name_plural_computed.title() }}</h3>
+          <ul id="objects-list">
             {% for item in items %}
-              {% if item.id == item_id %}
-                <option value="{{ item.id }}" selected>{{ item.name }}</option>
-              {% else %}
-                <option value="{{ item.id }}">{{ item.name }}</option>
-              {% endif %}
+              <li>
+                <div class="pizza-header">
+                  <strong>{{ item.name | truncate_name(40) }}</strong>
+                  {% if item.kind %}<span class="kind-badge">({{ item.kind }})</span>{% endif %}
+                  <div class="pizza-actions">
+                    <input type="hidden" name="source_item" value="{{ item.name }}">
+                    <select class="merge-select"
+                            name="target_item"
+                            hx-post="/merge/item"
+                            hx-target="body"
+                            hx-swap="outerHTML"
+                            hx-include="previous input[name='source_item']"
+                            aria-label="Merge {{ item.name }} with another {{ settings.object_name_singular }}"
+                            title="Select a {{ settings.object_name_singular }} to merge with">
+                      <option value="">merge...</option>
+                      {% for other_item in items %}
+                        {% if other_item.name != item.name %}
+                          <option value="{{ other_item.name }}">→ {{ other_item.name | truncate_name(25) }}</option>
+                        {% endif %}
+                      {% endfor %}
+                    </select>
+                    <button class="split-button"
+                            hx-post="/split/item/{{ item.name }}"
+                            hx-target="body"
+                            hx-swap="outerHTML"
+                            aria-label="Split {{ item.name }} into separate items"
+                            title="Split this {{ settings.object_name_singular }} into separate items">split</button>
+                    <button class="delete-button"
+                            hx-post="/delete/item/{{ item.name }}"
+                            hx-target="body"
+                            hx-swap="outerHTML"
+                            aria-label="Delete {{ item.name }}"
+                            title="Delete this {{ settings.object_name_singular }}">×</button>
+                  </div>
+                </div>
+                <ul>
+                  {% for feature in item.features %}{{ item_feature_item_with_move(feature, item.name, items) }}{% endfor %}
+                </ul>
+              </li>
             {% endfor %}
-          </select>
-          <button type="submit">
-            Create
-            {{ settings.property_name_singular.title() }}
-          </button>
-        </form>
-      </div>
+          </ul>
+        </div>
+        <div class="section">
+          <h4>
+            {{ settings.property_name_plural_computed.title() }}
+            without {{ settings.object_name_plural_computed }}
+            <span class="standalone-indicator">(Free)</span>
+          </h4>
+          <ul id="standalone-properties">
+            {% for feature in features %}{{ standalone_feature_item(feature, items) }}{% endfor %}
+          </ul>
+        </div>
+        <h2>Create</h2>
+        <div class="section">
+          <h3>{{ settings.object_name_singular.title() }}</h3>
+          <form method="post"
+                action="/create/item/"
+                hx-post="/create/item/"
+                hx-target="body"
+                hx-swap="outerHTML">
+            <label for="item_name">
+              {{ settings.object_name_singular.title() }}
+              Name:
+            </label>
+            <input type="text"
+                   name="name"
+                   id="item_name"
+                   value="{{ item_name or '' }}"
+                   placeholder="Enter {{ settings.object_name_singular }} name or leave blank for {{ settings.object_name_singular.title() }}-1, {{ settings.object_name_singular.title() }}-2, etc." />
+            <label for="item_kind">Kind (optional):</label>
+            <input type="text"
+                   name="kind"
+                   id="item_kind"
+                   value=""
+                   placeholder="e.g., vegan, vegetarian..." />
+            <button type="submit">
+              Create
+              {{ settings.object_name_singular.title() }}
+            </button>
+          </form>
+        </div>
+        <div class="section">
+          <h3>{{ settings.property_name_singular.title() }}</h3>
+          <div class="form-description">
+            You can create {{ settings.property_name_plural_computed }} that belong to
+            a specific {{ settings.object_name_singular }}, or create standalone
+            {{ settings.property_name_plural_computed }} that don't belong to any
+            {{ settings.object_name_singular }}.
+          </div>
+          <form method="post"
+                action="/create/feature/"
+                hx-post="/create/feature/"
+                hx-target="body"
+                hx-swap="outerHTML">
+            <label for="feature_name">
+              {{ settings.property_name_singular.title() }}
+              Name:
+            </label>
+            <input type="text"
+                   required
+                   name="name"
+                   id="feature_name"
+                   value=""
+                   placeholder="Enter {{ settings.property_name_singular }} name..." />
+            <label for="feature_amount">Amount:</label>
+            <input type="number"
+                   name="amount"
+                   id="feature_amount"
+                   value="1"
+                   min="1"
+                   max="3"
+                   required />
+            <label for="item_id">
+              Add to {{ settings.object_name_singular }}
+              (optional):
+            </label>
+            <select name="item_id" id="item_id">
+              <option value="">
+                [No {{ settings.object_name_singular }}
+                - Free]
+              </option>
+              {% for item in items %}
+                {% if item.id == item_id %}
+                  <option value="{{ item.id }}" selected>{{ item.name }}</option>
+                {% else %}
+                  <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <button type="submit">
+              Create
+              {{ settings.property_name_singular.title() }}
+            </button>
+          </form>
+        </div>
       </main>
     </div>
   </body>
