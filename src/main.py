@@ -6,7 +6,12 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .infrastructure.database.database import get_main_engine, init_db
+from .infrastructure.database.database import (
+    get_async_engine,
+    get_main_engine,
+    init_async_db,
+    init_db,
+)
 from .logging_config import get_logger, setup_logging
 from .logging_utils import log_system_info
 from .middleware import log_requests_middleware
@@ -21,8 +26,14 @@ async def lifespan(_app: FastAPI):
     logger = get_logger(__name__)
 
     # Initialize database schema once at startup
-    init_db(get_main_engine())
-    logger.info("Database initialized successfully")
+    # Use async database initialization for better concurrency support
+    try:
+        await init_async_db(get_async_engine())
+        logger.info("Async database initialized successfully")
+    except Exception as e:
+        logger.warning(f"Async database init failed, falling back to sync: {e}")
+        init_db(get_main_engine())
+        logger.info("Sync database initialized successfully")
 
     # Log system info instead of print statements
     hostname = socket.gethostname()
