@@ -55,6 +55,24 @@ def _prompt_fix_skip_quit(issue_type: str) -> str:
     return "skip"
 
 
+def _prompt_single_key(message: str, options: list[str], default: str = "") -> str:
+    """Prompt user for single keypress choice."""
+    console.print(f"{message} ({'/'.join(options)})", style="cyan")
+    if default:
+        console.print(f"Press key or Enter for default [{default}]:", style="dim")
+    else:
+        console.print("Press key:", style="dim")
+
+    choice = _get_single_key()
+
+    # Handle Enter key (returns empty string or newline)
+    if choice in ["", "\n", "\r"] and default:
+        choice = default
+
+    console.print(f"[{choice}]")
+    return choice.lower().strip()
+
+
 def _run_command(cmd: list[str], description: str, show_output: bool = False) -> bool:
     """Run a command and return success status."""
     try:
@@ -184,6 +202,123 @@ def check(
         typer.echo(ctx.get_help())
         raise typer.Exit()
     _run_checks(fix_all, fix_format, fix_lint, fix_newlines, skip_tests)
+
+
+def _show_requirements_coverage() -> None:
+    """Show requirements coverage from last test run."""
+    import json
+    from pathlib import Path
+
+    console.print("📋 Showing requirements coverage from last run...", style="cyan")
+
+    cache_file = Path(".pytest_cache") / "requirements_coverage.json"
+    if not cache_file.exists():
+        console.print(
+            "❌ No cached requirements coverage found. Run tests first.", style="red"
+        )
+        return
+
+    try:
+        with open(cache_file, encoding="utf-8") as f:
+            coverage_data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        console.print(f"❌ Error reading cached coverage: {e}", style="red")
+        return
+
+    console.print("Requirements Coverage (Last Run)", style="green")
+    console.print()
+
+    # Show command info
+    command_info = coverage_data.get("command_info", {})
+    if command_info:
+        console.print(
+            f"Database: {command_info.get('database', 'unknown')}", style="dim"
+        )
+        console.print(
+            f"Generated: {command_info.get('timestamp', 'unknown')}", style="dim"
+        )
+        console.print(f"Command: {command_info.get('command', 'unknown')}", style="dim")
+
+        git_info = command_info.get("git", {})
+        if "error" not in git_info and git_info:
+            branch = git_info.get("branch", "unknown")
+            commit_short = git_info.get("commit_short", "unknown")
+            clean_status = "clean" if git_info.get("clean", False) else "dirty"
+            console.print(f"Git: {branch}@{commit_short} ({clean_status})", style="dim")
+
+        env_vars = command_info.get("environment_variables", {})
+        if env_vars:
+            env_str = ", ".join(f"{k}={v}" for k, v in env_vars.items())
+            console.print(f"Environment: {env_str}", style="dim")
+
+        console.print()
+
+    # Display requirements and their tests
+    for req in sorted(coverage_data["requirements"].keys()):
+        tests = coverage_data["requirements"][req]
+        console.print(f"  {req}:", style="white")
+
+        for test_info in tests:
+            result = test_info["result"]
+            if result == "passed":
+                symbol = "✓"
+                color = "green"
+            elif result == "failed":
+                symbol = "✗"
+                color = "red"
+            elif result == "skipped":
+                symbol = "⊝"
+                color = "yellow"
+            else:
+                symbol = "?"
+                color = "purple"
+
+            console.print(f"    {symbol} {test_info['test_name']}", style=color)
+
+    # Summary statistics
+    summary = coverage_data["summary"]
+    console.print()
+    console.print("Requirements Coverage Summary:", style="cyan")
+    console.print(f"  Tests with requirements: {summary['total_tests']}")
+    console.print(f"  Requirements covered: {summary['total_requirements']}")
+
+
+def _run_database_tests(db_type: str, parallel: int = 1) -> bool:
+    """Run database tests."""
+    if db_type == "sqlite":
+        cmd = ["uv", "run", "pytest", "--color=yes"]
+        if parallel > 1:
+            cmd.extend(["-n", str(parallel)])
+            description = f"SQLite Tests (-n{parallel})"
+        else:
+            description = "SQLite Tests"
+        emoji = "🧪"
+    else:  # postgresql
+        cmd = [
+            "env",
+            "TEST_DATABASE=postgresql",
+            "DATABASE_URL=postgresql://savt_user:savt_password@localhost:5432/savt",
+            "uv",
+            "run",
+            "pytest",
+            "--color=yes",
+        ]
+        if parallel > 1:
+            cmd.extend(["-n", str(parallel)])
+            description = f"PostgreSQL Tests (-n{parallel})"
+        else:
+            description = "PostgreSQL Tests"
+        emoji = "🐘"
+
+    console.print(f"{emoji} Running {description}...", style="cyan")
+    test_success = _run_command(cmd, description, show_output=True)
+
+    if test_success:
+        console.print(f"✅ {description} passed!", style="green")
+    else:
+        console.print(f"❌ {description} failed", style="red")
+
+    return test_success
 
 
 def _run_checks(
@@ -318,12 +453,101 @@ def _run_checks(
             console.print("✅ All files have proper trailing newlines", style="green")
     console.print()
 
-    # Tests
+    # Tests - Interactive database selection and test execution
     if not skip_tests:
-        console.print("🧪 Running tests...", style="cyan")
-        success &= _run_command(
-            ["uv", "run", "pytest", "--color=yes"], "Tests", show_output=True
-        )
+        selected_db = "sqlite"  # Default database
+
+        while True:
+            console.print("🧪 Test Selection", style="cyan")
+            console.print(f"Current database: [bold]{selected_db.upper()}[/bold]")
+            console.print()
+
+            # Show available commands
+            console.print("📋 SQLite command: [dim]uv run pytest --color=yes[/dim]")
+            psql_cmd = (
+                "TEST_DATABASE=postgresql DATABASE_URL="
+                "postgresql://savt_user:savt_password@localhost:5432/savt "
+                "uv run pytest --color=yes"
+            )
+            console.print(f"📋 PostgreSQL command: [dim]{psql_cmd}[/dim]")
+            req_cmd = "uv run pytest --requirements-report -q"
+            console.print(f"📋 Requirements command: [dim]{req_cmd}[/dim]")
+            console.print()
+
+            console.print("Options:", style="bold")
+            console.print("  (s) - Select SQLite database")
+            console.print("  (p) - Select PostgreSQL database")
+            console.print()
+            console.print("  Run tests with parallel workers:")
+            console.print("  (1) - Run with 1 worker (single-threaded)")
+            console.print("  (2) - Run with 2 parallel workers")
+            console.print("  (3) - Run with 3 parallel workers")
+            console.print("  (4) - Run with 5 parallel workers")
+            console.print("  (5) - Run with 8 parallel workers")
+            console.print("  (6) - Run with 13 parallel workers")
+            console.print("  (7) - Run with 21 parallel workers")
+            console.print("  (8) - Run with 34 parallel workers")
+            console.print("  (9) - Run with 55 parallel workers")
+            console.print("  (0) - Run with 89 parallel workers")
+            console.print()
+            console.print("  (r) - View requirements coverage")
+            console.print("  (q) - Quit")
+            console.print()
+
+            choice = _prompt_single_key("Select action", [], "1")
+
+            if choice in ["s", "sqlite"]:
+                selected_db = "sqlite"
+                console.print("✅ Selected SQLite database", style="green")
+            elif choice in ["p", "postgresql"]:
+                selected_db = "postgresql"
+                console.print("✅ Selected PostgreSQL database", style="green")
+            elif choice == "1":
+                test_success = _run_database_tests(
+                    selected_db
+                )  # Single-threaded, no -n flag
+                success &= test_success
+            elif choice == "2":
+                test_success = _run_database_tests(selected_db, parallel=2)
+                success &= test_success
+            elif choice == "3":
+                test_success = _run_database_tests(selected_db, parallel=3)
+                success &= test_success
+            elif choice == "4":
+                test_success = _run_database_tests(selected_db, parallel=5)
+                success &= test_success
+            elif choice == "5":
+                test_success = _run_database_tests(selected_db, parallel=8)
+                success &= test_success
+            elif choice == "6":
+                test_success = _run_database_tests(selected_db, parallel=13)
+                success &= test_success
+            elif choice == "7":
+                test_success = _run_database_tests(selected_db, parallel=21)
+                success &= test_success
+            elif choice == "8":
+                test_success = _run_database_tests(selected_db, parallel=34)
+                success &= test_success
+            elif choice == "9":
+                test_success = _run_database_tests(selected_db, parallel=55)
+                success &= test_success
+            elif choice == "0":
+                test_success = _run_database_tests(selected_db, parallel=89)
+                success &= test_success
+            elif choice in ["r", "requirements"]:
+                _show_requirements_coverage()
+            elif choice in ["q", "quit"]:
+                console.print("Skipping tests.", style="yellow")
+                break
+            else:
+                console.print(
+                    "Please enter valid option: s/p/0-9/r/q",
+                    style="yellow",
+                )
+                continue
+
+            # Continue the loop
+            console.print()
 
     # Summary
     if fix_all or fix_format or fix_lint or fix_newlines:

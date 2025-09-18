@@ -2,15 +2,15 @@
 
 This document shows the traceability between functional requirements (FR), business rules (BR), and test cases.
 
-**Last updated**: unchanged**
+**Last updated**: 2025-09-18**
 
 ## Coverage Summary
 
 - **Total Requirements**: 29
-- **Requirements with Tests**: 13
-- **Requirements without Tests**: 16
+- **Requirements with Tests**: 11
+- **Requirements without Tests**: 18
 
-**Coverage Percentage**: 44.8%
+**Coverage Percentage**: 37.9%
 
 ## Requirements Coverage
 
@@ -43,12 +43,14 @@ This document shows the traceability between functional requirements (FR), busin
 **Status**: ✅ **Tested**
 
 **Test Cases**:
+- `test_async_item_creation_works`
 - `test_create_item_with_feature`
 
 ### FR-1.2: Object names must be unique within the system
 **Status**: ✅ **Tested**
 
 **Test Cases**:
+- `test_async_duplicate_item_prevention`
 - `test_create_item_conflict`
 
 ### FR-1.3: Objects cannot be deleted (data persistence)
@@ -86,16 +88,16 @@ This document shows the traceability between functional requirements (FR), busin
 - `test_item_scoped_veto`
 
 ### FR-2.3: Property names must be unique within their scope (object or standalone)
-**Status**: ✅ **Tested**
+**Status**: ❌ **Not Tested**
 
-**Test Cases**:
-- `test_create_feature_conflict`
+**Test Cases**: None
+⚠️ *This requirement needs test coverage*
 
 ### FR-2.4: System prevents duplicate property creation (returns 409 error)
-**Status**: ✅ **Tested**
+**Status**: ❌ **Not Tested**
 
-**Test Cases**:
-- `test_create_feature_conflict`
+**Test Cases**: None
+⚠️ *This requirement needs test coverage*
 
 ### FR-2.5: Properties cannot be deleted (data persistence)
 **Status**: ❌ **Not Tested**
@@ -207,6 +209,8 @@ The following requirements have no test coverage:
 - **BR-3.4**: Unique constraints - Names must be unique within scope
 - **FR-1.3**: Objects cannot be deleted (data persistence)
 - **FR-1.4**: Objects display all their associated properties
+- **FR-2.3**: Property names must be unique within their scope (object or standalone)
+- **FR-2.4**: System prevents duplicate property creation (returns 409 error)
 - **FR-2.5**: Properties cannot be deleted (data persistence)
 - **FR-3.4**: Vetoed properties are visually distinguished (strikethrough)
 - **FR-4.1**: Properties display as clickable links when not vetoed
@@ -222,8 +226,8 @@ The following requirements have no test coverage:
 ## Test Statistics
 
 - **Total Test Cases with Requirements**: 23
-- **Unique Requirements Tested**: 13
-- **Average Tests per Requirement**: 1.8
+- **Unique Requirements Tested**: 11
+- **Average Tests per Requirement**: 2.1
 
 ---
 
