@@ -61,8 +61,43 @@ uv tool install ruff mypy
 - Test with docstrings: `uv run pytest --show-docstrings` (displays test requirements during execution)
 - Requirements coverage: `uv run pytest -v` (shows FR/BR coverage in verbose mode)
 - Requirements only: `uv run pytest --requirements-report -q` (coverage without running tests)
-- All checks: `./scripts/check.sh` (or `./scripts/check.sh --fix` to auto-fix)
+- All checks: `./qa check` (or `./qa check --fix-all` to auto-fix)
 - Individual tools: `uv tool run ruff check src/`, `uv tool run mypy src/`
+
+### Testing
+
+**Fast Tests (Default - In-Memory SQLite):**
+```bash
+# Run all tests with in-memory SQLite (fast)
+uv run pytest
+
+# Run tests in parallel
+uv run pytest -n10
+
+# Run all tests simultaneously (proves concurrency design)
+uv run pytest -n72
+```
+
+**Integration Tests (PostgreSQL):**
+```bash
+# Set up PostgreSQL test database first
+createdb savt_test  # or use your PostgreSQL setup
+
+# Run tests against PostgreSQL
+TEST_DATABASE=postgresql DATABASE_URL=postgresql://user:password@localhost:5432/savt uv run pytest
+
+# Run PostgreSQL tests in parallel (tests real concurrency)
+TEST_DATABASE=postgresql DATABASE_URL=postgresql://user:password@localhost:5432/savt uv run pytest -n10
+```
+
+**Test Types Explained:**
+
+- **Unit Tests (SQLite)**: Fast, isolated, CI-friendly, perfect for development
+- **Integration Tests (PostgreSQL)**: Realistic, tests actual concurrency and connection pooling
+
+**Environment Variables:**
+- `TEST_DATABASE=postgresql` - Use PostgreSQL for tests instead of SQLite
+- `DATABASE_URL` - PostgreSQL connection string (tests use `*_test` suffix automatically)
 
 **Code Style:** 88-character lines, Python 3.12+ modern typing (`dict[str, int]` not `Dict[str, int]`)
 
