@@ -3,31 +3,106 @@
 Tests HTMX-specific functionality, headers, and dynamic content updates.
 """
 
+from collections.abc import Generator
+from typing import TypedDict
+
 import pytest
 from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from src.infrastructure.database.database import get_session
+from src.infrastructure.database.database import get_async_session, get_session
 from src.infrastructure.database.models import Feature, Item
 from src.main import app
 
 
+class SampleData(TypedDict):
+    """Type definition for sample test data."""
+
+    objects: list[Item]
+    properties: list[Feature]
+
+
 @pytest.fixture(name="client")
-def client_fixture(session: Session):
+def client_fixture(session: Session) -> Generator[TestClient, None, None]:
     """Test client for making HTTP requests."""
 
     def get_session_override():
         return session
 
+    async def get_async_session_override():
+        # For tests, just yield the sync session wrapped in an async context
+        # This avoids creating separate connections and session conflicts
+        from unittest.mock import AsyncMock
+
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        # Create a mock async session that forwards calls to the sync session
+        mock_async_session = AsyncMock(spec=AsyncSession)
+
+        # Forward common session methods to the sync session
+        mock_async_session.add = session.add
+        mock_async_session.add_all = session.add_all
+        mock_async_session.delete = session.delete
+        mock_async_session.merge = session.merge
+        mock_async_session.refresh = session.refresh
+        mock_async_session.expunge = session.expunge
+        mock_async_session.expunge_all = session.expunge_all
+
+        # Mock async methods
+        async def mock_commit():
+            session.commit()
+
+        async def mock_rollback():
+            session.rollback()
+
+        async def mock_close():
+            session.close()
+
+        async def mock_execute(stmt):
+            return session.execute(stmt)
+
+        async def mock_get(entity, ident):
+            return session.get(entity, ident)
+
+        async def mock_scalar(stmt):
+            return session.scalar(stmt)
+
+        async def mock_scalars(stmt):
+            return session.scalars(stmt)
+
+        mock_async_session.commit = mock_commit
+        mock_async_session.rollback = mock_rollback
+        mock_async_session.close = mock_close
+        mock_async_session.execute = mock_execute
+        mock_async_session.get = mock_get
+        mock_async_session.scalar = mock_scalar
+        mock_async_session.scalars = mock_scalars
+
+        yield mock_async_session
+
+    # Override both dependency injection and direct function calls
+    from src.infrastructure.database import database
+    from src.presentation import routes
+
+    original_get_async_session = database.get_async_session
+    original_routes_get_async_session = routes.get_async_session
+
     app.dependency_overrides[get_session] = get_session_override
+    app.dependency_overrides[get_async_session] = get_async_session_override
+    database.get_async_session = get_async_session_override
+    routes.get_async_session = get_async_session_override
+
     client = TestClient(app)
     yield client
+
     app.dependency_overrides.clear()
+    database.get_async_session = original_get_async_session
+    routes.get_async_session = original_routes_get_async_session
 
 
 @pytest.fixture
-def sample_data(session):
+def sample_data(session: Session) -> SampleData:
     """Create sample data for testing."""
     # Create items
     pizza = Item(name="Pizza")
@@ -48,7 +123,7 @@ def sample_data(session):
 class TestHTMXHeaders:
     """Test HTMX request/response headers."""
 
-    def test_htmx_request_header_detection(self, client):
+    def test_htmx_request_header_detection(self, client: TestClient) -> None:
         """Test server detects HTMX requests correctly."""
         # Regular request
         response = client.get("/")
@@ -61,7 +136,9 @@ class TestHTMXHeaders:
         # Both should work but might return different content
         assert response.content != b"" and htmx_response.content != b""
 
-    def test_veto_with_htmx_headers(self, client, sample_data):
+    def test_veto_with_htmx_headers(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test veto requests with HTMX headers."""
         headers = {
             "HX-Request": "true",
@@ -85,7 +162,7 @@ class TestHTMXHeaders:
         objects_list = soup.find("ul", id="objects-list")
         assert objects_list is not None
 
-    def test_form_submission_with_htmx_headers(self, client):
+    def test_form_submission_with_htmx_headers(self, client: TestClient) -> None:
         """Test form submissions with HTMX headers."""
         headers = {"HX-Request": "true", "HX-Target": "body"}
 
@@ -102,7 +179,9 @@ class TestHTMXHeaders:
 class TestPartialUpdates:
     """Test HTMX partial content updates."""
 
-    def test_veto_returns_objects_fragment(self, client, sample_data):
+    def test_veto_returns_objects_fragment(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test veto action returns only objects list fragment."""
         response = client.get(
             "/user/anonymous/veto/item/Pizza/feature/Pepperoni",
@@ -126,7 +205,9 @@ class TestPartialUpdates:
         )
         assert len(creation_forms) == 0
 
-    def test_unveto_returns_objects_fragment(self, client, sample_data):
+    def test_unveto_returns_objects_fragment(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test unveto action returns only objects list fragment."""
         # First veto a property
         client.get(
@@ -156,7 +237,9 @@ class TestPartialUpdates:
         )
         assert len(creation_forms) == 0
 
-    def test_standalone_veto_returns_standalone_fragment(self, client, sample_data):
+    def test_standalone_veto_returns_standalone_fragment(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test standalone feature veto returns only standalone features fragment."""
         response = client.get(
             "/user/anonymous/veto/feature/Standalone", headers={"HX-Request": "true"}
@@ -183,7 +266,9 @@ class TestPartialUpdates:
 class TestDynamicContentUpdates:
     """Test dynamic content changes through HTMX."""
 
-    def test_veto_updates_feature_state(self, client, sample_data):
+    def test_veto_updates_feature_state(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test vetoing updates feature visual state."""
         # Get initial state
         initial_response = client.get(
@@ -205,7 +290,9 @@ class TestDynamicContentUpdates:
         assert unveto_link is not None
         assert "/unveto/" in unveto_link.get("href")
 
-    def test_unveto_restores_feature_state(self, client, sample_data):
+    def test_unveto_restores_feature_state(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test unvetoing restores feature normal state."""
         # First veto
         client.get(
@@ -237,7 +324,9 @@ class TestDynamicContentUpdates:
                 break
         assert struck_feature is None
 
-    def test_feature_creation_updates_page(self, client, sample_data):
+    def test_feature_creation_updates_page(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test feature creation updates page content."""
         pizza_id = sample_data["objects"][0].id
 
@@ -264,7 +353,7 @@ class TestDynamicContentUpdates:
             # If no ul found, just check that the new feature exists somewhere
             assert feature_text is not None
 
-    def test_item_creation_updates_page(self, client):
+    def test_item_creation_updates_page(self, client: TestClient) -> None:
         """Test item creation updates page content."""
         response = client.post(
             "/create/item/",
@@ -295,7 +384,9 @@ class TestDynamicContentUpdates:
 class TestHTMXSwapBehavior:
     """Test HTMX swap attributes and behavior."""
 
-    def test_objects_list_outer_html_swap(self, client, sample_data):
+    def test_objects_list_outer_html_swap(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test objects list uses outerHTML swap correctly."""
         response = client.get(
             "/user/anonymous/veto/item/Pizza/feature/Pepperoni",
@@ -310,7 +401,9 @@ class TestHTMXSwapBehavior:
         # Should be the root element of the response
         assert soup.contents[0] == root_element or soup.contents[0].name is None
 
-    def test_standalone_features_outer_html_swap(self, client, sample_data):
+    def test_standalone_features_outer_html_swap(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test standalone features list uses outerHTML swap correctly."""
         response = client.get(
             "/user/anonymous/veto/feature/Standalone", headers={"HX-Request": "true"}
@@ -321,7 +414,7 @@ class TestHTMXSwapBehavior:
         root_element = soup.find("ul", id="standalone-properties")
         assert root_element is not None
 
-    def test_form_submission_body_swap(self, client):
+    def test_form_submission_body_swap(self, client: TestClient) -> None:
         """Test form submissions swap entire body."""
         response = client.post("/create/item/", data={"name": "Body Swap Test"})
         soup = BeautifulSoup(response.content, "html.parser")
@@ -339,7 +432,9 @@ class TestHTMXSwapBehavior:
 class TestHTMXTargeting:
     """Test HTMX targeting behavior."""
 
-    def test_veto_targets_correct_element(self, client, sample_data):
+    def test_veto_targets_correct_element(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test veto actions target correct elements."""
         # Item feature veto should target objects-list
         obj_response = client.get(
@@ -358,7 +453,9 @@ class TestHTMXTargeting:
         assert standalone_soup.find("ul", id="standalone-properties") is not None
         assert standalone_soup.find("ul", id="objects-list") is None
 
-    def test_multiple_feature_states_in_fragment(self, client, session, sample_data):
+    def test_multiple_feature_states_in_fragment(
+        self, client: TestClient, session: Session, sample_data: SampleData
+    ) -> None:
         """Test fragment contains multiple features with different states."""
         # Add another feature to the item
         pizza = session.exec(select(Item).where(Item.name == "Pizza")).first()
@@ -395,7 +492,9 @@ class TestHTMXTargeting:
 class TestHTMXFallbackBehavior:
     """Test HTMX graceful degradation and fallbacks."""
 
-    def test_veto_links_have_fallback_href(self, client, sample_data):
+    def test_veto_links_have_fallback_href(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test veto links work without HTMX (graceful degradation)."""
         # Get page without HTMX headers
         response = client.get("/")
@@ -415,7 +514,7 @@ class TestHTMXFallbackBehavior:
             fallback_response = client.get(href)
             assert fallback_response.status_code == 200
 
-    def test_forms_work_without_htmx(self, client):
+    def test_forms_work_without_htmx(self, client: TestClient) -> None:
         """Test forms work without HTMX headers."""
         # Submit form without HTMX headers
         response = client.post("/create/item/", data={"name": "Fallback Object"})

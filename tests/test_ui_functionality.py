@@ -3,6 +3,7 @@
 Tests user interface behavior, form validation, and JavaScript-free functionality.
 """
 
+from collections.abc import Generator
 from typing import TypedDict
 
 import pytest
@@ -10,22 +11,94 @@ from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from src.infrastructure.database.database import get_session
+from src.infrastructure.database.database import get_async_session, get_session
 from src.infrastructure.database.models import Feature, Item
 from src.main import app
 
 
+class SampleData(TypedDict):
+    """Type definition for sample test data."""
+
+    objects: list[Item]
+    properties: list[Feature]
+
+
 @pytest.fixture(name="client")
-def client_fixture(session: Session):
+def client_fixture(session: Session) -> Generator[TestClient, None, None]:
     """Test client for making HTTP requests."""
 
     def get_session_override():
         return session
 
+    async def get_async_session_override():
+        # For tests, just yield the sync session wrapped in an async context
+        # This avoids creating separate connections and session conflicts
+        from unittest.mock import AsyncMock
+
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        # Create a mock async session that forwards calls to the sync session
+        mock_async_session = AsyncMock(spec=AsyncSession)
+
+        # Forward common session methods to the sync session
+        mock_async_session.add = session.add
+        mock_async_session.add_all = session.add_all
+        mock_async_session.delete = session.delete
+        mock_async_session.merge = session.merge
+        mock_async_session.refresh = session.refresh
+        mock_async_session.expunge = session.expunge
+        mock_async_session.expunge_all = session.expunge_all
+
+        # Mock async methods
+        async def mock_commit():
+            session.commit()
+
+        async def mock_rollback():
+            session.rollback()
+
+        async def mock_close():
+            session.close()
+
+        async def mock_execute(stmt):
+            return session.execute(stmt)
+
+        async def mock_get(entity, ident):
+            return session.get(entity, ident)
+
+        async def mock_scalar(stmt):
+            return session.scalar(stmt)
+
+        async def mock_scalars(stmt):
+            return session.scalars(stmt)
+
+        mock_async_session.commit = mock_commit
+        mock_async_session.rollback = mock_rollback
+        mock_async_session.close = mock_close
+        mock_async_session.execute = mock_execute
+        mock_async_session.get = mock_get
+        mock_async_session.scalar = mock_scalar
+        mock_async_session.scalars = mock_scalars
+
+        yield mock_async_session
+
+    # Override both dependency injection and direct function calls
+    from src.infrastructure.database import database
+    from src.presentation import routes
+
+    original_get_async_session = database.get_async_session
+    original_routes_get_async_session = routes.get_async_session
+
     app.dependency_overrides[get_session] = get_session_override
+    app.dependency_overrides[get_async_session] = get_async_session_override
+    database.get_async_session = get_async_session_override
+    routes.get_async_session = get_async_session_override
+
     client = TestClient(app)
     yield client
+
     app.dependency_overrides.clear()
+    database.get_async_session = original_get_async_session
+    routes.get_async_session = original_routes_get_async_session
 
 
 class PopulatedData(TypedDict):
@@ -115,7 +188,7 @@ class TestFormValidation:
         # Should handle gracefully
         assert response.status_code in [200, 400, 422]
 
-    def test_duplicate_item_names(self, client):
+    def test_duplicate_item_names(self, client: TestClient) -> None:
         """Test creating items with duplicate names."""
         # Create first item
         response1 = client.post("/create/item/", data={"name": "Duplicate"})
@@ -127,7 +200,7 @@ class TestFormValidation:
         # Should handle gracefully (either allow or reject)
         assert response2.status_code in [200, 400, 409]
 
-    def test_special_characters_in_names(self, client):
+    def test_special_characters_in_names(self, client: TestClient) -> None:
         """Test items and features with special characters."""
         special_names = [
             "Name with spaces",
@@ -153,7 +226,9 @@ class TestFormValidation:
 class TestUserWorkflow:
     """Test complete user workflows and scenarios."""
 
-    def test_complete_veto_workflow(self, client, populated_data):
+    def test_complete_veto_workflow(
+        self, client: TestClient, populated_data: PopulatedData
+    ) -> None:
         """Test complete workflow of vetoing and unvetoing features."""
         # Initial state - get the page
         initial_response = client.get("/")
@@ -200,7 +275,9 @@ class TestUserWorkflow:
         assert veto_link is not None
         assert "/veto/" in veto_link.get("href")
 
-    def test_multiple_vetos_workflow(self, client, populated_data):
+    def test_multiple_vetos_workflow(
+        self, client: TestClient, populated_data: PopulatedData
+    ) -> None:
         """Test workflow with multiple vetoed features."""
         # Veto multiple features
         features_to_veto = ["Pepperoni", "Beef", "Salt"]
@@ -229,7 +306,7 @@ class TestUserWorkflow:
                     break
             assert vetoed_feature is not None, f"{feature_name} should be vetoed"
 
-    def test_create_and_veto_workflow(self, client):
+    def test_create_and_veto_workflow(self, client: TestClient) -> None:
         """Test creating new items and immediately vetoing them."""
         # Create a new item
         item_response = client.post("/create/item/", data={"name": "New Item"})
@@ -266,7 +343,7 @@ class TestUserWorkflow:
 class TestUIAccessibility:
     """Test UI accessibility and usability features."""
 
-    def test_focus_management(self, client):
+    def test_focus_management(self, client: TestClient) -> None:
         """Test that auto-focus is not applied to avoid page jumping."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -282,7 +359,7 @@ class TestUIAccessibility:
         # Should not have auto-focus to prevent page jumping
         assert focus_script is None
 
-    def test_form_input_attributes(self, client):
+    def test_form_input_attributes(self, client: TestClient) -> None:
         """Test form inputs have proper attributes for accessibility."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -300,7 +377,9 @@ class TestUIAccessibility:
             assert input_elem.get("placeholder") is not None
             assert input_elem.get("id") is not None
 
-    def test_link_accessibility(self, client, populated_data):
+    def test_link_accessibility(
+        self, client: TestClient, populated_data: PopulatedData
+    ) -> None:
         """Test links have proper accessibility features."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -318,7 +397,9 @@ class TestUIAccessibility:
 class TestUIConsistency:
     """Test UI consistency across different states."""
 
-    def test_consistent_feature_display(self, client, populated_data):
+    def test_consistent_feature_display(
+        self, client: TestClient, populated_data: PopulatedData
+    ) -> None:
         """Test features display consistently across items."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -338,7 +419,9 @@ class TestUIConsistency:
                     # Should have one or the other, not both for the feature name
                     assert (feature_link is not None) != (struck_text is not None)
 
-    def test_consistent_standalone_feature_display(self, client, populated_data):
+    def test_consistent_standalone_feature_display(
+        self, client: TestClient, populated_data: PopulatedData
+    ) -> None:
         """Test standalone features display consistently."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -354,7 +437,9 @@ class TestUIConsistency:
             # Should have one or the other for the feature name
             assert (feature_link is not None) != (struck_text is not None)
 
-    def test_form_state_preservation(self, client, populated_data):
+    def test_form_state_preservation(
+        self, client: TestClient, populated_data: PopulatedData
+    ) -> None:
         """Test form state is preserved after operations."""
         # Submit a form and check if form fields are properly reset/preserved
         response = client.post("/create/item/", data={"name": "Test Item"})
@@ -374,7 +459,7 @@ class TestUIConsistency:
 class TestErrorHandling:
     """Test error handling in the UI."""
 
-    def test_invalid_veto_urls(self, client):
+    def test_invalid_veto_urls(self, client: TestClient) -> None:
         """Test handling of invalid veto URLs."""
         invalid_urls = [
             "/user/anonymous/veto/item/NonExistent/feature/AlsoNonExistent",
@@ -387,7 +472,7 @@ class TestErrorHandling:
             # Should handle gracefully, not crash
             assert response.status_code in [200, 404, 400]
 
-    def test_malformed_form_data(self, client):
+    def test_malformed_form_data(self, client: TestClient) -> None:
         """Test handling of malformed form submissions."""
         # Missing required fields
         response1 = client.post("/create/item/", data={})
@@ -400,7 +485,7 @@ class TestErrorHandling:
         )
         assert response2.status_code in [200, 400, 422]
 
-    def test_very_long_names(self, client):
+    def test_very_long_names(self, client: TestClient) -> None:
         """Test that very long names are rejected with appropriate error."""
         long_name = "x" * 150  # Name longer than 100 character limit
 
@@ -412,7 +497,9 @@ class TestErrorHandling:
 class TestBrowserCompatibility:
     """Test features work without JavaScript (graceful degradation)."""
 
-    def test_no_javascript_functionality(self, client, populated_data):
+    def test_no_javascript_functionality(
+        self, client: TestClient, populated_data: PopulatedData
+    ) -> None:
         """Test core functionality works without JavaScript."""
         # All veto/unveto operations should work via href fallbacks
         response = client.get("/")
@@ -425,7 +512,7 @@ class TestBrowserCompatibility:
             veto_response = client.get(href)
             assert veto_response.status_code == 200
 
-    def test_form_submission_without_htmx(self, client):
+    def test_form_submission_without_htmx(self, client: TestClient) -> None:
         """Test forms work with standard submission."""
         # Submit form using standard POST (not HTMX)
         response = client.post("/create/item/", data={"name": "Standard Form"})

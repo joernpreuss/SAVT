@@ -39,14 +39,16 @@ def session_fixture():
 
     if database_url.startswith("postgresql"):
         # Create the test database first for PostgreSQL
+        from urllib.parse import urlparse
+
+        from sqlalchemy import text
+
+        parsed = urlparse(database_url)
+        test_db_name = (
+            parsed.path[1:] if parsed.path else "test_db"
+        )  # Remove leading slash
+
         try:
-            from urllib.parse import urlparse
-
-            from sqlalchemy import text
-
-            parsed = urlparse(database_url)
-            test_db_name = parsed.path[1:]  # Remove leading slash
-
             # Connect to default postgres database to create test database
             admin_url = f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port}/postgres"
             admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
@@ -83,13 +85,49 @@ def session_fixture():
             poolclass=StaticPool,
         )
 
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
+    SQLModel.metadata.create_all(engine)  # type: ignore[misc]
+
+    # For SQLite, use a temporary file that both sync and async can share
+    if database_url.startswith("sqlite"):
+        import os
+        import tempfile
+
+        # Create a temporary database file
+        temp_fd, temp_path = tempfile.mkstemp(suffix=".db")
+        os.close(temp_fd)  # Close the file descriptor, keep the path
+
+        file_database_url = f"sqlite:///{temp_path}"
+
+        # Create a new engine for the file database
+        file_engine = create_engine(
+            file_database_url,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        SQLModel.metadata.create_all(file_engine)  # type: ignore[misc]
+
+        # Create session from file engine
+        with Session(file_engine) as session:
+            # Store the database URL for async session creation
+            session._test_database_url = file_database_url
+            yield session
+
+        # Clean up the temporary file
+        try:
+            os.unlink(temp_path)
+        except OSError:
+            pass
+    else:
+        # For PostgreSQL, use committed sessions to share data
+        with Session(engine) as session:
+            # Store the database URL for async session creation
+            session._test_database_url = database_url
+            yield session
+            # Session commits automatically when exiting the context
 
     # Clean up PostgreSQL test data if needed
     if database_url.startswith("postgresql"):
-        SQLModel.metadata.drop_all(engine)
+        SQLModel.metadata.drop_all(engine)  # type: ignore[misc]
         engine.dispose()
 
 
@@ -139,7 +177,7 @@ async def async_session_fixture():
 
     # Create tables
     async with async_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(SQLModel.metadata.create_all)  # type: ignore[misc]
 
     async with AsyncSession(async_engine) as session:
         yield session
@@ -147,6 +185,6 @@ async def async_session_fixture():
     # Clean up
     if database_url.startswith("postgresql"):
         async with async_engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.drop_all)
+            await conn.run_sync(SQLModel.metadata.drop_all)  # type: ignore[misc]
 
     await async_engine.dispose()

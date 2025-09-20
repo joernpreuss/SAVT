@@ -21,6 +21,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - File endings: All files must end with newline (enforced by `.editorconfig` and QA tool)
 - Package management: Use `uv add` instead of `pip install` (faster, better dependency resolution)
 - QA tool: `./qa check` runs linting, formatting, type checking, template linting, tests
+- **When user says "qa"**: Run `./qa check` and select SQLite tests with option 1 (single-threaded)
 - djLint: Integrated HTML/Jinja2 formatter, ignores J018/J004 (FastAPI-specific)
 - Ruff format: Run `ruff format` after every change
 
