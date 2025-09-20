@@ -242,7 +242,7 @@ def delete_feature(session: Session, feature_id: int) -> bool:
     # Import here to avoid circular imports
     from .undo_service import store_deleted_feature
 
-    store_deleted_feature(feature_copy)
+    store_deleted_feature(session, feature_copy)
 
     # Delete the feature
     session.delete(feature)

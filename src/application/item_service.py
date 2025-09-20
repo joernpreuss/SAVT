@@ -118,7 +118,7 @@ def delete_item(session: Session, item_name: str) -> bool:
     # Import here to avoid circular imports
     from .undo_service import store_deleted_item
 
-    store_deleted_item(item_copy, features_copy)
+    store_deleted_item(session, item_copy, features_copy)
 
     # Move all features to standalone (set item_id to None)
     for feature in item.features:
@@ -215,7 +215,7 @@ async def delete_item_async(session: AsyncSession, item_name: str) -> bool:
     # Import here to avoid circular imports
     from .undo_service import store_deleted_item
 
-    store_deleted_item(item_copy, features_copy)
+    store_deleted_item(session, item_copy, features_copy)
 
     # Move all features to standalone (set item_id to None)
     for feature in item.features:

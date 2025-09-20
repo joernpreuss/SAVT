@@ -1,98 +1,137 @@
-from datetime import datetime, timedelta
-from typing import Final, NamedTuple
+"""Persistent database-backed undo service.
 
-from sqlmodel import Session
+Provides undo functionality for deleted items and features using database storage
+instead of in-memory dictionaries, ensuring data survives server restarts.
+"""
+
+import json
+from datetime import datetime, timedelta
+
+from sqlmodel import Session, select
 
 from ..infrastructure.database.models import Feature, Item
+from ..infrastructure.database.undo_models import (
+    DeletedFeatureRecord,
+    DeletedItemRecord,
+)
 from ..logging_config import get_logger
 
-logger: Final = get_logger(__name__)
-
-
-class DeletedItem(NamedTuple):
-    """Stores deleted item data for undo."""
-
-    item: Item
-    features: list[Feature]
-    deleted_at: datetime
-
-
-class DeletedFeature(NamedTuple):
-    """Stores deleted feature data for undo."""
-
-    feature: Feature
-    deleted_at: datetime
-
-
-# In-memory storage for deleted items (expires after 30 seconds)
-_deleted_items: dict[str, DeletedItem] = {}
-_deleted_features: dict[int, DeletedFeature] = {}
+logger = get_logger(__name__)
 
 _UNDO_TIMEOUT_SECONDS = 30
 
 
-def _cleanup_expired_deletions() -> None:
-    """Remove expired deletions from memory."""
-    cutoff = datetime.now() - timedelta(seconds=_UNDO_TIMEOUT_SECONDS)
+def _cleanup_expired_deletions(session: Session) -> None:
+    """Remove expired deletions from database."""
+    cutoff = datetime.now()
 
     # Clean up expired items
-    expired_items = [
-        key for key, item in _deleted_items.items() if item.deleted_at < cutoff
-    ]
-    for key in expired_items:
-        del _deleted_items[key]
+    expired_items = session.exec(
+        select(DeletedItemRecord).where(DeletedItemRecord.expires_at < cutoff)
+    ).all()
+    for item in expired_items:
+        session.delete(item)
 
     # Clean up expired features
-    expired_feature_ids = [
-        feature_id
-        for feature_id, feature in _deleted_features.items()
-        if feature.deleted_at < cutoff
-    ]
-    for feature_id in expired_feature_ids:
-        del _deleted_features[feature_id]
+    expired_features = session.exec(
+        select(DeletedFeatureRecord).where(DeletedFeatureRecord.expires_at < cutoff)
+    ).all()
+    for feature in expired_features:
+        session.delete(feature)
+
+    if expired_items or expired_features:
+        session.commit()
+        logger.debug(
+            "Cleaned up expired undo records",
+            items_removed=len(expired_items),
+            features_removed=len(expired_features),
+        )
 
 
-def store_deleted_item(item: Item, features: list[Feature]) -> None:
-    """Store deleted item for potential undo."""
-    _cleanup_expired_deletions()
-    _deleted_items[item.name] = DeletedItem(item, features, datetime.now())
+def store_deleted_item(session: Session, item: Item, features: list[Feature]) -> None:
+    """Store deleted item and features for potential undo."""
+    _cleanup_expired_deletions(session)
+
+    # Serialize features data
+    features_data = json.dumps(
+        [
+            {
+                "id": f.id,
+                "name": f.name,
+                "kind": f.kind,
+                "item_id": f.item_id,
+                "vetoed_by": f.vetoed_by,
+            }
+            for f in features
+        ]
+    )
+
+    deleted_record = DeletedItemRecord(
+        original_name=item.name,
+        original_kind=item.kind,
+        deleted_at=datetime.now(),
+        features_data=features_data,
+        expires_at=datetime.now() + timedelta(seconds=_UNDO_TIMEOUT_SECONDS),
+    )
+
+    session.add(deleted_record)
+    session.commit()
+
     logger.debug(
-        "Stored deleted item for undo",
+        "Stored deleted item for undo in database",
         item_name=item.name,
         features_count=len(features),
+        expires_at=deleted_record.expires_at,
     )
 
 
-def store_deleted_feature(feature: Feature) -> None:
+def store_deleted_feature(session: Session, feature: Feature) -> None:
     """Store deleted feature for potential undo."""
     if feature.id is None:
         logger.warning("Cannot store feature for undo - no ID")
         return
 
-    _cleanup_expired_deletions()
-    _deleted_features[feature.id] = DeletedFeature(feature, datetime.now())
+    _cleanup_expired_deletions(session)
+
+    deleted_record = DeletedFeatureRecord(
+        original_feature_id=feature.id,
+        original_name=feature.name,
+        original_kind=feature.kind,
+        original_item_id=feature.item_id,
+        original_vetoed_by=json.dumps(feature.vetoed_by),
+        deleted_at=datetime.now(),
+        expires_at=datetime.now() + timedelta(seconds=_UNDO_TIMEOUT_SECONDS),
+    )
+
+    session.add(deleted_record)
+    session.commit()
+
     logger.debug(
-        "Stored deleted feature for undo",
+        "Stored deleted feature for undo in database",
         feature_id=feature.id,
         feature_name=feature.name,
+        expires_at=deleted_record.expires_at,
     )
 
 
 def undo_item_deletion(session: Session, item_name: str) -> tuple[bool, str]:
-    """Restore a deleted item and its features.
+    """Restore a deleted item and its features from database storage.
 
     Returns:
         (success, message)
     """
-    _cleanup_expired_deletions()
+    _cleanup_expired_deletions(session)
 
-    if item_name not in _deleted_items:
+    # Find the deleted item record
+    deleted_record = session.exec(
+        select(DeletedItemRecord).where(DeletedItemRecord.original_name == item_name)
+    ).first()
+
+    if not deleted_record:
         logger.warning(
             "Cannot undo item deletion - not found or expired", item_name=item_name
         )
         return False, "Cannot undo: deletion too old or item not found"
-
-    deleted_item = _deleted_items[item_name]
 
     try:
         # Import here to avoid circular imports
@@ -100,71 +139,103 @@ def undo_item_deletion(session: Session, item_name: str) -> tuple[bool, str]:
         from .item_service import create_item as _create_item
 
         # Recreate the item
-        restored_item = _create_item(session, deleted_item.item)
+        restored_item_data = Item(
+            name=deleted_record.original_name, kind=deleted_record.original_kind
+        )
+        restored_item = _create_item(session, restored_item_data)
 
-        # Recreate the features with the restored item_id
-        for feature in deleted_item.features:
-            feature.item_id = restored_item.id
-            feature.id = None  # Let database assign new ID
+        # Deserialize and recreate features
+        features_data = json.loads(deleted_record.features_data)
+        restored_features_count = 0
+
+        for feature_data in features_data:
+            feature = Feature(
+                name=feature_data["name"],
+                kind=feature_data["kind"],
+                item_id=restored_item.id,
+                vetoed_by=feature_data["vetoed_by"],
+            )
             _create_feature(session, feature)
+            restored_features_count += 1
 
-        # Remove from undo storage
-        del _deleted_items[item_name]
+        # Remove the undo record
+        session.delete(deleted_record)
+        session.commit()
 
-        logger.info("Item deletion undone successfully", item_name=item_name)
-        return True, f"Restored {item_name} with {len(deleted_item.features)} features"
+        logger.info(
+            "Item deletion undone successfully from database",
+            item_name=item_name,
+            features_restored=restored_features_count,
+        )
+        return True, f"Restored {item_name} with {restored_features_count} features"
 
     except Exception as e:
+        session.rollback()
         logger.error("Failed to undo item deletion", item_name=item_name, error=str(e))
         return False, f"Failed to restore {item_name}: {str(e)}"
 
 
 def undo_feature_deletion(session: Session, feature_id: int) -> tuple[bool, str]:
-    """Restore a deleted feature.
+    """Restore a deleted feature from database storage.
 
     Returns:
         (success, message)
     """
-    _cleanup_expired_deletions()
+    _cleanup_expired_deletions(session)
 
-    if feature_id not in _deleted_features:
+    # Find the deleted feature record
+    deleted_record = session.exec(
+        select(DeletedFeatureRecord).where(
+            DeletedFeatureRecord.original_feature_id == feature_id
+        )
+    ).first()
+
+    if not deleted_record:
         logger.warning(
             "Cannot undo feature deletion - not found or expired", feature_id=feature_id
         )
         return False, "Cannot undo: deletion too old or feature not found"
-
-    deleted_feature = _deleted_features[feature_id]
 
     try:
         # Import here to avoid circular imports
         from .feature_service import create_feature as _create_feature
 
         # Recreate the feature
-        feature = deleted_feature.feature
-        feature.id = None  # Let database assign new ID
+        feature = Feature(
+            name=deleted_record.original_name,
+            kind=deleted_record.original_kind,
+            item_id=deleted_record.original_item_id,
+            vetoed_by=json.loads(deleted_record.original_vetoed_by),
+        )
         _create_feature(session, feature)
 
-        # Remove from undo storage
-        del _deleted_features[feature_id]
+        # Remove the undo record
+        session.delete(deleted_record)
+        session.commit()
 
         logger.info(
-            "Feature deletion undone successfully",
-            feature_id=feature_id,
-            feature_name=feature.name,
+            "Feature deletion undone successfully from database",
+            original_feature_id=feature_id,
+            feature_name=deleted_record.original_name,
         )
-        return True, f"Restored {feature.name}"
+        return True, f"Restored {deleted_record.original_name}"
 
     except Exception as e:
+        session.rollback()
         logger.error(
             "Failed to undo feature deletion", feature_id=feature_id, error=str(e)
         )
         return False, f"Failed to restore feature: {str(e)}"
 
 
-def get_undo_info() -> dict[str, int]:
-    """Get info about available undos."""
-    _cleanup_expired_deletions()
+def get_undo_info(session: Session) -> dict[str, int]:
+    """Get info about available undos from database."""
+    _cleanup_expired_deletions(session)
+
+    items_count = len(session.exec(select(DeletedItemRecord)).all())
+    features_count = len(session.exec(select(DeletedFeatureRecord)).all())
+
     return {
-        "deleted_items": len(_deleted_items),
-        "deleted_features": len(_deleted_features),
+        "deleted_items": items_count,
+        "deleted_features": features_count,
     }
