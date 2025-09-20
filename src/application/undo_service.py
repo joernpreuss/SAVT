@@ -1,4 +1,3 @@
-# pyright: reportImportCycles=false
 from datetime import datetime, timedelta
 from typing import Final, NamedTuple
 
