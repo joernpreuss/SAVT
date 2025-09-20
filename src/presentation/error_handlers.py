@@ -1,5 +1,4 @@
 """Centralized error handling for the presentation layer."""
-# pyright: reportImportCycles=false
 
 from typing import Any
 
