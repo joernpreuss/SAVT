@@ -61,8 +61,16 @@ uv tool install ruff mypy
 - Test with docstrings: `uv run pytest --show-docstrings` (displays test requirements during execution)
 - Requirements coverage: `uv run pytest -v` (shows FR/BR coverage in verbose mode)
 - Requirements only: `uv run pytest --requirements-report -q` (coverage without running tests)
-- All checks: `./qa check` (or `./qa check --fix-all` to auto-fix)
-- Individual tools: `uv tool run ruff check src/`, `uv tool run mypy src/`
+- All checks: `./qa check` (interactive menu with rerun options)
+- Auto-fix all: `./qa check --fix-all`
+- Individual commands: `./qa format`, `./qa lint`, `./qa typecheck`, `./qa newlines`
+- Raw tools: `uv tool run ruff check src/`, `uv tool run mypy src/`
+
+**QA Tool Features:**
+- **Interactive rerun options**: After checks complete, rerun individual tools (formatter, linter, etc.) from test selection menu
+- **Template formatting**: Unified code + template formatting with `./qa format` (ruff + djlint)
+- **ESC key support**: Press ESC to quit from any menu quickly
+- **Smart workflow**: Shows results first, then asks for fixes (no more blind fix prompts)
 
 ### Testing
 
