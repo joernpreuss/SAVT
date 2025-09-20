@@ -1,3 +1,4 @@
+import asyncio
 from typing import Final
 
 from fastapi import (
@@ -12,12 +13,14 @@ from fastapi import (
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session
 
 from ..application.feature_service import (
     create_feature,
     delete_feature,
     get_features,
+    get_features_async,
     veto_feature_by_id,
     veto_item_feature,
 )
@@ -27,11 +30,12 @@ from ..application.item_service import (
     delete_item,
     get_item,
     get_items,
+    get_items_async,
 )
 from ..application.undo_service import undo_feature_deletion, undo_item_deletion
 from ..config import settings
 from ..domain.exceptions import DomainError
-from ..infrastructure.database.database import get_session
+from ..infrastructure.database.database import get_async_session, get_session
 from ..infrastructure.database.models import Feature, Item
 from ..logging_config import get_logger
 from ..utils import truncate_name
@@ -68,6 +72,15 @@ def _get_next_default_item_name(session: Session) -> str:
         counter += 1
 
 
+def _get_next_default_item_name_simple() -> str:
+    """Get a default item name without database lookup for faster async rendering."""
+    import time
+
+    base_name = settings.object_name_singular.title()
+    timestamp = int(time.time() * 1000) % 100000  # Last 5 digits for uniqueness
+    return f"{base_name}-{timestamp}"
+
+
 def render_full_page_response(
     request: Request,
     session: Session,
@@ -81,6 +94,47 @@ def render_full_page_response(
 
     # Get the next available default name for the item name field
     next_default_name = _get_next_default_item_name(session)
+
+    return templates.TemplateResponse(
+        request,
+        "properties.html",
+        {
+            "features": standalone_features,
+            "items": list(items),
+            "item_id": item_id,
+            "settings": settings,
+            "message": message,
+            "item_name": next_default_name,  # Pre-populate the item name field only
+        },
+    )
+
+
+async def render_full_page_response_async(
+    request: Request,
+    session: AsyncSession,
+    item_id: str | int | None = None,
+    message: str | None = None,
+):
+    """Render the full features page with concurrent database operations for better
+    performance."""
+
+    async def get_features_task():
+        return await get_features_async(session)
+
+    async def get_items_task():
+        return await get_items_async(session)
+
+    async with asyncio.TaskGroup() as tg:
+        features_task = tg.create_task(get_features_task())
+        items_task = tg.create_task(get_items_task())
+
+    features = features_task.result()
+    items = items_task.result()
+    standalone_features = _filter_standalone_features(features)
+
+    # Get the next available default name for the item name field
+    # Using simple version to avoid additional database query for better performance
+    next_default_name = _get_next_default_item_name_simple()
 
     return templates.TemplateResponse(
         request,
@@ -126,12 +180,12 @@ def _render_fragment_response(request: Request, session: Session, item: str | No
 @router.get("/", response_class=HTMLResponse)
 async def list_features(
     *,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_async_session),
     request: Request,
     item_id: str | None = Cookie(default=None),
 ):
     logger.info("Debug item_id", item_id=item_id)
-    return render_full_page_response(request, session, item_id)
+    return await render_full_page_response_async(request, session, item_id)
 
 
 @router.post("/create/item/")

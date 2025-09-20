@@ -25,7 +25,7 @@ def _validate_item_name(name: str) -> None:
         name: The name to validate
 
     Raises:
-        ValueError: If name is empty or too long
+        ValueError: If name is empty, too long, or contains problematic characters
     """
     if not name or not name.strip():
         logger.warning(
@@ -39,6 +39,20 @@ def _validate_item_name(name: str) -> None:
         raise ValueError(
             f"Item name cannot be longer than {MAX_NAME_LENGTH} characters"
         )
+
+    # Check for problematic control characters
+    for char in name:
+        if (ord(char) < 32 and char not in [" "]) or ord(
+            char
+        ) == 127:  # Allow space, reject DEL
+            logger.warning(
+                "Item creation failed - contains problematic character",
+                attempted_name=repr(name),
+                problematic_char=repr(char),
+            )
+            raise ValueError(
+                "Item name cannot contain newlines, tabs, or other control characters"
+            )
 
 
 def _commit_and_refresh_item(session: Session, item: Item) -> Item:

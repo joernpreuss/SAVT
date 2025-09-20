@@ -2,6 +2,7 @@
 from collections.abc import Sequence
 from typing import Final
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, select
 
 from ..domain.constants import MAX_FEATURE_AMOUNT, MAX_NAME_LENGTH
@@ -24,7 +25,7 @@ def _validate_feature_name(name: str) -> None:
         name: The name to validate
 
     Raises:
-        ValueError: If name is empty or too long
+        ValueError: If name is empty, too long, or contains problematic characters
     """
     if not name or not name.strip():
         logger.warning(
@@ -38,6 +39,21 @@ def _validate_feature_name(name: str) -> None:
         raise ValueError(
             f"Feature name cannot be longer than {MAX_NAME_LENGTH} characters"
         )
+
+    # Check for problematic control characters
+    for char in name:
+        if (ord(char) < 32 and char not in [" "]) or ord(
+            char
+        ) == 127:  # Allow space, reject DEL
+            logger.warning(
+                "Feature creation failed - contains problematic character",
+                attempted_name=repr(name),
+                problematic_char=repr(char),
+            )
+            raise ValueError(
+                "Feature name cannot contain newlines, tabs, or other control "
+                + "characters"
+            )
 
 
 def _commit_and_refresh_feature(session: Session, feature: Feature) -> Feature:
@@ -60,6 +76,15 @@ def get_features(session: Session) -> Sequence[Feature]:
     statement: Final = select(Feature)
     results: Final = session.exec(statement)
     features: Final = results.all()
+    return features  # type: ignore[no-any-return]
+
+
+async def get_features_async(session: AsyncSession) -> Sequence[Feature]:
+    """Get all features using async database operations for better concurrency."""
+
+    statement: Final = select(Feature)
+    result = await session.execute(statement)
+    features = result.scalars().all()
     return features  # type: ignore[no-any-return]
 
 

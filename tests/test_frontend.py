@@ -4,6 +4,9 @@ Tests HTML rendering, template structure, and frontend functionality
 without requiring JavaScript execution.
 """
 
+from collections.abc import Generator
+from typing import TypedDict
+
 import pytest
 from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
@@ -15,21 +18,94 @@ from src.infrastructure.database.models import Feature, Item
 from src.main import app
 
 
+class SampleData(TypedDict):
+    """Type definition for sample test data."""
+
+    objects: list[Item]
+    properties: list[Feature]
+
+
 @pytest.fixture(name="client")
-def client_fixture(session: Session):
+def client_fixture(session: Session) -> Generator[TestClient, None, None]:
     """Test client for making HTTP requests."""
+    from src.infrastructure.database.database import get_async_session
 
     def get_session_override():
         return session
 
+    async def get_async_session_override():
+        # For tests, just yield the sync session wrapped in an async context
+        # This avoids creating separate connections and session conflicts
+        from unittest.mock import AsyncMock
+
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        # Create a mock async session that forwards calls to the sync session
+        mock_async_session = AsyncMock(spec=AsyncSession)
+
+        # Forward common session methods to the sync session
+        mock_async_session.add = session.add
+        mock_async_session.add_all = session.add_all
+        mock_async_session.delete = session.delete
+        mock_async_session.merge = session.merge
+        mock_async_session.refresh = session.refresh
+        mock_async_session.expunge = session.expunge
+        mock_async_session.expunge_all = session.expunge_all
+
+        # Mock async methods
+        async def mock_commit():
+            session.commit()
+
+        async def mock_rollback():
+            session.rollback()
+
+        async def mock_close():
+            session.close()
+
+        async def mock_execute(stmt):
+            return session.execute(stmt)
+
+        async def mock_get(entity, ident):
+            return session.get(entity, ident)
+
+        async def mock_scalar(stmt):
+            return session.scalar(stmt)
+
+        async def mock_scalars(stmt):
+            return session.scalars(stmt)
+
+        mock_async_session.commit = mock_commit
+        mock_async_session.rollback = mock_rollback
+        mock_async_session.close = mock_close
+        mock_async_session.execute = mock_execute
+        mock_async_session.get = mock_get
+        mock_async_session.scalar = mock_scalar
+        mock_async_session.scalars = mock_scalars
+
+        yield mock_async_session
+
+    # Override both dependency injection and direct function calls
+    from src.infrastructure.database import database
+    from src.presentation import routes
+
+    original_get_async_session = database.get_async_session
+    original_routes_get_async_session = routes.get_async_session
+
     app.dependency_overrides[get_session] = get_session_override
+    app.dependency_overrides[get_async_session] = get_async_session_override
+    database.get_async_session = get_async_session_override
+    routes.get_async_session = get_async_session_override
+
     client = TestClient(app)
     yield client
+
     app.dependency_overrides.clear()
+    database.get_async_session = original_get_async_session
+    routes.get_async_session = original_routes_get_async_session
 
 
 @pytest.fixture
-def sample_data(session):
+def sample_data(session: Session) -> SampleData:
     """Create sample data for testing."""
     # Create items
     pizza = Item(name="Pizza")
@@ -58,7 +134,7 @@ def sample_data(session):
 class TestHTMLRendering:
     """Test HTML template rendering and structure."""
 
-    def test_main_page_structure(self, client):
+    def test_main_page_structure(self, client: TestClient) -> None:
         """Test main page renders with correct HTML structure."""
         response = client.get("/")
         assert response.status_code == 200
@@ -81,7 +157,9 @@ class TestHTMLRendering:
         )
         assert css_link is not None
 
-    def test_items_list_rendering(self, client, sample_data):
+    def test_items_list_rendering(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test items and features are rendered correctly."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -101,7 +179,9 @@ class TestHTMLRendering:
                 feature_items = features_list.find_all("li")
                 assert len(feature_items) >= 0
 
-    def test_standalone_features_rendering(self, client, sample_data):
+    def test_standalone_features_rendering(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test standalone features are rendered correctly."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -114,7 +194,7 @@ class TestHTMLRendering:
         feature_items = standalone_list.find_all("li")
         assert len(feature_items) >= 1  # At least the standalone feature
 
-    def test_forms_rendering(self, client):
+    def test_forms_rendering(self, client: TestClient) -> None:
         """Test create forms are rendered correctly."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -136,13 +216,15 @@ class TestHTMLRendering:
 class TestHTMXAttributes:
     """Test HTMX attributes are correctly set on elements."""
 
-    def test_veto_links_have_htmx_attributes(self, client, sample_data):
+    def test_veto_links_have_htmx_attributes(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test veto links have correct HTMX attributes."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Find veto links (non-vetoed properties)
-        veto_links = soup.find_all("a", href=lambda x: x and "/veto/" in x)
+        veto_links = soup.find_all("a", href=lambda x: x is not None and "/veto/" in x)
 
         for link in veto_links:
             # Check HTMX attributes
@@ -153,7 +235,9 @@ class TestHTMXAttributes:
             # Verify fallback href matches hx-get
             assert link.get("href") == link.get("hx-get")
 
-    def test_unveto_links_have_htmx_attributes(self, client, sample_data):
+    def test_unveto_links_have_htmx_attributes(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test unveto links have correct HTMX attributes."""
         # First veto a feature
         client.get("/user/anonymous/veto/feature/Standalone")
@@ -162,7 +246,9 @@ class TestHTMXAttributes:
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Find unveto links
-        unveto_links = soup.find_all("a", href=lambda x: x and "/unveto/" in x)
+        unveto_links = soup.find_all(
+            "a", href=lambda x: x is not None and "/unveto/" in x
+        )
 
         for link in unveto_links:
             # Check HTMX attributes
@@ -173,7 +259,7 @@ class TestHTMXAttributes:
             # Verify fallback href matches hx-get
             assert link.get("href") == link.get("hx-get")
 
-    def test_forms_have_htmx_attributes(self, client):
+    def test_forms_have_htmx_attributes(self, client: TestClient) -> None:
         """Test forms have correct HTMX attributes."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -194,7 +280,9 @@ class TestHTMXAttributes:
 class TestVetoFunctionality:
     """Test veto/unveto functionality through HTML responses."""
 
-    def test_veto_property_changes_display(self, client, sample_data):
+    def test_veto_property_changes_display(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test vetoing a property changes its display."""
         # Get initial state
         response = client.get("/")
@@ -229,7 +317,9 @@ class TestVetoFunctionality:
         assert unveto_link is not None
         assert "/unveto/" in unveto_link.get("href")
 
-    def test_unveto_property_restores_display(self, client, sample_data):
+    def test_unveto_property_restores_display(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test unvetoing a property restores normal display."""
         # First veto a feature
         veto_response = client.get("/user/anonymous/veto/feature/Standalone")
@@ -265,7 +355,7 @@ class TestVetoFunctionality:
 class TestFormSubmission:
     """Test form submissions work correctly."""
 
-    def test_create_object_form_submission(self, client):
+    def test_create_object_form_submission(self, client: TestClient) -> None:
         """Test object creation form submission."""
         response = client.post(
             "/create/item/", data={"name": "Test Object"}, follow_redirects=True
@@ -287,7 +377,9 @@ class TestFormSubmission:
         ]
         assert "Test Object" in object_names
 
-    def test_create_property_form_submission(self, client, sample_data):
+    def test_create_property_form_submission(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test property creation form submission."""
         # Get an object ID
         pizza_id = sample_data["objects"][0].id
@@ -302,10 +394,12 @@ class TestFormSubmission:
 
         # Find the property in the objects list
         # Look for text containing the property name
-        property_text = soup.find(string=lambda text: text and "Test Property" in text)
+        property_text = soup.find(
+            string=lambda text: text is not None and "Test Property" in text
+        )
         assert property_text is not None
 
-    def test_create_standalone_property(self, client):
+    def test_create_standalone_property(self, client: TestClient) -> None:
         """Test creating a feature without an item."""
         response = client.post(
             "/create/feature/", data={"name": "New Standalone", "item_id": ""}
@@ -327,7 +421,7 @@ class TestFormSubmission:
 class TestHTMLValidation:
     """Test HTML structure and validation."""
 
-    def test_html_has_required_ids(self, client):
+    def test_html_has_required_ids(self, client: TestClient) -> None:
         """Test HTML contains required IDs for HTMX targeting."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -338,13 +432,17 @@ class TestHTMLValidation:
         assert soup.find(id="item_name") is not None
         assert soup.find(id="feature_name") is not None
 
-    def test_property_ids_are_unique(self, client, sample_data):
+    def test_property_ids_are_unique(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test each property has a unique ID."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Find all property elements with IDs
-        property_elements = soup.find_all(id=lambda x: x and x.startswith("property-"))
+        property_elements = soup.find_all(
+            id=lambda x: x is not None and x.startswith("property-")
+        )
 
         # Extract IDs
         property_ids = [elem.get("id") for elem in property_elements]
@@ -352,7 +450,7 @@ class TestHTMLValidation:
         # Check all IDs are unique
         assert len(property_ids) == len(set(property_ids))
 
-    def test_accessibility_basics(self, client):
+    def test_accessibility_basics(self, client: TestClient) -> None:
         """Test basic accessibility features."""
         response = client.get("/")
         soup = BeautifulSoup(response.content, "html.parser")
@@ -372,7 +470,9 @@ class TestHTMLValidation:
 class TestFragmentRendering:
     """Test HTMX fragment templates render correctly."""
 
-    def test_objects_list_fragment_structure(self, client, sample_data):
+    def test_objects_list_fragment_structure(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test objects list fragment has correct structure."""
         # Trigger an action that returns the objects list fragment
         response = client.get("/user/anonymous/veto/item/Pizza/feature/Pepperoni")
@@ -382,7 +482,9 @@ class TestFragmentRendering:
         root_element = soup.find("ul", id="objects-list")
         assert root_element is not None
 
-    def test_standalone_properties_fragment_structure(self, client, sample_data):
+    def test_standalone_properties_fragment_structure(
+        self, client: TestClient, sample_data: SampleData
+    ) -> None:
         """Test standalone properties fragment has correct structure."""
         # Trigger an action that returns the standalone features fragment
         response = client.get("/user/anonymous/veto/feature/Standalone")

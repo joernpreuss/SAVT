@@ -18,7 +18,11 @@ def _get_single_key() -> str:
         import msvcrt  # type: ignore
 
         key_bytes = msvcrt.getch()  # type: ignore
-        return key_bytes.decode("utf-8").lower()  # type: ignore
+        key = key_bytes.decode("utf-8")
+        # Handle ESC key (ASCII 27)
+        if ord(key) == 27:
+            return "q"  # Treat ESC as quit
+        return key.lower()  # type: ignore
     except ImportError:
         try:
             # Unix/Linux/macOS
@@ -30,7 +34,11 @@ def _get_single_key() -> str:
             old_settings = termios.tcgetattr(fd)
             try:
                 tty.setcbreak(fd)  # type: ignore
-                return sys.stdin.read(1).lower()
+                key = sys.stdin.read(1)
+                # Handle ESC key (ASCII 27)
+                if ord(key) == 27:
+                    return "q"  # Treat ESC as quit
+                return key.lower()
             finally:
                 termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         except (ImportError, OSError, termios.error):  # type: ignore
@@ -40,10 +48,16 @@ def _get_single_key() -> str:
 
 def _prompt_fix_skip_quit(issue_type: str) -> str:
     """Prompt user for fix/skip/quit choice and handle the response."""
-    console.print(
-        f"{issue_type} issues found. Press: (f)ix, (s)kip, or (q)uit",
-        style="yellow",
-    )
+    if issue_type.lower() == "linting":
+        console.print(
+            f"{issue_type} issues found. Press: (f)ix, (u)nsafe fix, (s)kip, or (q)uit",
+            style="yellow",
+        )
+    else:
+        console.print(
+            f"{issue_type} issues found. Press: (f)ix, (s)kip, or (q)uit",
+            style="yellow",
+        )
     choice = _get_single_key()
     console.print(f"[{choice}]")
 
@@ -52,6 +66,8 @@ def _prompt_fix_skip_quit(issue_type: str) -> str:
         sys.exit(0)
     elif choice == "f":
         return "fix"
+    elif choice == "u" and issue_type.lower() == "linting":
+        return "unsafe_fix"
     return "skip"
 
 
@@ -167,8 +183,15 @@ app = typer.Typer(
       qa check --fix-format      - fix formatting only
       qa check --fix-lint        - fix linting only
       qa check --fix-newlines    - fix newlines only
+      qa check --unsafe-fixes    - enable unsafe fixes for linting
       qa check --skip-tests      - skip test execution
       qa fix-all                 - shortcut for 'qa check --fix-all'
+
+    Individual commands:
+      qa format                  - run formatter (code + templates)
+      qa lint                    - run linter only
+      qa typecheck               - run type checker only
+      qa newlines                - check/fix trailing newlines only
     """,
     add_completion=False,
     rich_markup_mode="rich",
@@ -192,6 +215,9 @@ def check(
     fix_newlines: bool = typer.Option(
         False, "--fix-newlines", help="Auto-fix trailing newlines"
     ),
+    unsafe_fixes: bool = typer.Option(
+        False, "--unsafe-fixes", help="Enable unsafe fixes for linting"
+    ),
     skip_tests: bool = typer.Option(False, "--skip-tests", help="Skip running tests"),
     help_flag: bool = typer.Option(
         False, "-h", "--help", help="Show this message and exit"
@@ -201,7 +227,7 @@ def check(
     if help_flag:
         typer.echo(ctx.get_help())
         raise typer.Exit()
-    _run_checks(fix_all, fix_format, fix_lint, fix_newlines, skip_tests)
+    _run_checks(fix_all, fix_format, fix_lint, fix_newlines, unsafe_fixes, skip_tests)
 
 
 def _show_requirements_coverage() -> None:
@@ -283,6 +309,95 @@ def _show_requirements_coverage() -> None:
     console.print(f"  Requirements covered: {summary['total_requirements']}")
 
 
+def _rerun_individual_check(check_type: str) -> bool:
+    """Rerun a specific check interactively."""
+    if check_type == "format":
+        console.print("✨ Re-running formatter...", style="cyan")
+        # Format code
+        code_success = _run_command(
+            ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Code formatting"
+        )
+        # Format templates
+        template_success = _run_command(
+            ["uv", "run", "djlint", "templates/", "--reformat"], "Template formatting"
+        )
+        success = code_success and template_success
+        if success:
+            console.print("✅ Formatting completed", style="green")
+        else:
+            console.print("❌ Formatting failed", style="red")
+        return success
+
+    elif check_type == "lint":
+        console.print("🔍 Re-running linter...", style="cyan")
+
+        # First, just check without fixing to show results
+        check_success = _run_command(
+            ["uv", "tool", "run", "ruff", "check", "src/", "tests/"],
+            "Linting",
+            show_output=True,
+        )
+
+        if check_success:
+            console.print("✅ No linting issues found", style="green")
+            return True
+        else:
+            console.print("❌ Linting issues found", style="red")
+            choice = _prompt_single_key(
+                "Apply fixes? (y/n/u for unsafe)", ["y", "n", "u"], "n"
+            )
+
+            if choice == "n":
+                return False
+
+            # Apply fixes based on choice
+            cmd = ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"]
+            if choice == "u":
+                cmd.append("--unsafe-fixes")
+
+            fix_success = _run_command(cmd, "Applying fixes", show_output=True)
+            if fix_success:
+                console.print("✅ Fixes applied successfully", style="green")
+            else:
+                console.print("❌ Some issues could not be fixed", style="red")
+            return fix_success
+
+    elif check_type == "typecheck":
+        console.print("🔎 Re-running type checker...", style="cyan")
+        success = _run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")
+        if success:
+            console.print("✅ Type checking passed", style="green")
+        else:
+            console.print("❌ Type checking failed", style="red")
+        return success
+
+    elif check_type == "newlines":
+        console.print("📄 Re-checking file endings...", style="cyan")
+
+        # First, just check without fixing to show results
+        check_success = _check_trailing_newlines(False)
+
+        if check_success:
+            console.print("✅ All files have proper trailing newlines", style="green")
+            return True
+        else:
+            console.print("❌ Trailing newline issues found", style="red")
+            choice = _prompt_single_key("Apply fixes? (y/n)", ["y", "n"], "n")
+
+            if choice == "n":
+                return False
+
+            # Apply fixes
+            fix_success = _check_trailing_newlines(True)
+            if fix_success:
+                console.print("✅ Trailing newlines fixed", style="green")
+            else:
+                console.print("❌ Failed to fix trailing newline issues", style="red")
+            return fix_success
+
+    return False
+
+
 def _run_database_tests(db_type: str, parallel: int = 1) -> bool:
     """Run database tests."""
     if db_type == "sqlite":
@@ -326,6 +441,7 @@ def _run_checks(
     fix_format: bool,
     fix_lint: bool,
     fix_newlines: bool,
+    unsafe_fixes: bool,
     skip_tests: bool,
 ) -> None:
     """Internal function to run the actual checks."""
@@ -341,14 +457,22 @@ def _run_checks(
     interactive_fixes = []
     had_issues = False
 
-    # Formatter
+    # Formatter (includes code and templates)
     console.print("✨ Running formatter...", style="cyan")
     if fix_format:
-        success &= _run_command(
-            ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Formatting"
+        # Format code
+        code_success = _run_command(
+            ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Code formatting"
         )
+        # Format templates
+        template_success = _run_command(
+            ["uv", "run", "djlint", "templates/", "--reformat"],
+            "Template formatting",
+        )
+        success &= code_success and template_success
     else:
-        format_result = _run_command(
+        # Check code formatting
+        code_format_result = _run_command(
             [
                 "uv",
                 "tool",
@@ -360,17 +484,30 @@ def _run_checks(
                 "--check",
                 "--diff",
             ],
-            "Format check",
+            "Code format check",
             show_output=True,
         )
+        # Check template formatting
+        template_format_result = _run_command(
+            ["uv", "run", "djlint", "templates/"],
+            "Template format check",
+            show_output=True,
+        )
+
+        format_result = code_format_result and template_format_result
         success &= format_result
+
         if not format_result:
             had_issues = True
             choice = _prompt_fix_skip_quit("Formatting")
             if choice == "fix":
                 _run_command(
                     ["uv", "tool", "run", "ruff", "format", "src/", "tests/"],
-                    "Formatting",
+                    "Code formatting",
+                )
+                _run_command(
+                    ["uv", "run", "djlint", "templates/", "--reformat"],
+                    "Template formatting",
                 )
                 interactive_fixes.append("format")
         else:
@@ -380,10 +517,10 @@ def _run_checks(
     # Linter
     console.print("🔍 Running linter...", style="cyan")
     if fix_lint:
-        success &= _run_command(
-            ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"],
-            "Linting with fixes",
-        )
+        lint_cmd = ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"]
+        if unsafe_fixes:
+            lint_cmd.append("--unsafe-fixes")
+        success &= _run_command(lint_cmd, "Linting with fixes")
     else:
         lint_result = _run_command(
             ["uv", "tool", "run", "ruff", "check", "src/", "tests/"],
@@ -394,41 +531,57 @@ def _run_checks(
         if not lint_result:
             had_issues = True
             choice = _prompt_fix_skip_quit("Linting")
-            if choice == "fix":
-                _run_command(
-                    ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"],
-                    "Linting with fixes",
+            if choice in ["fix", "unsafe_fix"]:
+                lint_cmd = [
+                    "uv",
+                    "tool",
+                    "run",
+                    "ruff",
+                    "check",
+                    "src/",
+                    "tests/",
+                    "--fix",
+                ]
+                if unsafe_fixes or choice == "unsafe_fix":
+                    lint_cmd.append("--unsafe-fixes")
+
+                fix_type = (
+                    "unsafe fixes"
+                    if (unsafe_fixes or choice == "unsafe_fix")
+                    else "fixes"
                 )
+                _run_command(lint_cmd, f"Linting with {fix_type}")
                 interactive_fixes.append("lint")
+
+                # Check if issues remain after fix attempt
+                recheck_result = _run_command(
+                    ["uv", "tool", "run", "ruff", "check", "src/", "tests/"],
+                    "Re-checking linting",
+                    show_output=True,
+                )
+
+                # If issues still exist, offer unsafe fix option again
+                if not recheck_result and choice != "unsafe_fix":
+                    console.print(
+                        "Issues still remain after fix attempt.", style="yellow"
+                    )
+                    retry_choice = _prompt_fix_skip_quit("Linting")
+                    if retry_choice == "unsafe_fix":
+                        unsafe_lint_cmd = [
+                            "uv",
+                            "tool",
+                            "run",
+                            "ruff",
+                            "check",
+                            "src/",
+                            "tests/",
+                            "--fix",
+                            "--unsafe-fixes",
+                        ]
+                        _run_command(unsafe_lint_cmd, "Linting with unsafe fixes")
+                        interactive_fixes.append("lint-unsafe")
         else:
             console.print("✅ No linting issues found", style="green")
-    console.print()
-
-    # Template formatter/linter
-    console.print("🎨 Running template formatter...", style="cyan")
-    if fix_format:
-        success &= _run_command(
-            ["uv", "run", "djlint", "templates/", "--reformat"],
-            "Template formatting",
-        )
-    else:
-        template_success = _run_command(
-            ["uv", "run", "djlint", "templates/"],
-            "Template linting",
-            show_output=True,
-        )
-        if not template_success and not (fix_all or fix_format):
-            had_issues = True
-            choice = _prompt_fix_skip_quit("Template")
-            if choice == "fix":
-                console.print("🔧 Fixing template issues...", style="yellow")
-                success &= _run_command(
-                    ["uv", "run", "djlint", "templates/", "--reformat"],
-                    "Template formatting",
-                )
-                interactive_fixes.append("template")
-        else:
-            success &= template_success
     console.print()
 
     # Type checker
@@ -478,6 +631,13 @@ def _run_checks(
             console.print("  (s) - Select SQLite database")
             console.print("  (p) - Select PostgreSQL database")
             console.print()
+            console.print("  Rerun individual checks:")
+            console.print("  (f) - Rerun formatter (code + templates)")
+            console.print("  (l) - Rerun linter")
+            console.print("  (t) - Rerun type checker")
+            console.print("  (n) - Rerun newlines check")
+            console.print("  (a) - Rerun all checks")
+            console.print()
             console.print("  Run tests with parallel workers:")
             console.print("  (1) - Run with 1 worker (single-threaded)")
             console.print("  (2) - Run with 2 parallel workers")
@@ -491,7 +651,7 @@ def _run_checks(
             console.print("  (0) - Run with 89 parallel workers")
             console.print()
             console.print("  (r) - View requirements coverage")
-            console.print("  (q) - Quit")
+            console.print("  (q) - Quit (or press ESC)")
             console.print()
 
             choice = _prompt_single_key("Select action", [], "1")
@@ -502,6 +662,20 @@ def _run_checks(
             elif choice in ["p", "postgresql"]:
                 selected_db = "postgresql"
                 console.print("✅ Selected PostgreSQL database", style="green")
+            elif choice == "f":
+                _rerun_individual_check("format")
+            elif choice == "l":
+                _rerun_individual_check("lint")
+            elif choice == "t":
+                _rerun_individual_check("typecheck")
+            elif choice == "n":
+                _rerun_individual_check("newlines")
+            elif choice == "a":
+                console.print("🔄 Rerunning all checks...", style="cyan")
+                # Recursively call the function with same parameters
+                _run_checks(
+                    False, False, False, False, False, True
+                )  # skip_tests=True to avoid double test menu
             elif choice == "1":
                 test_success = _run_database_tests(
                     selected_db
@@ -541,7 +715,7 @@ def _run_checks(
                 break
             else:
                 console.print(
-                    "Please enter valid option: s/p/0-9/r/q",
+                    "Please enter valid option: s/p/f/l/t/n/a/0-9/r/q",
                     style="yellow",
                 )
                 continue
@@ -549,7 +723,7 @@ def _run_checks(
             # Continue the loop
             console.print()
 
-    # Summary
+    # Summary and interactive rerun options
     if fix_all or fix_format or fix_lint or fix_newlines:
         if success:
             console.print("🔧 All checks completed with fixes applied!", style="green")
@@ -591,7 +765,163 @@ def fix_all_command(
     if help_flag:
         typer.echo(ctx.get_help())
         raise typer.Exit()
-    _run_checks(True, False, False, False, skip_tests)  # fix_all=True enables all fixes
+    _run_checks(
+        True, False, False, False, False, skip_tests
+    )  # fix_all=True enables all fixes
+
+
+@app.command("format")
+def format_command(
+    ctx: typer.Context,
+    check_only: bool = typer.Option(
+        False, "--check", help="Check formatting without fixing"
+    ),
+    help_flag: bool = typer.Option(
+        False, "-h", "--help", help="Show this message and exit"
+    ),
+) -> None:
+    """Run formatter (ruff format + djlint)"""
+    if help_flag:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+
+    console.print("✨ Running formatter...", style="cyan")
+
+    if check_only:
+        # Check code formatting
+        code_success = _run_command(
+            [
+                "uv",
+                "tool",
+                "run",
+                "ruff",
+                "format",
+                "src/",
+                "tests/",
+                "--check",
+                "--diff",
+            ],
+            "Code format check",
+            show_output=True,
+        )
+        # Check template formatting
+        template_success = _run_command(
+            ["uv", "run", "djlint", "templates/"],
+            "Template format check",
+            show_output=True,
+        )
+
+        success = code_success and template_success
+        if success:
+            console.print("✅ No formatting issues found", style="green")
+        else:
+            console.print("❌ Formatting issues found", style="red")
+            sys.exit(1)
+    else:
+        # Format code
+        code_success = _run_command(
+            ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Code formatting"
+        )
+        # Format templates
+        template_success = _run_command(
+            ["uv", "run", "djlint", "templates/", "--reformat"], "Template formatting"
+        )
+
+        success = code_success and template_success
+        if success:
+            console.print("✅ Formatting completed", style="green")
+        else:
+            console.print("❌ Formatting failed", style="red")
+            sys.exit(1)
+
+
+@app.command("lint")
+def lint_command(
+    ctx: typer.Context,
+    fix: bool = typer.Option(False, "--fix", help="Fix linting issues"),
+    unsafe_fixes: bool = typer.Option(
+        False, "--unsafe-fixes", help="Enable unsafe fixes"
+    ),
+    help_flag: bool = typer.Option(
+        False, "-h", "--help", help="Show this message and exit"
+    ),
+) -> None:
+    """Run linter (ruff check)"""
+    if help_flag:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+
+    console.print("🔍 Running linter...", style="cyan")
+
+    cmd = ["uv", "tool", "run", "ruff", "check", "src/", "tests/"]
+    if fix:
+        cmd.append("--fix")
+        if unsafe_fixes:
+            cmd.append("--unsafe-fixes")
+
+    success = _run_command(cmd, "Linting", show_output=True)
+
+    if success:
+        console.print("✅ No linting issues found", style="green")
+    else:
+        if fix:
+            console.print("❌ Some linting issues could not be fixed", style="red")
+        else:
+            console.print("❌ Linting issues found", style="red")
+        sys.exit(1)
+
+
+@app.command("typecheck")
+def typecheck_command(
+    ctx: typer.Context,
+    help_flag: bool = typer.Option(
+        False, "-h", "--help", help="Show this message and exit"
+    ),
+) -> None:
+    """Run type checker (mypy)"""
+    if help_flag:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+
+    console.print("🔎 Running type checker...", style="cyan")
+
+    success = _run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")
+
+    if success:
+        console.print("✅ Type checking passed", style="green")
+    else:
+        console.print("❌ Type checking failed", style="red")
+        sys.exit(1)
+
+
+@app.command("newlines")
+def newlines_command(
+    ctx: typer.Context,
+    fix: bool = typer.Option(False, "--fix", help="Fix trailing newline issues"),
+    help_flag: bool = typer.Option(
+        False, "-h", "--help", help="Show this message and exit"
+    ),
+) -> None:
+    """Check/fix trailing newlines in files"""
+    if help_flag:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+
+    console.print("📄 Checking file endings...", style="cyan")
+
+    success = _check_trailing_newlines(fix)
+
+    if success:
+        if fix:
+            console.print("✅ All files have proper trailing newlines", style="green")
+        else:
+            console.print("✅ All files have proper trailing newlines", style="green")
+    else:
+        if fix:
+            console.print("❌ Failed to fix trailing newline issues", style="red")
+        else:
+            console.print("❌ Trailing newline issues found", style="red")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
