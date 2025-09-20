@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from ..domain.constants import MAX_NAME_LENGTH
 from ..infrastructure.database.models import Feature, Item
 from ..logging_config import get_logger
 from ..logging_utils import log_database_operation
+from .validation import validate_entity_name
 
 logger: Final = get_logger(__name__)
 
@@ -19,7 +19,7 @@ class ItemAlreadyExistsError(ValueError):
 
 
 def _validate_item_name(name: str) -> None:
-    """Validate item name.
+    """Validate item name using shared validation logic.
 
     Args:
         name: The name to validate
@@ -27,32 +27,7 @@ def _validate_item_name(name: str) -> None:
     Raises:
         ValueError: If name is empty, too long, or contains problematic characters
     """
-    if not name or not name.strip():
-        logger.warning(
-            "Item creation failed - empty name provided",
-            attempted_name=repr(name),
-        )
-        raise ValueError("Item name cannot be empty")
-
-    if len(name) > MAX_NAME_LENGTH:
-        logger.warning("Item creation failed - name too long", name_length=len(name))
-        raise ValueError(
-            f"Item name cannot be longer than {MAX_NAME_LENGTH} characters"
-        )
-
-    # Check for problematic control characters
-    for char in name:
-        if (ord(char) < 32 and char not in [" "]) or ord(
-            char
-        ) == 127:  # Allow space, reject DEL
-            logger.warning(
-                "Item creation failed - contains problematic character",
-                attempted_name=repr(name),
-                problematic_char=repr(char),
-            )
-            raise ValueError(
-                "Item name cannot contain newlines, tabs, or other control characters"
-            )
+    validate_entity_name(name, "item")
 
 
 def _commit_and_refresh_item(session: Session, item: Item) -> Item:

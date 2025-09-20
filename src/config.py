@@ -59,11 +59,11 @@ class Settings(BaseSettings):
             secure_key = secrets.token_urlsafe(64)
             print(
                 "⚠️  WARNING: Using default secret key. "
-                "Generated secure key for this session."
+                + "Generated secure key for this session."
             )
             print(
                 "💡 For production, set SECRET_KEY environment variable "
-                "or add to .env file:"
+                + "or add to .env file:"
             )
             print(f"   SECRET_KEY={secure_key}")
             return secure_key
