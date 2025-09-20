@@ -1,6 +1,7 @@
+import secrets
 from typing import Final
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .constants import DEFAULT_PORT, MIN_SECRET_KEY_LENGTH
@@ -47,6 +48,33 @@ class Settings(BaseSettings):
         min_length=MIN_SECRET_KEY_LENGTH,
         description="Secret key for security features",
     )
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        """Validate and potentially generate a secure secret key."""
+        # If using the insecure default, generate a random one
+        if v == "dev-secret-key-change-in-production":
+            # Generate a cryptographically secure random key
+            secure_key = secrets.token_urlsafe(64)
+            print(
+                "⚠️  WARNING: Using default secret key. "
+                "Generated secure key for this session."
+            )
+            print(
+                "💡 For production, set SECRET_KEY environment variable "
+                "or add to .env file:"
+            )
+            print(f"   SECRET_KEY={secure_key}")
+            return secure_key
+
+        # Validate minimum length
+        if len(v) < MIN_SECRET_KEY_LENGTH:
+            raise ValueError(
+                f"Secret key must be at least {MIN_SECRET_KEY_LENGTH} characters long"
+            )
+
+        return v
 
     # Logging configuration
     log_to_file: bool = Field(
