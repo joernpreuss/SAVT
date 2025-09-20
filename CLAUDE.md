@@ -22,12 +22,13 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - Package management: Use `uv add` instead of `pip install` (faster, better dependency resolution)
 - QA tool: `./qa check` runs linting, formatting, type checking, template linting, tests
 - **When user says "qa"**: Run `./qa check` and select SQLite tests with option 1 (single-threaded)
+- **QA Interactive**: Rerun individual checks from test menu, ESC to quit, shows results before fixes
 - djLint: Integrated HTML/Jinja2 formatter, ignores J018/J004 (FastAPI-specific)
 - Ruff format: Run `ruff format` after every change
 
 ## Development Protocol
 
-**After EVERY change:**
+**After every change:**
 
 1. Run `./qa check` immediately
 2. Fix ALL issues until it's 100% green
@@ -38,10 +39,11 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
    - Validate - Run `./qa check` after cleanup to ensure no broken imports
 4. Only then proceed with next changes
 
-**Never work with a broken QA check.** `./qa check` is not a gate at the end - it's a compass throughout development.
+**Important:** Never work with a broken QA check. `./qa check` is not a gate at the end - it's a compass throughout development.
 
 ## Git Workflow
 
+- NEVER execute `git add` - Only the user stages files
 - NEVER execute `git commit` - Only the user commits code
 - NEVER execute `git push` - Only the user pushes changes
 - Use "cm" keyword for commit messages - Type "commit" to get a suggested commit message for current changes

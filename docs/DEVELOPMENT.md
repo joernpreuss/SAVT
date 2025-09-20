@@ -81,6 +81,26 @@ Extended development guidance for the SAVT project.
 - **docker-compose.yml**: Local development setup
 - **Health checks**: Built-in container health monitoring
 
+## Recent Enhancements
+
+### Testing Infrastructure
+- **Performance Tests**: Added simple performance test suite to identify bottlenecks in individual operations and concurrent load handling
+- **Character Validation Tests**: Created comprehensive tests to ensure problematic characters (control chars, newlines) are rejected while valid Unicode characters are accepted
+- **Enhanced Frontend Tests**: Improved type safety with comprehensive type annotations for test fixtures, better async session handling, and improved dependency injection for test isolation
+- **Load Testing**: Added realistic 33-user concurrent load testing framework with HTMX-aware requests and comprehensive metrics
+
+### QA Tool Improvements
+- **Interactive Rerun Options**: Enhanced QA tool with interactive menu allowing users to rerun individual checks (formatter, linter, typecheck, newlines) from test selection menu
+- **Template Formatting Integration**: Unified code + template formatting - `./qa format` now runs both ruff and djlint together
+- **ESC Key Support**: Added ESC key support for quick quit from any menu
+- **Smart Workflow**: Improved user experience - shows results first, then asks for fixes (eliminates confusing blind fix prompts)
+- **Individual Commands**: Added standalone commands (`./qa format`, `./qa lint`, `./qa typecheck`, `./qa newlines`) for targeted checks
+
+### Code Quality
+- **Type Annotations**: Added comprehensive type annotations to test fixtures improving IDE support and reducing Pylance warnings
+- **Async Session Handling**: Enhanced test fixtures with proper async session mocking and dependency injection
+- **UI Functionality Tests**: Added extensive tests for HTML rendering, HTMX interactions, accessibility, and error handling without requiring JavaScript
+
 ## Development History
 
 - Started as pizza ordering proof of concept
