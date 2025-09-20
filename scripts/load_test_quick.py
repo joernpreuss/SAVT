@@ -1,7 +1,16 @@
 """
-Quick Load Test for SAVT Application
+Configurable Load Test for SAVT Application
 
-Configurable test that reads user count from USERS environment variable.
+A simple wrapper around the main load test coordinator that allows
+configuration via environment variables.
+
+Environment Variables:
+    USERS: Number of concurrent users (default: 5)
+    DURATION: Test duration in seconds (default: 15 for multi-user, 10 for single)
+
+Usage:
+    python scripts/load_test_quick.py
+    USERS=33 DURATION=30 python scripts/load_test_quick.py
 """
 
 import asyncio
@@ -20,9 +29,9 @@ async def quick_test():
     """Run a configurable load test."""
     coordinator = LoadTestCoordinator()
 
-    # Get user count from environment variable, default to 5
+    # Get configuration from environment variables
     users = int(os.environ.get("USERS", 5))
-    duration = 10 if users == 1 else 15
+    duration = int(os.environ.get("DURATION", 10 if users == 1 else 15))
 
     print("🧪 LOAD TEST")
     print("=" * 30)

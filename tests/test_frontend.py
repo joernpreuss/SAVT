@@ -26,7 +26,7 @@ class SampleData(TypedDict):
 
 
 @pytest.fixture(name="client")
-def client_fixture(session: Session) -> Generator[TestClient, None, None]:
+def client_fixture(session: Session) -> Generator[TestClient]:
     """Test client for making HTTP requests."""
     from src.infrastructure.database.database import get_async_session
 

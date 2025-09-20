@@ -24,7 +24,7 @@ class SampleData(TypedDict):
 
 
 @pytest.fixture(name="client")
-def client_fixture(session: Session) -> Generator[TestClient, None, None]:
+def client_fixture(session: Session) -> Generator[TestClient]:
     """Test client for making HTTP requests."""
 
     def get_session_override():

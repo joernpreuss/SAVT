@@ -88,12 +88,12 @@ def get_async_engine() -> AsyncEngine:
     return _async_engine
 
 
-def get_session() -> Generator[Session, None, None]:
+def get_session() -> Generator[Session]:
     with Session(get_main_engine()) as session:
         yield session
 
 
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_async_session() -> AsyncGenerator[AsyncSession]:
     """Get async database session with proper transaction management."""
     async with AsyncSession(get_async_engine()) as session:
         try:
