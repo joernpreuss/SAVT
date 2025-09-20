@@ -5,11 +5,12 @@ from typing import Final
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, select
 
-from ..domain.constants import MAX_FEATURE_AMOUNT, MAX_NAME_LENGTH
+from ..domain.constants import MAX_FEATURE_AMOUNT
 from ..infrastructure.database.models import Feature
 from ..logging_config import get_logger
 from ..logging_utils import log_database_operation, log_user_action
 from ..utils import apply_veto_to_feature
+from .validation import validate_entity_name
 
 logger: Final = get_logger(__name__)
 
@@ -19,7 +20,7 @@ class FeatureAlreadyExistsError(ValueError):
 
 
 def _validate_feature_name(name: str) -> None:
-    """Validate feature name.
+    """Validate feature name using shared validation logic.
 
     Args:
         name: The name to validate
@@ -27,33 +28,7 @@ def _validate_feature_name(name: str) -> None:
     Raises:
         ValueError: If name is empty, too long, or contains problematic characters
     """
-    if not name or not name.strip():
-        logger.warning(
-            "Feature creation failed - empty name provided",
-            attempted_name=repr(name),
-        )
-        raise ValueError("Feature name cannot be empty")
-
-    if len(name) > MAX_NAME_LENGTH:
-        logger.warning("Feature creation failed - name too long", name_length=len(name))
-        raise ValueError(
-            f"Feature name cannot be longer than {MAX_NAME_LENGTH} characters"
-        )
-
-    # Check for problematic control characters
-    for char in name:
-        if (ord(char) < 32 and char not in [" "]) or ord(
-            char
-        ) == 127:  # Allow space, reject DEL
-            logger.warning(
-                "Feature creation failed - contains problematic character",
-                attempted_name=repr(name),
-                problematic_char=repr(char),
-            )
-            raise ValueError(
-                "Feature name cannot contain newlines, tabs, or other control "
-                + "characters"
-            )
+    validate_entity_name(name, "feature")
 
 
 def _commit_and_refresh_feature(session: Session, feature: Feature) -> Feature:
