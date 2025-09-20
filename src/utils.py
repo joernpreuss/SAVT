@@ -1,12 +1,7 @@
-import logging
-import sys
-from typing import Final
-
 from .domain.constants import MAX_NAME_LENGTH
+from .logging_config import get_logger
 
-logger: Final = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler(sys.stdout))
-logger.setLevel(logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def truncate_name(name: str, max_length: int = MAX_NAME_LENGTH) -> str:
@@ -168,10 +163,8 @@ def apply_veto_to_feature(
     Returns:
         True if the feature was modified, False if no change was needed
     """
-    from .logging_config import get_logger
     from .logging_utils import log_database_operation, log_user_action
 
-    logger = get_logger(__name__)
     action = "veto" if veto else "unveto"
 
     vetoed_by_set = set(feature.vetoed_by)
