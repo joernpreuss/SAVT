@@ -50,6 +50,63 @@ app: Final = FastAPI(
     version=settings.version,
     debug=settings.debug,
     lifespan=lifespan,
+    description="""
+**SAVT (Suggestion And Veto Tool)** - Pure Python collaborative decision-making
+platform for any group decision.
+
+## Use Cases
+
+From simple choices to complex business decisions:
+- **Team decisions** (meeting times, project priorities, vendor selection)
+- **Development workflows** (code reviews, deployments, architecture choices)
+- **Social planning** (restaurant choices, event planning, group activities)
+- **Business operations** (budget allocation, policy changes, hiring decisions)
+
+## Core Features
+
+- **Democratic suggestion system** - Anyone can propose options
+- **Veto-based consensus** - Participants can block options they strongly oppose
+- **Real-time collaboration** with HTMX-powered UI
+- **Persistent undo** functionality for mistake recovery
+- **Comprehensive REST API** for integration with external systems
+
+## API Integration
+
+This REST API enables programmatic integration with SAVT for:
+- **Automated decision workflows** (deployment approvals, release gates)
+- **External system integration** (Slack bots, workflow tools, dashboards)
+- **Custom UI development** and mobile applications
+- **Bulk operations** and reporting for analytics
+
+## Authentication
+
+Currently, user identification is handled via simple string usernames.
+Future versions will include proper authentication and authorization.
+    """.strip(),
+    contact={
+        "name": "SAVT API Support",
+        "url": "https://github.com/savt/issues",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
+    openapi_tags=[
+        {
+            "name": "features",
+            "description": "Manage decision features/properties that can be "
+            + "suggested and vetoed",
+        },
+        {
+            "name": "items",
+            "description": "Manage decision items that contain multiple features",
+        },
+        {
+            "name": "users",
+            "description": "User-specific operations for creating and voting on "
+            + "features",
+        },
+    ],
 )
 
 # Mount static files

@@ -8,13 +8,20 @@ Built with **uv** - the modern, fast Python package manager that's significantly
 
 ## Overview
 
-SAVT is a collaborative decision-making tool originally designed as a proof of concept for ordering pizza together. The system allows users to:
+SAVT is a collaborative decision-making platform designed for any group decision - from simple social choices to complex business workflows. The system enables democratic consensus-building through a suggestion and veto model:
 
-- Create objects (like pizzas or any item requiring group decisions)
-- Suggest properties for those objects (like toppings: salami, mushrooms, extra cheese)
-- Veto properties they don't want, enabling democratic consensus-building
+- **Create decision items** (projects, events, purchases, policies, etc.)
+- **Democratic suggestions** - Anyone can propose options or features
+- **Veto-based consensus** - Participants can block options they strongly oppose
+- **Flexible data model** - Works for any type of group decision
 
-While initially built for pizza ordering, the flexible object-property model makes it suitable for any group decision-making scenario where suggestions and vetoes help reach consensus.
+**Use Cases:**
+- **Business decisions:** vendor selection, budget allocation, policy changes
+- **Development workflows:** code reviews, deployments, architecture choices
+- **Team coordination:** meeting scheduling, project priorities, resource allocation
+- **Social planning:** restaurant choices, event planning, group activities
+
+The pizza ordering example demonstrates the concept, but SAVT's flexible architecture supports any collaborative decision-making scenario.
 
 ## Technical Approach
 
