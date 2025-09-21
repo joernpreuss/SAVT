@@ -13,6 +13,8 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - **Jinja2 + HTMX** - Server-side templates with dynamic interactions (no JS)
 - **Feature IDs**: Use `feature.id` for unique identification, not `feature.name` (allows duplicate names)
 - **Veto system**: Users can veto/unveto features independently using feature IDs
+- **API versioning**: All API endpoints use `/api/v1/` prefix for future compatibility
+- **HTTP status codes**: 201 for creation (POST new resources), 200 for actions/updates
 
 ## Development Standards
 
@@ -28,18 +30,21 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 
 ## Development Protocol
 
-**After every change:**
+**CRITICAL: After EVERY change:**
 
-1. Run `./qa check` immediately
-2. Fix ALL issues until it's 100% green
-3. Check for redundancy - Always verify no unused files or duplicate code exists:
+1. **ALWAYS** run `./qa check` immediately
+2. **ALWAYS** run tests to verify functionality
+3. Fix ALL issues until both are 100% green
+4. Check for redundancy - Always verify no unused files or duplicate code exists:
    - Unused files - Search for imports to verify files are still referenced
    - Duplicate code - Look for similar functions across modules (validation, helpers)
    - Dead code - Delete unused implementations and imports
    - Validate - Run `./qa check` after cleanup to ensure no broken imports
-4. Only then proceed with next changes
+5. Only then proceed with next changes
 
-**Important:** Never work with a broken QA check. `./qa check` is not a gate at the end - it's a compass throughout development.
+**REMEMBER**: ALWAYS QA AND TEST. Both are mandatory after any code change.
+
+**Never work with broken QA or failing tests.** They are not gates at the end - they are compasses throughout development.
 
 ## Git Workflow
 
@@ -55,7 +60,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - `src/application/feature_service.py` - Feature CRUD and veto operations
 - `src/application/item_operations_service.py` - Complex operations (merge/split/move)
 - `src/presentation/routes.py` - HTML routes
-- `src/presentation/api_routes.py` - JSON API
+- `src/presentation/api_routes.py` - JSON API with comprehensive OpenAPI documentation
 - `src/domain/entities.py` - Pure domain entities (dataclasses)
 - `src/infrastructure/database/models.py` - SQLModel persistence models
 - `templates/macros.html` - Jinja2 macros for veto/unveto functionality
