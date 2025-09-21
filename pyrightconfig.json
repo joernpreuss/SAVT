@@ -30,7 +30,7 @@
   "reportAssertAlwaysTrue": true,
   "reportSelfClsParameterName": true,
   "reportImplicitOverride": true,
-  "pythonVersion": "3.12",
+  "pythonVersion": "3.13",
   "pythonPlatform": "All",
   "venvPath": ".",
   "venv": ".venv"

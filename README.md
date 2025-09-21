@@ -39,7 +39,7 @@ SAVT is built with pure Python to avoid JavaScript/TypeScript complexity, using 
 
 **System Requirements:**
 
-- Python 3.12+ (pinned via `.python-version`)
+- Python 3.13+ (pinned via `.python-version`)
 - uv - Install with: `pip install uv`
 
 **Key Technologies:**
@@ -114,7 +114,7 @@ TEST_DATABASE=postgresql DATABASE_URL=postgresql://user:password@localhost:5432/
 - `TEST_DATABASE=postgresql` - Use PostgreSQL for tests instead of SQLite
 - `DATABASE_URL` - PostgreSQL connection string (tests use `*_test` suffix automatically)
 
-**Code Style:** 88-character lines, Python 3.12+ modern typing (`dict[str, int]` not `Dict[str, int]`)
+**Code Style:** 88-character lines, Python 3.13+ modern typing (`dict[str, int]` not `Dict[str, int]`)
 
 ### Configurable Terminology
 

@@ -15,7 +15,7 @@ jobs:
       PROPERTY_NAME_SINGULAR: topping
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.13"]
 
     steps:
       - uses: actions/checkout@v4

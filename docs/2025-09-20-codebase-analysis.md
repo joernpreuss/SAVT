@@ -9,8 +9,8 @@ Comprehensive analysis of the SAVT codebase identifying potential improvements f
 - **File**: ~~`pyproject.toml`~~
 - **Issue**: ~~Python version mismatch~~
   - ~~Line 10: `requires-python = "~=3.13.0"` (expects Python 3.13)~~
-  - ~~Line 47: `target-version = "py312"` (Ruff targets Python 3.12)~~
-  - ~~Line 79: `python_version = "3.12"` (MyPy targets Python 3.12)~~
+  - ~~Line 47: `target-version = "py313"` (Ruff targets Python 3.13)~~
+  - ~~Line 79: `python_version = "3.13"` (MyPy targets Python 3.13)~~
 - **Impact**: ~~Type checking and linting may miss Python 3.13 features~~
 - **Fix**: ~~Align all Python version references to 3.13~~ ✅ **DONE**: All version references now use Python 3.13
 
