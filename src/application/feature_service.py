@@ -47,7 +47,7 @@ def _commit_and_refresh_feature(session: Session, feature: Feature) -> Feature:
 
 
 def get_features(session: Session) -> Sequence[Feature]:
-    statement: Final = select(Feature)
+    statement: Final = select(Feature).where(Feature.deleted_at.is_(None))  # type: ignore[union-attr]
     results: Final = session.exec(statement)
     features: Final = results.all()
     return features  # type: ignore[no-any-return]
@@ -56,7 +56,7 @@ def get_features(session: Session) -> Sequence[Feature]:
 async def get_features_async(session: AsyncSession) -> Sequence[Feature]:
     """Get all features using async database operations for better concurrency."""
 
-    statement: Final = select(Feature)
+    statement: Final = select(Feature).where(Feature.deleted_at.is_(None))  # type: ignore[union-attr]
     result = await session.execute(statement)
     features = result.scalars().all()
     return features  # type: ignore[no-any-return]
@@ -66,7 +66,9 @@ def get_feature(
     session: Session, name: str, item_id: int | None = None
 ) -> Feature | None:
     statement: Final = select(Feature).where(
-        Feature.name == name, Feature.item_id == item_id
+        Feature.name == name,
+        Feature.item_id == item_id,
+        Feature.deleted_at.is_(None),  # type: ignore[union-attr]
     )
     results: Final = session.exec(statement)
     feature: Final = results.first()
@@ -74,7 +76,10 @@ def get_feature(
 
 
 def get_feature_by_id(session: Session, feature_id: int) -> Feature | None:
-    statement: Final = select(Feature).where(Feature.id == feature_id)
+    statement: Final = select(Feature).where(
+        Feature.id == feature_id,
+        Feature.deleted_at.is_(None),  # type: ignore[union-attr]
+    )
     results: Final = session.exec(statement)
     feature: Final = results.first()
     return feature  # type: ignore[no-any-return]
@@ -212,7 +217,7 @@ def veto_feature_by_id(
 
 
 def delete_feature(session: Session, feature_id: int) -> bool:
-    """Delete a feature by ID.
+    """Soft delete a feature by ID.
 
     Args:
         session: Database session
@@ -221,41 +226,82 @@ def delete_feature(session: Session, feature_id: int) -> bool:
     Returns:
         True if feature was deleted, False if not found
     """
-    logger.debug("Deleting feature", feature_id=feature_id)
+    logger.debug("Soft deleting feature", feature_id=feature_id)
 
     feature: Final = get_feature_by_id(session, feature_id)
     if not feature:
         logger.warning("Feature deletion failed - not found", feature_id=feature_id)
         return False
 
-    # Store for undo before deletion
-    feature_copy = Feature(
-        name=feature.name,
-        amount=feature.amount,
-        created_by=feature.created_by,
-        vetoed_by=feature.vetoed_by.copy(),
-        item_id=feature.item_id,
-    )
-    # Store the original ID for undo reference
-    feature_copy.id = feature.id
+    # Convert to domain entity and perform soft delete
+    domain_feature = feature.to_domain()
+    domain_feature.soft_delete()
 
-    # Import here to avoid circular imports
-    from .undo_service import store_deleted_feature
+    # Update the database model
+    feature.deleted_at = domain_feature.deleted_at
 
-    store_deleted_feature(session, feature_copy)
-
-    # Delete the feature
-    session.delete(feature)
+    session.add(feature)
     session.commit()
 
     log_database_operation(
-        operation="delete",
+        operation="soft_delete",
         table="Feature",
         success=True,
         feature_name=feature.name,
         feature_id=feature_id,
     )
     logger.info(
-        "Feature deleted successfully", feature_name=feature.name, feature_id=feature_id
+        "Feature soft deleted successfully",
+        feature_name=feature.name,
+        feature_id=feature_id,
+    )
+    return True
+
+
+def restore_feature(session: Session, feature_id: int) -> bool:
+    """Restore a soft deleted feature.
+
+    Args:
+        session: Database session
+        feature_id: ID of the feature to restore
+
+    Returns:
+        True if feature was restored, False if not found
+    """
+    logger.debug("Restoring feature", feature_id=feature_id)
+
+    # Look for soft deleted feature
+    statement: Final = select(Feature).where(
+        Feature.id == feature_id,
+        Feature.deleted_at.is_not(None),  # type: ignore[union-attr]
+    )
+    results: Final = session.exec(statement)
+    feature: Final = results.first()
+
+    if not feature:
+        logger.warning("Feature restore failed - not found", feature_id=feature_id)
+        return False
+
+    # Convert to domain entity and restore
+    domain_feature = feature.to_domain()
+    domain_feature.restore()
+
+    # Update the database model
+    feature.deleted_at = None
+
+    session.add(feature)
+    session.commit()
+
+    log_database_operation(
+        operation="restore",
+        table="Feature",
+        success=True,
+        feature_name=feature.name,
+        feature_id=feature_id,
+    )
+    logger.info(
+        "Feature restored successfully",
+        feature_name=feature.name,
+        feature_id=feature_id,
     )
     return True

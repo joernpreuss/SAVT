@@ -1,6 +1,7 @@
 """Pure domain entities without infrastructure dependencies."""
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from .constants import MAX_FEATURE_AMOUNT, MAX_KIND_LENGTH, MAX_NAME_LENGTH
 from .exceptions import ValidationError
@@ -14,6 +15,7 @@ class Item:
     name: str
     kind: str | None = None
     created_by: str | None = None
+    deleted_at: datetime | None = None
 
     def __post_init__(self):
         """Validate item data after initialization."""
@@ -34,6 +36,18 @@ class Item:
                 f"Item kind cannot exceed {MAX_KIND_LENGTH} characters"
             )
 
+    def is_deleted(self) -> bool:
+        """Check if item is soft deleted."""
+        return self.deleted_at is not None
+
+    def soft_delete(self) -> None:
+        """Mark item as deleted with current timestamp."""
+        self.deleted_at = datetime.now()
+
+    def restore(self) -> None:
+        """Restore soft deleted item."""
+        self.deleted_at = None
+
 
 @dataclass
 class Feature:
@@ -43,6 +57,7 @@ class Feature:
     name: str
     amount: int = 1
     created_by: str | None = None
+    deleted_at: datetime | None = None
     vetoed_by: list[str] | None = None
     item_id: int | None = None
 
@@ -86,3 +101,15 @@ class Feature:
     def is_vetoed(self) -> bool:
         """Check if feature has any vetoes."""
         return bool(self.vetoed_by)
+
+    def is_deleted(self) -> bool:
+        """Check if feature is soft deleted."""
+        return self.deleted_at is not None
+
+    def soft_delete(self) -> None:
+        """Mark feature as deleted with current timestamp."""
+        self.deleted_at = datetime.now()
+
+    def restore(self) -> None:
+        """Restore soft deleted feature."""
+        self.deleted_at = None

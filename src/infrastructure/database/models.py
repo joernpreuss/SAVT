@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import Form
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -15,6 +17,7 @@ class Item(SQLModel, table=True):  # type: ignore[call-arg]
         default=None, max_length=MAX_KIND_LENGTH
     )  # e.g., vegan, vegetarian
     created_by: str | None = None  # use SVUser later
+    deleted_at: datetime | None = Field(default=None, index=True)
 
     features: list["Feature"] = Relationship(back_populates="item")
 
@@ -30,6 +33,7 @@ class Item(SQLModel, table=True):  # type: ignore[call-arg]
             name=domain_item.name,
             kind=domain_item.kind,
             created_by=domain_item.created_by,
+            deleted_at=domain_item.deleted_at,
         )
 
     def to_domain(self) -> DomainItem:
@@ -39,6 +43,7 @@ class Item(SQLModel, table=True):  # type: ignore[call-arg]
             name=self.name,
             kind=self.kind,
             created_by=self.created_by,
+            deleted_at=self.deleted_at,
         )
 
 
@@ -49,6 +54,7 @@ class Feature(SQLModel, table=True):  # type: ignore[call-arg]
     name: str = Field(index=True, min_length=1, max_length=MAX_NAME_LENGTH)
     amount: int = Field(default=1, ge=1, le=MAX_FEATURE_AMOUNT)
     created_by: str | None = None  # use SVUser later
+    deleted_at: datetime | None = Field(default=None, index=True)
 
     # to have a list of users who vetoed this feature that works with sqlite
     vetoed_by: list[str] = Field(default_factory=list, sa_column=Column(JSON))
@@ -82,6 +88,7 @@ class Feature(SQLModel, table=True):  # type: ignore[call-arg]
             name=domain_feature.name,
             amount=domain_feature.amount,
             created_by=domain_feature.created_by,
+            deleted_at=domain_feature.deleted_at,
             vetoed_by=domain_feature.vetoed_by or [],
             item_id=domain_feature.item_id,
         )
@@ -93,6 +100,7 @@ class Feature(SQLModel, table=True):  # type: ignore[call-arg]
             name=self.name,
             amount=self.amount,
             created_by=self.created_by,
+            deleted_at=self.deleted_at,
             vetoed_by=self.vetoed_by,
             item_id=self.item_id,
         )

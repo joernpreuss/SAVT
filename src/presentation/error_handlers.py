@@ -99,10 +99,11 @@ def render_error_response(
     request: Request, error_message: str, status_code: int = 400
 ) -> HTMLResponse:
     """Render error response for HTML requests."""
-    from .routes import get_session, render_full_page_response
 
     # For HTML responses, show the error message on the main page
     try:
+        from .routes import get_session, render_full_page_response
+
         session = next(get_session())
         response = render_full_page_response(request, session, message=error_message)
         response.status_code = status_code

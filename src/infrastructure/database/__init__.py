@@ -1,1 +1,1 @@
-"""Database subpackage (engine, models, repositories)."""
+"""Database subpackage (engine, models)."""

@@ -12,6 +12,7 @@ from ..application.feature_service import (
     delete_feature,
     get_features,
     get_features_async,
+    restore_feature,
     veto_feature_by_id,
     veto_item_feature,
 )
@@ -22,8 +23,8 @@ from ..application.item_service import (
     get_item,
     get_items,
     get_items_async,
+    restore_item,
 )
-from ..application.undo_service import undo_feature_deletion, undo_item_deletion
 from ..config import settings
 from ..domain.exceptions import DomainError
 from ..infrastructure.database.database import get_async_engine, get_session
@@ -538,11 +539,13 @@ async def route_undo_item_deletion(
 ):
     logger.debug("Undoing item deletion via web form", item_name=item_name)
 
-    success, message = undo_item_deletion(session, item_name)
+    success = restore_item(session, item_name)
     if success:
-        logger.info("Item deletion undone successfully", item_name=item_name)
+        logger.info("Item restored successfully", item_name=item_name)
+        message = f"Item '{item_name}' restored successfully"
     else:
-        logger.warning("Item undo failed", item_name=item_name, message=message)
+        logger.warning("Item restore failed", item_name=item_name)
+        message = f"Failed to restore item '{item_name}'"
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
@@ -560,11 +563,13 @@ async def route_undo_feature_deletion(
 ):
     logger.debug("Undoing feature deletion via web form", feature_id=feature_id)
 
-    success, message = undo_feature_deletion(session, feature_id)
+    success = restore_feature(session, feature_id)
     if success:
-        logger.info("Feature deletion undone successfully", feature_id=feature_id)
+        logger.info("Feature restored successfully", feature_id=feature_id)
+        message = "Feature restored successfully"
     else:
-        logger.warning("Feature undo failed", feature_id=feature_id, message=message)
+        logger.warning("Feature restore failed", feature_id=feature_id)
+        message = "Failed to restore feature"
 
     # If HTMX request, return full page
     if "HX-Request" in request.headers:
