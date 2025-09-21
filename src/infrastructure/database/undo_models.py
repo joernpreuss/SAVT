@@ -12,7 +12,7 @@ from sqlmodel import Field, SQLModel
 class DeletedItemRecord(SQLModel, table=True):  # type: ignore[call-arg]
     """Persistent storage for deleted items that can be restored."""
 
-    __tablename__ = "deleted_items"
+    __tablename__: str = "deleted_items"  # type: ignore[assignment]
 
     id: int | None = Field(default=None, primary_key=True)
 
@@ -31,7 +31,7 @@ class DeletedItemRecord(SQLModel, table=True):  # type: ignore[call-arg]
 class DeletedFeatureRecord(SQLModel, table=True):  # type: ignore[call-arg]
     """Persistent storage for deleted features that can be restored."""
 
-    __tablename__ = "deleted_features"
+    __tablename__: str = "deleted_features"  # type: ignore[assignment]
 
     id: int | None = Field(default=None, primary_key=True)
 

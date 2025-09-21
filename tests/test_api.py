@@ -54,10 +54,10 @@ def test_create_feature(client: TestClient, timestamp_str: str):
     """
     _setup_logging_once()
     response = client.post(
-        "/api/users/test_user/properties",
+        "/api/v1/users/test_user/properties",
         json={"name": f"test_feature_per_api_{timestamp_str}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     logging.info(f"create_feature status: {response.status_code}")
     data = response.json()
     _log_response_json("create_feature response", data)
@@ -70,15 +70,15 @@ def test_two_vetos(client: TestClient, timestamp_str: str):
     feature_name = f"test_feature_controversial_two_{timestamp_str}"
 
     response = client.post(
-        "/api/users/test_user_pro/properties", json={"name": feature_name}
+        "/api/v1/users/test_user_pro/properties", json={"name": feature_name}
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     logging.info(f"create feature status: {response.status_code}")
     _log_response_json("create feature", response.json())
     # TODO check response content
 
     response = client.post(
-        f"/api/users/test_user_contra_1/properties/{feature_name}/veto"
+        f"/api/v1/users/test_user_contra_1/properties/{feature_name}/veto"
     )
     assert response.status_code == 200
     logging.info(f"veto 1 status: {response.status_code}")
@@ -86,7 +86,7 @@ def test_two_vetos(client: TestClient, timestamp_str: str):
     # TODO check response content
 
     response = client.post(
-        f"/api/users/test_user_contra_2/properties/{feature_name}/veto"
+        f"/api/v1/users/test_user_contra_2/properties/{feature_name}/veto"
     )
     assert response.status_code == 200
     logging.info(f"veto 2 status: {response.status_code}")
@@ -105,15 +105,15 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
     feature_name = f"test_feature_controversial_same_{timestamp_str}"
 
     response = client.post(
-        "/api/users/test_user_pro/properties", json={"name": feature_name}
+        "/api/v1/users/test_user_pro/properties", json={"name": feature_name}
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     logging.info(f"create feature status: {response.status_code}")
     _log_response_json("create feature", response.json())
     # TODO check response content
 
     response = client.post(
-        f"/api/users/test_user_contra/properties/{feature_name}/veto"
+        f"/api/v1/users/test_user_contra/properties/{feature_name}/veto"
     )
     assert response.status_code == 200
     logging.info(f"veto 1 status: {response.status_code}")
@@ -121,7 +121,7 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
     # TODO check response content
 
     response = client.post(
-        f"/api/users/test_user_contra/properties/{feature_name}/veto"
+        f"/api/v1/users/test_user_contra/properties/{feature_name}/veto"
     )
     assert response.status_code == 200
     response_json = response.json()
@@ -136,10 +136,10 @@ def test_create_feature_conflict(client: TestClient, timestamp_str: str):
     - Duplicate feature names are allowed for independent veto control
     """
     name = f"dup_feature_{timestamp_str}"
-    r1 = client.post("/api/users/alice/properties", json={"name": name})
-    assert r1.status_code == 200
-    r2 = client.post("/api/users/bob/properties", json={"name": name})
-    assert r2.status_code == 200  # Duplicates are now allowed
+    r1 = client.post("/api/v1/users/alice/properties", json={"name": name})
+    assert r1.status_code == 201
+    r2 = client.post("/api/v1/users/bob/properties", json={"name": name})
+    assert r2.status_code == 201  # Duplicates are now allowed
 
 
 def test_veto_then_unveto_feature(client: TestClient, timestamp_str: str):
@@ -152,16 +152,16 @@ def test_veto_then_unveto_feature(client: TestClient, timestamp_str: str):
     - FR-3.6: Veto/unveto operations are immediate and persistent
     """
     name = f"veto_toggle_{timestamp_str}"
-    r = client.post("/api/users/alice/properties", json={"name": name})
-    assert r.status_code == 200
+    r = client.post("/api/v1/users/alice/properties", json={"name": name})
+    assert r.status_code == 201
 
-    r = client.post(f"/api/users/alice/properties/{name}/veto")
+    r = client.post(f"/api/v1/users/alice/properties/{name}/veto")
     assert r.status_code == 200
     assert "vetoed" in r.json()
     assert "vetoed_by" in r.json()["vetoed"]
     assert "alice" in r.json()["vetoed"]["vetoed_by"]
 
-    r = client.post(f"/api/users/alice/properties/{name}/unveto")
+    r = client.post(f"/api/v1/users/alice/properties/{name}/unveto")
     assert r.status_code == 200
     assert "unvetoed" in r.json()
     assert "alice" not in r.json()["unvetoed"]["vetoed_by"]
@@ -171,13 +171,14 @@ def test_list_features_sorted_and_flags(client: TestClient, timestamp_str: str):
     names = [f"a_{timestamp_str}", f"b_{timestamp_str}", f"c_{timestamp_str}"]
     for n in names:
         assert (
-            client.post("/api/users/u/properties", json={"name": n}).status_code == 200
+            client.post("/api/v1/users/u/properties", json={"name": n}).status_code
+            == 201
         )
 
     # Veto one to flip its flag
-    assert client.post(f"/api/users/u/properties/{names[1]}/veto").status_code == 200
+    assert client.post(f"/api/v1/users/u/properties/{names[1]}/veto").status_code == 200
 
-    r = client.get("/api/properties")
+    r = client.get("/api/v1/properties")
     assert r.status_code == 200
     body = r.json()
     assert "properties" in body
