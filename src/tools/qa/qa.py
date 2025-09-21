@@ -10,6 +10,15 @@ from rich.console import Console
 
 console = Console(force_terminal=True)
 
+# Command constants to avoid duplication
+CODE_FORMAT_CMD = ["uv", "tool", "run", "ruff", "format", "src/", "tests/"]
+CODE_FORMAT_CHECK_CMD = CODE_FORMAT_CMD + ["--check", "--diff"]
+TEMPLATE_FORMAT_CMD = ["uv", "run", "djlint", "templates/", "--reformat"]
+TEMPLATE_FORMAT_CHECK_CMD = ["uv", "run", "djlint", "templates/"]
+LINT_CMD = ["uv", "tool", "run", "ruff", "check", "src/", "tests/"]
+LINT_FIX_CMD = LINT_CMD + ["--fix"]
+TYPECHECK_CMD = ["uv", "tool", "run", "mypy", "src/"]
+
 
 def _get_single_key() -> str:
     """Get a single keypress without requiring Enter."""
@@ -314,13 +323,9 @@ def _rerun_individual_check(check_type: str) -> bool:
     if check_type == "format":
         console.print("✨ Re-running formatter...", style="cyan")
         # Format code
-        code_success = _run_command(
-            ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Code formatting"
-        )
+        code_success = _run_command(CODE_FORMAT_CMD, "Code formatting")
         # Format templates
-        template_success = _run_command(
-            ["uv", "run", "djlint", "templates/", "--reformat"], "Template formatting"
-        )
+        template_success = _run_command(TEMPLATE_FORMAT_CMD, "Template formatting")
         success = code_success and template_success
         if success:
             console.print("✅ Formatting completed", style="green")
@@ -332,11 +337,7 @@ def _rerun_individual_check(check_type: str) -> bool:
         console.print("🔍 Re-running linter...", style="cyan")
 
         # First, just check without fixing to show results
-        check_success = _run_command(
-            ["uv", "tool", "run", "ruff", "check", "src/", "tests/"],
-            "Linting",
-            show_output=True,
-        )
+        check_success = _run_command(LINT_CMD, "Linting", show_output=True)
 
         if check_success:
             console.print("✅ No linting issues found", style="green")
@@ -351,7 +352,7 @@ def _rerun_individual_check(check_type: str) -> bool:
                 return False
 
             # Apply fixes based on choice
-            cmd = ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"]
+            cmd = LINT_FIX_CMD.copy()
             if choice == "u":
                 cmd.append("--unsafe-fixes")
 
@@ -364,7 +365,7 @@ def _rerun_individual_check(check_type: str) -> bool:
 
     elif check_type == "typecheck":
         console.print("🔎 Re-running type checker...", style="cyan")
-        success = _run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")
+        success = _run_command(TYPECHECK_CMD, "Type checking")
         if success:
             console.print("✅ Type checking passed", style="green")
         else:
@@ -461,37 +462,18 @@ def _run_checks(
     console.print("✨ Running formatter...", style="cyan")
     if fix_format:
         # Format code
-        code_success = _run_command(
-            ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Code formatting"
-        )
+        code_success = _run_command(CODE_FORMAT_CMD, "Code formatting")
         # Format templates
-        template_success = _run_command(
-            ["uv", "run", "djlint", "templates/", "--reformat"],
-            "Template formatting",
-        )
+        template_success = _run_command(TEMPLATE_FORMAT_CMD, "Template formatting")
         success &= code_success and template_success
     else:
         # Check code formatting
         code_format_result = _run_command(
-            [
-                "uv",
-                "tool",
-                "run",
-                "ruff",
-                "format",
-                "src/",
-                "tests/",
-                "--check",
-                "--diff",
-            ],
-            "Code format check",
-            show_output=True,
+            CODE_FORMAT_CHECK_CMD, "Code format check", show_output=True
         )
         # Check template formatting
         template_format_result = _run_command(
-            ["uv", "run", "djlint", "templates/"],
-            "Template format check",
-            show_output=True,
+            TEMPLATE_FORMAT_CHECK_CMD, "Template format check", show_output=True
         )
 
         format_result = code_format_result and template_format_result
@@ -501,14 +483,8 @@ def _run_checks(
             had_issues = True
             choice = _prompt_fix_skip_quit("Formatting")
             if choice == "fix":
-                _run_command(
-                    ["uv", "tool", "run", "ruff", "format", "src/", "tests/"],
-                    "Code formatting",
-                )
-                _run_command(
-                    ["uv", "run", "djlint", "templates/", "--reformat"],
-                    "Template formatting",
-                )
+                _run_command(CODE_FORMAT_CMD, "Code formatting")
+                _run_command(TEMPLATE_FORMAT_CMD, "Template formatting")
                 interactive_fixes.append("format")
         else:
             console.print("✅ No formatting issues found", style="green")
@@ -517,31 +493,18 @@ def _run_checks(
     # Linter
     console.print("🔍 Running linter...", style="cyan")
     if fix_lint:
-        lint_cmd = ["uv", "tool", "run", "ruff", "check", "src/", "tests/", "--fix"]
+        lint_cmd = LINT_FIX_CMD.copy()
         if unsafe_fixes:
             lint_cmd.append("--unsafe-fixes")
         success &= _run_command(lint_cmd, "Linting with fixes")
     else:
-        lint_result = _run_command(
-            ["uv", "tool", "run", "ruff", "check", "src/", "tests/"],
-            "Linting",
-            show_output=True,
-        )
+        lint_result = _run_command(LINT_CMD, "Linting", show_output=True)
         success &= lint_result
         if not lint_result:
             had_issues = True
             choice = _prompt_fix_skip_quit("Linting")
             if choice in ["fix", "unsafe_fix"]:
-                lint_cmd = [
-                    "uv",
-                    "tool",
-                    "run",
-                    "ruff",
-                    "check",
-                    "src/",
-                    "tests/",
-                    "--fix",
-                ]
+                lint_cmd = LINT_FIX_CMD.copy()
                 if unsafe_fixes or choice == "unsafe_fix":
                     lint_cmd.append("--unsafe-fixes")
 
@@ -555,9 +518,7 @@ def _run_checks(
 
                 # Check if issues remain after fix attempt
                 recheck_result = _run_command(
-                    ["uv", "tool", "run", "ruff", "check", "src/", "tests/"],
-                    "Re-checking linting",
-                    show_output=True,
+                    LINT_CMD, "Re-checking linting", show_output=True
                 )
 
                 # If issues still exist, offer unsafe fix option again
@@ -567,17 +528,7 @@ def _run_checks(
                     )
                     retry_choice = _prompt_fix_skip_quit("Linting")
                     if retry_choice == "unsafe_fix":
-                        unsafe_lint_cmd = [
-                            "uv",
-                            "tool",
-                            "run",
-                            "ruff",
-                            "check",
-                            "src/",
-                            "tests/",
-                            "--fix",
-                            "--unsafe-fixes",
-                        ]
+                        unsafe_lint_cmd = LINT_FIX_CMD + ["--unsafe-fixes"]
                         _run_command(unsafe_lint_cmd, "Linting with unsafe fixes")
                         interactive_fixes.append("lint-unsafe")
         else:
@@ -586,7 +537,7 @@ def _run_checks(
 
     # Type checker
     console.print("🔎 Running type checker...", style="cyan")
-    success &= _run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")
+    success &= _run_command(TYPECHECK_CMD, "Type checking")
     console.print()
 
     # Trailing newlines
@@ -627,37 +578,44 @@ def _run_checks(
             console.print(f"📋 Requirements command: [dim]{req_cmd}[/dim]")
             console.print()
 
-            console.print("Options:", style="bold")
-            console.print("  (s) - Select SQLite database")
-            console.print("  (p) - Select PostgreSQL database")
-            console.print()
-            console.print("  Rerun individual checks:")
-            console.print("  (f) - Rerun formatter (code + templates)")
-            console.print("  (l) - Rerun linter")
-            console.print("  (t) - Rerun type checker")
-            console.print("  (n) - Rerun newlines check")
-            console.print("  (a) - Rerun all checks")
-            console.print()
-            console.print("  Run tests with parallel workers:")
-            console.print("  (1) - Run with 1 worker (single-threaded)")
-            console.print("  (2) - Run with 2 parallel workers")
-            console.print("  (3) - Run with 3 parallel workers")
-            console.print("  (4) - Run with 5 parallel workers")
-            console.print("  (5) - Run with 8 parallel workers")
-            console.print("  (6) - Run with 13 parallel workers")
-            console.print("  (7) - Run with 21 parallel workers")
-            console.print("  (8) - Run with 34 parallel workers")
-            console.print("  (9) - Run with 55 parallel workers")
-            console.print("  (0) - Run with 89 parallel workers")
-            console.print()
-            console.print("  (r) - View requirements coverage")
-            console.print("  (c) - Clear screen")
+            console.print("  (h) - Show help/options")
             console.print("  (q) - Quit (or press ESC)")
             console.print()
 
             choice = _prompt_single_key("Select action", [], "1")
 
-            if choice in ["s", "sqlite"]:
+            if choice == "h":
+                # Show help once, then continue with next iteration
+                console.print()
+                console.print("Available Options:", style="bold green")
+                console.print("  (s) - Select SQLite database")
+                console.print("  (p) - Select PostgreSQL database")
+                console.print()
+                console.print("  Rerun individual checks:")
+                console.print("  (f) - Rerun formatter (code + templates)")
+                console.print("  (l) - Rerun linter")
+                console.print("  (t) - Rerun type checker")
+                console.print("  (n) - Rerun newlines check")
+                console.print("  (a) - Rerun all checks")
+                console.print()
+                console.print("  Run tests with parallel workers:")
+                console.print("  (1) - Run with 1 worker (single-threaded)")
+                console.print("  (2) - Run with 2 parallel workers")
+                console.print("  (3) - Run with 3 parallel workers")
+                console.print("  (4) - Run with 5 parallel workers")
+                console.print("  (5) - Run with 8 parallel workers")
+                console.print("  (6) - Run with 13 parallel workers")
+                console.print("  (7) - Run with 21 parallel workers")
+                console.print("  (8) - Run with 34 parallel workers")
+                console.print("  (9) - Run with 55 parallel workers")
+                console.print("  (0) - Run with 89 parallel workers")
+                console.print()
+                console.print("  (r) - View requirements coverage")
+                console.print("  (c) - Clear screen")
+                console.print("  (q) - Quit (or press ESC)")
+                console.print()
+                continue  # Go back to menu without changing show_options
+            elif choice in ["s", "sqlite"]:
                 selected_db = "sqlite"
                 console.print("✅ Selected SQLite database", style="green")
             elif choice in ["p", "postgresql"]:
@@ -722,7 +680,7 @@ def _run_checks(
                 break
             else:
                 console.print(
-                    "Please enter valid option: s/p/f/l/t/n/a/0-9/r/c/q",
+                    "Please enter valid option: h/q (press 'h' for help)",
                     style="yellow",
                 )
                 continue
@@ -797,25 +755,11 @@ def format_command(
     if check_only:
         # Check code formatting
         code_success = _run_command(
-            [
-                "uv",
-                "tool",
-                "run",
-                "ruff",
-                "format",
-                "src/",
-                "tests/",
-                "--check",
-                "--diff",
-            ],
-            "Code format check",
-            show_output=True,
+            CODE_FORMAT_CHECK_CMD, "Code format check", show_output=True
         )
         # Check template formatting
         template_success = _run_command(
-            ["uv", "run", "djlint", "templates/"],
-            "Template format check",
-            show_output=True,
+            TEMPLATE_FORMAT_CHECK_CMD, "Template format check", show_output=True
         )
 
         success = code_success and template_success
@@ -826,13 +770,9 @@ def format_command(
             sys.exit(1)
     else:
         # Format code
-        code_success = _run_command(
-            ["uv", "tool", "run", "ruff", "format", "src/", "tests/"], "Code formatting"
-        )
+        code_success = _run_command(CODE_FORMAT_CMD, "Code formatting")
         # Format templates
-        template_success = _run_command(
-            ["uv", "run", "djlint", "templates/", "--reformat"], "Template formatting"
-        )
+        template_success = _run_command(TEMPLATE_FORMAT_CMD, "Template formatting")
 
         success = code_success and template_success
         if success:
@@ -860,7 +800,7 @@ def lint_command(
 
     console.print("🔍 Running linter...", style="cyan")
 
-    cmd = ["uv", "tool", "run", "ruff", "check", "src/", "tests/"]
+    cmd = LINT_CMD.copy()
     if fix:
         cmd.append("--fix")
         if unsafe_fixes:
@@ -892,7 +832,7 @@ def typecheck_command(
 
     console.print("🔎 Running type checker...", style="cyan")
 
-    success = _run_command(["uv", "tool", "run", "mypy", "src/"], "Type checking")
+    success = _run_command(TYPECHECK_CMD, "Type checking")
 
     if success:
         console.print("✅ Type checking passed", style="green")
