@@ -48,11 +48,14 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 
 ## Git Workflow
 
-- NEVER execute `git add` - Only the user stages files
-- NEVER execute `git commit` - Only the user commits code
-- NEVER execute `git push` - Only the user pushes changes
-- Use "cm" keyword for commit messages - Type "commit" to get a suggested commit message for current changes
-- No automatic git operations - All git commands must be explicitly requested by user
+**CRITICAL: NO AUTOMATIC GIT OPERATIONS**
+
+- **NEVER execute `git add`** - Only the user stages files for commit
+- **NEVER execute `git commit`** - Only the user creates commits
+- **NEVER execute `git push`** - Only the user pushes to remote repositories
+- **NEVER execute any git command** unless explicitly requested by the user
+- When user says "cm" or "commit": Only provide a suggested commit message
+- All git workflow steps (add → commit → push) are exclusively user actions
 
 ## Important Files
 
