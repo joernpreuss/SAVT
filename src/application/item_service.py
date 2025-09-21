@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from ..infrastructure.database.models import Item
 from ..logging_config import get_logger
 from ..logging_utils import log_database_operation
-from .validation import validate_entity_name
+from .validation import validate_entity_name_with_logging
 
 logger: Final = get_logger(__name__)
 
@@ -26,7 +26,7 @@ def _validate_item_name(name: str) -> None:
     Raises:
         ValueError: If name is empty, too long, or contains problematic characters
     """
-    validate_entity_name(name, "item")
+    validate_entity_name_with_logging(name, "item")
 
 
 def _commit_and_refresh_item(session: Session, item: Item) -> Item:

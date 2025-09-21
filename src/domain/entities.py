@@ -7,6 +7,37 @@ from .constants import MAX_FEATURE_AMOUNT, MAX_KIND_LENGTH, MAX_NAME_LENGTH
 from .exceptions import ValidationError
 
 
+def validate_entity_name(name: str, entity_type: str = "entity") -> None:
+    """Validate entity name according to domain business rules.
+
+    Pure domain validation without logging or external dependencies.
+
+    Args:
+        name: The name to validate
+        entity_type: Type of entity being validated (for error messages)
+
+    Raises:
+        ValidationError: If name is empty, too long, or contains problematic characters
+    """
+    if not name or not name.strip():
+        raise ValidationError(f"{entity_type.title()} name cannot be empty")
+
+    if len(name) > MAX_NAME_LENGTH:
+        raise ValidationError(
+            f"{entity_type.title()} name cannot be longer than {MAX_NAME_LENGTH} "
+            + "characters"
+        )
+
+    # Check for problematic control characters
+    for char in name:
+        if (ord(char) < 32 and char not in [" "]) or ord(char) == 127:
+            # Allow space (ord 32), reject control chars and DEL (ord 127)
+            raise ValidationError(
+                f"{entity_type.title()} name cannot contain newlines, tabs, "
+                + "or other control characters"
+            )
+
+
 @dataclass
 class Item:
     """Core business entity representing an item (e.g., pizza)."""
@@ -23,13 +54,7 @@ class Item:
 
     def validate(self) -> None:
         """Validate item business rules."""
-        if not self.name or len(self.name.strip()) == 0:
-            raise ValidationError("Item name cannot be empty")
-
-        if len(self.name) > MAX_NAME_LENGTH:
-            raise ValidationError(
-                f"Item name cannot exceed {MAX_NAME_LENGTH} characters"
-            )
+        validate_entity_name(self.name, "item")
 
         if self.kind and len(self.kind) > MAX_KIND_LENGTH:
             raise ValidationError(
@@ -69,13 +94,7 @@ class Feature:
 
     def validate(self) -> None:
         """Validate feature business rules."""
-        if not self.name or len(self.name.strip()) == 0:
-            raise ValidationError("Feature name cannot be empty")
-
-        if len(self.name) > MAX_NAME_LENGTH:
-            raise ValidationError(
-                f"Feature name cannot exceed {MAX_NAME_LENGTH} characters"
-            )
+        validate_entity_name(self.name, "feature")
 
         if self.amount < 1 or self.amount > MAX_FEATURE_AMOUNT:
             raise ValidationError(

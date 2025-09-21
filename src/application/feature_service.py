@@ -9,7 +9,7 @@ from ..infrastructure.database.models import Feature
 from ..logging_config import get_logger
 from ..logging_utils import log_database_operation, log_user_action
 from ..utils import apply_veto_to_feature
-from .validation import validate_entity_name
+from .validation import validate_entity_name_with_logging
 
 logger: Final = get_logger(__name__)
 
@@ -27,7 +27,7 @@ def _validate_feature_name(name: str) -> None:
     Raises:
         ValueError: If name is empty, too long, or contains problematic characters
     """
-    validate_entity_name(name, "feature")
+    validate_entity_name_with_logging(name, "feature")
 
 
 def _commit_and_refresh_feature(session: Session, feature: Feature) -> Feature:
