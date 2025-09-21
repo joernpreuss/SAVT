@@ -117,7 +117,6 @@ class FeatureListResponse(BaseModel):
                 }
             },
         },
-        409: {"description": "Feature with this name already exists"},
     },
 )
 async def api_create_feature(

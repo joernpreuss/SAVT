@@ -72,7 +72,7 @@ standalone_feature_item %}
           Click <strong>[veto]</strong> or <strong>[unveto]</strong>
           to change {{ settings.property_name_plural_computed }} status
         </div>
-        <div class="section">
+        <div class="section" id="items-section">
           <h3>{{ settings.object_name_plural_computed.title() }}</h3>
           <ul id="objects-list">
             {% for item in items %}
@@ -118,7 +118,7 @@ standalone_feature_item %}
             {% endfor %}
           </ul>
         </div>
-        <div class="section">
+        <div class="section" id="properties-section">
           <h4>
             {{ settings.property_name_plural_computed.title() }}
             without {{ settings.object_name_plural_computed }}

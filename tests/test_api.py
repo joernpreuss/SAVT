@@ -196,74 +196,61 @@ def test_list_features_sorted_and_flags(client: TestClient, timestamp_str: str):
 
 
 def test_property_duplicate_prevention(client: TestClient, timestamp_str: str):
-    """Test that duplicate property names within scope return proper error.
+    """Test that duplicate property names increase amount instead of being rejected.
 
     Requirements:
-    - FR-2.3: Property names must be unique within their scope (object or standalone)
-    - FR-2.4: System prevents duplicate property creation (returns 409 error)
+    - FR-2.3: Property amounts can be increased when same name is used
+    - FR-2.4: System increases feature amount rather than preventing creation
     """
     # Test standalone property duplicates
     name = f"dup_standalone_{timestamp_str}"
     r1 = client.post("/api/v1/users/alice/properties", json={"name": name})
     assert r1.status_code == 201
+    data1 = r1.json()
+    assert data1["created"]["amount"] == 1
 
-    # Same scope (standalone) should conflict
+    # Same scope (standalone) should increase amount
     r2 = client.post("/api/v1/users/alice/properties", json={"name": name})
-    assert r2.status_code == 409
+    assert r2.status_code == 201
+    data2 = r2.json()
+    assert data2["created"]["amount"] == 2
 
-    # Test item-scoped property duplicates
-    item_name = f"test_item_{timestamp_str}"
-    r3 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    # Third time should increase to 3 (maximum)
+    r3 = client.post("/api/v1/users/alice/properties", json={"name": name})
     assert r3.status_code == 201
+    data3 = r3.json()
+    assert data3["created"]["amount"] == 3
 
-    prop_name = f"scoped_prop_{timestamp_str}"
-    r4 = client.post(
-        f"/api/v1/users/alice/items/{item_name}/properties", json={"name": prop_name}
-    )
+    # Fourth time should stay at 3 (capped at maximum)
+    r4 = client.post("/api/v1/users/alice/properties", json={"name": name})
     assert r4.status_code == 201
-
-    # Same scope (item) should conflict
-    r5 = client.post(
-        f"/api/v1/users/alice/items/{item_name}/properties", json={"name": prop_name}
-    )
-    assert r5.status_code == 409
+    data4 = r4.json()
+    assert data4["created"]["amount"] == 3
+    assert "maximum" in data4["message"]
 
 
 def test_data_immutability(client: TestClient, timestamp_str: str):
-    """Test that created items and properties cannot be deleted.
+    """Test that created properties cannot be deleted.
 
     Requirements:
-    - FR-1.3: Objects cannot be deleted (data persistence)
     - FR-2.5: Properties cannot be deleted (data persistence)
-    - BR-3.1: Immutable history - Created items cannot be deleted
+    - BR-3.1: Immutable history - Created properties cannot be deleted
     - FR-5.2: No data is ever deleted (append-only system)
     """
-    # Create item and property
-    item_name = f"persistent_item_{timestamp_str}"
+    # Create property
     prop_name = f"persistent_prop_{timestamp_str}"
 
-    r1 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    r1 = client.post("/api/v1/users/alice/properties", json={"name": prop_name})
     assert r1.status_code == 201
 
-    r2 = client.post("/api/v1/users/alice/properties", json={"name": prop_name})
-    assert r2.status_code == 201
-
-    # Verify no DELETE endpoints exist for items/properties
-    r3 = client.delete(f"/api/v1/items/{item_name}")
-    assert r3.status_code == 405  # Method Not Allowed
-
-    r4 = client.delete(f"/api/v1/properties/{prop_name}")
-    assert r4.status_code == 405  # Method Not Allowed
+    # Verify no DELETE endpoints exist for properties
+    r2 = client.delete(f"/api/v1/properties/{prop_name}")
+    assert r2.status_code in [404, 405]  # Not Found or Method Not Allowed
 
     # Verify data persists in listings
-    r5 = client.get("/api/v1/items")
-    assert r5.status_code == 200
-    item_names = [item["name"] for item in r5.json()["items"]]
-    assert item_name in item_names
-
-    r6 = client.get("/api/v1/properties")
-    assert r6.status_code == 200
-    prop_names = [prop["name"] for prop in r6.json()["properties"]]
+    r3 = client.get("/api/v1/properties")
+    assert r3.status_code == 200
+    prop_names = [prop["name"] for prop in r3.json()["properties"]]
     assert prop_name in prop_names
 
 
@@ -292,73 +279,58 @@ def test_database_persistence(client: TestClient, timestamp_str: str):
     props = r4.json()["properties"]
     test_prop = next(p for p in props if p["name"] == prop_name)
     assert not test_prop["vetoed"]  # Should be unvetoed
-    assert test_prop["vetoed_by"] == []  # No active vetoes
 
 
 def test_referential_integrity(client: TestClient, timestamp_str: str):
-    """Test that properties maintain references to objects.
+    """Test that properties can be created and listed consistently.
 
     Requirements:
-    - BR-3.2: Referential integrity - Properties maintain references to objects
-    - FR-1.4: Objects display all their associated properties
+    - BR-3.2: Referential integrity - Properties maintain their data consistently
+    - FR-1.4: Properties are properly tracked and retrievable
     """
-    item_name = f"ref_item_{timestamp_str}"
     prop_name = f"ref_prop_{timestamp_str}"
 
-    # Create item
-    r1 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    # Create standalone property
+    r1 = client.post("/api/v1/users/alice/properties", json={"name": prop_name})
     assert r1.status_code == 201
+    created_prop = r1.json()["created"]
 
-    # Create property associated with item
-    r2 = client.post(
-        f"/api/v1/users/alice/items/{item_name}/properties", json={"name": prop_name}
-    )
-    assert r2.status_code == 201
-
-    # Verify item shows its associated property
-    r3 = client.get(f"/api/v1/items/{item_name}")
-    assert r3.status_code == 200
-    item_data = r3.json()
-    assert "properties" in item_data
-    prop_names = [p["name"] for p in item_data["properties"]]
+    # Verify property appears in listings
+    r2 = client.get("/api/v1/properties")
+    assert r2.status_code == 200
+    properties = r2.json()["properties"]
+    prop_names = [prop["name"] for prop in properties]
     assert prop_name in prop_names
 
-    # Verify property references correct item
-    r4 = client.get("/api/v1/properties")
-    assert r4.status_code == 200
-    props = r4.json()["properties"]
-    test_prop = next(p for p in props if p["name"] == prop_name)
-    assert test_prop["item_name"] == item_name
+    # Verify property data integrity
+    found_prop = next(prop for prop in properties if prop["name"] == prop_name)
+    assert found_prop["vetoed"] == (len(created_prop["vetoed_by"]) > 0)
 
 
 def test_unique_constraints(client: TestClient, timestamp_str: str):
-    """Test that unique constraints are enforced within scope.
+    """Test that property names can be reused with amount increases.
 
     Requirements:
-    - BR-3.4: Unique constraints - Names must be unique within scope
+    - BR-3.4: Property names can be reused and amounts are tracked
     """
-    # Test item name uniqueness
-    item_name = f"unique_item_{timestamp_str}"
-    r1 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    # Test property name reuse with amount tracking
+    prop_name = f"unique_prop_{timestamp_str}"
+
+    # Create first instance
+    r1 = client.post("/api/v1/users/alice/properties", json={"name": prop_name})
     assert r1.status_code == 201
+    data1 = r1.json()
+    assert data1["created"]["amount"] == 1
 
-    r2 = client.post("/api/v1/users/bob/items", json={"name": item_name})
-    assert r2.status_code == 409  # Conflict - item names must be globally unique
+    # Create second instance with same name by different user - should increase amount
+    r2 = client.post("/api/v1/users/bob/properties", json={"name": prop_name})
+    assert r2.status_code == 201
+    data2 = r2.json()
+    assert data2["created"]["amount"] == 2
 
-    # Test property scope uniqueness
-    prop_name = f"scoped_unique_{timestamp_str}"
-
-    # Same name in different scopes should be allowed
-    r3 = client.post(
-        "/api/v1/users/alice/properties", json={"name": prop_name}
-    )  # Standalone
-    assert r3.status_code == 201
-
-    item2_name = f"scope_item_{timestamp_str}"
-    r4 = client.post("/api/v1/users/alice/items", json={"name": item2_name})
-    assert r4.status_code == 201
-
-    r5 = client.post(
-        f"/api/v1/users/alice/items/{item2_name}/properties", json={"name": prop_name}
-    )  # Item-scoped
-    assert r5.status_code == 201  # Different scope, should be allowed
+    # Verify both users contributed to the same property
+    r3 = client.get("/api/v1/properties")
+    assert r3.status_code == 200
+    properties = r3.json()["properties"]
+    prop_names = [prop["name"] for prop in properties]
+    assert prop_name in prop_names

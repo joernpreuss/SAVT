@@ -339,83 +339,173 @@ def _show_requirements_coverage() -> None:
     console.print(f"  Requirements covered: {summary['total_requirements']}")
 
 
-def _rerun_individual_check(check_type: str) -> bool:
-    """Rerun a specific check interactively."""
-    if check_type == "format":
-        console.print("✨ Re-running formatter...", style="cyan")
-        # Format code
-        code_success = _run_command(_code_format_cmd(), "Code formatting")
-        # Format templates
-        template_success = _run_command(_template_format_cmd(), "Template formatting")
-        success = code_success and template_success
-        if success:
-            console.print("✅ Formatting completed", style="green")
-        else:
-            console.print("❌ Formatting failed", style="red")
-        return success
-
-    elif check_type == "lint":
-        console.print("🔍 Re-running linter...", style="cyan")
-
-        # First, just check without fixing to show results
-        check_success = _run_command(_lint_cmd(), "Linting", show_output=True)
-
-        if check_success:
-            console.print("✅ No linting issues found", style="green")
-            return True
-        else:
-            console.print("❌ Linting issues found", style="red")
-            choice = _prompt_single_key(
-                "Apply fixes? (y/n/u for unsafe)", ["y", "n", "u"], "n"
+def _run_individual_check(check_type: str) -> None:
+    """Run a specific check using existing logic."""
+    try:
+        if check_type == "format":
+            console.print("✨ Running formatter...", style="cyan")
+            # Format code
+            code_success = _run_command(_code_format_cmd(), "Code formatting")
+            # Format templates
+            template_success = _run_command(
+                _template_format_cmd(), "Template formatting"
             )
-
-            if choice == "n":
-                return False
-
-            # Apply fixes based on choice
-            cmd = _lint_cmd(fix=True, unsafe=(choice == "u"))
-
-            fix_success = _run_command(cmd, "Applying fixes", show_output=True)
-            if fix_success:
-                console.print("✅ Fixes applied successfully", style="green")
+            success = code_success and template_success
+            if success:
+                console.print("✅ Formatting completed", style="green")
             else:
-                console.print("❌ Some issues could not be fixed", style="red")
-            return fix_success
-
-    elif check_type == "typecheck":
-        console.print("🔎 Re-running type checker...", style="cyan")
-        success = _run_command(_typecheck_cmd(), "Type checking")
-        if success:
-            console.print("✅ Type checking passed", style="green")
-        else:
-            console.print("❌ Type checking failed", style="red")
-        return success
-
-    elif check_type == "newlines":
-        console.print("📄 Re-checking file endings...", style="cyan")
-
-        # First, just check without fixing to show results
-        check_success = _check_trailing_newlines(False)
-
-        if check_success:
-            console.print("✅ All files have proper trailing newlines", style="green")
-            return True
-        else:
-            console.print("❌ Trailing newline issues found", style="red")
-            choice = _prompt_single_key("Apply fixes? (y/n)", ["y", "n"], "n")
-
-            if choice == "n":
-                return False
-
-            # Apply fixes
-            fix_success = _check_trailing_newlines(True)
-            if fix_success:
-                console.print("✅ Trailing newlines fixed", style="green")
+                console.print("❌ Formatting failed", style="red")
+        elif check_type == "lint":
+            console.print("🔍 Running linter...", style="cyan")
+            success = _run_command(_lint_cmd(), "Linting", show_output=True)
+            if success:
+                console.print("✅ No linting issues found", style="green")
             else:
-                console.print("❌ Failed to fix trailing newline issues", style="red")
-            return fix_success
+                console.print("❌ Linting issues found", style="red")
+        elif check_type == "typecheck":
+            console.print("🔎 Running type checker...", style="cyan")
+            success = _run_command(_typecheck_cmd(), "Type checking")
+            if success:
+                console.print("✅ Type checking passed", style="green")
+            else:
+                console.print("❌ Type checking failed", style="red")
+        elif check_type == "newlines":
+            console.print("📄 Checking file endings...", style="cyan")
+            success = _check_trailing_newlines(False)
+            if success:
+                console.print(
+                    "✅ All files have proper trailing newlines", style="green"
+                )
+            else:
+                console.print("❌ Trailing newline issues found", style="red")
+    except Exception:
+        # Continue the interactive loop on any error
+        pass
 
-    return False
+
+def _interactive_menu(success: bool = True, title: str = "🧪 Test Selection") -> bool:
+    """Run the interactive menu for test selection and individual checks."""
+    selected_db = "sqlite"  # Default database
+
+    while True:
+        console.print(title, style="cyan")
+        console.print(f"Current database: [bold]{selected_db.upper()}[/bold]")
+        console.print()
+
+        console.print("  (h) - Show help/options")
+        console.print("  (q) - Quit (or press ESC)")
+        console.print()
+
+        choice = _prompt_single_key("Select action", [], "1")
+
+        if choice == "h":
+            # Show help once, then continue with next iteration
+            console.print()
+            console.print("Available Options:", style="bold green")
+            console.print("  (s) - Select SQLite database")
+            console.print("  (p) - Select PostgreSQL database")
+            console.print()
+            console.print("  Rerun individual checks:")
+            console.print("  (f) - Run formatter (code + templates)")
+            console.print("  (l) - Run linter")
+            console.print("  (t) - Run type checker")
+            console.print("  (n) - Run newlines check")
+            console.print("  (a) - Run all checks")
+            console.print()
+            console.print("  Run tests with parallel workers:")
+            console.print("  (1) - Run with 1 worker (single-threaded)")
+            console.print("  (2) - Run with 2 parallel workers")
+            console.print("  (3) - Run with 3 parallel workers")
+            console.print("  (4) - Run with 5 parallel workers")
+            console.print("  (5) - Run with 8 parallel workers")
+            console.print("  (6) - Run with 13 parallel workers")
+            console.print("  (7) - Run with 21 parallel workers")
+            console.print("  (8) - Run with 34 parallel workers")
+            console.print("  (9) - Run with 55 parallel workers")
+            console.print("  (0) - Run with 89 parallel workers")
+            console.print()
+            console.print("  (r) - View requirements coverage")
+            console.print("  (c) - Clear screen")
+            console.print("  (q) - Quit (or press ESC)")
+            console.print()
+            continue  # Go back to menu without changing show_options
+        elif choice in ["s", "sqlite"]:
+            selected_db = "sqlite"
+            console.print("✅ Selected SQLite database", style="green")
+        elif choice in ["p", "postgresql"]:
+            selected_db = "postgresql"
+            console.print("✅ Selected PostgreSQL database", style="green")
+        elif choice == "f":
+            _run_individual_check("format")
+        elif choice == "l":
+            _run_individual_check("lint")
+        elif choice == "t":
+            _run_individual_check("typecheck")
+        elif choice == "n":
+            _run_individual_check("newlines")
+        elif choice == "a":
+            console.print("🔄 Rerunning all checks...", style="cyan")
+            # Recursively call the function with same parameters
+            _run_checks(
+                False, False, False, False, False, True
+            )  # skip_tests=True to avoid double test menu
+        elif choice == "1":
+            test_success = _run_database_tests(
+                selected_db
+            )  # Single-threaded, no -n flag
+            success &= test_success
+        elif choice == "2":
+            test_success = _run_database_tests(selected_db, parallel=2)
+            success &= test_success
+        elif choice == "3":
+            test_success = _run_database_tests(selected_db, parallel=3)
+            success &= test_success
+        elif choice == "4":
+            test_success = _run_database_tests(selected_db, parallel=5)
+            success &= test_success
+        elif choice == "5":
+            test_success = _run_database_tests(selected_db, parallel=8)
+            success &= test_success
+        elif choice == "6":
+            test_success = _run_database_tests(selected_db, parallel=13)
+            success &= test_success
+        elif choice == "7":
+            test_success = _run_database_tests(selected_db, parallel=21)
+            success &= test_success
+        elif choice == "8":
+            test_success = _run_database_tests(selected_db, parallel=34)
+            success &= test_success
+        elif choice == "9":
+            test_success = _run_database_tests(selected_db, parallel=55)
+            success &= test_success
+        elif choice == "0":
+            test_success = _run_database_tests(selected_db, parallel=89)
+            success &= test_success
+        elif choice in ["r", "requirements"]:
+            _show_requirements_coverage()
+        elif choice in ["c", "clear"]:
+            # Clear screen using ANSI escape sequence
+            import os
+
+            os.system("cls" if os.name == "nt" else "clear")
+            continue
+        elif choice in ["q", "quit"]:
+            if title == "🧪 Test Selection":
+                console.print("Skipping tests.", style="yellow")
+            else:
+                console.print("Exiting interactive mode.", style="yellow")
+            break
+        else:
+            console.print(
+                "Please enter valid option: h/q (press 'h' for help)",
+                style="yellow",
+            )
+            continue
+
+        # Continue the loop
+        console.print()
+
+    return success
 
 
 def _run_database_tests(db_type: str, parallel: int = 1) -> bool:
@@ -574,122 +664,7 @@ def _run_checks(
 
     # Tests - Interactive database selection and test execution
     if not skip_tests:
-        selected_db = "sqlite"  # Default database
-
-        while True:
-            console.print("🧪 Test Selection", style="cyan")
-            console.print(f"Current database: [bold]{selected_db.upper()}[/bold]")
-            console.print()
-
-            console.print("  (h) - Show help/options")
-            console.print("  (q) - Quit (or press ESC)")
-            console.print()
-
-            choice = _prompt_single_key("Select action", [], "1")
-
-            if choice == "h":
-                # Show help once, then continue with next iteration
-                console.print()
-                console.print("Available Options:", style="bold green")
-                console.print("  (s) - Select SQLite database")
-                console.print("  (p) - Select PostgreSQL database")
-                console.print()
-                console.print("  Rerun individual checks:")
-                console.print("  (f) - Rerun formatter (code + templates)")
-                console.print("  (l) - Rerun linter")
-                console.print("  (t) - Rerun type checker")
-                console.print("  (n) - Rerun newlines check")
-                console.print("  (a) - Rerun all checks")
-                console.print()
-                console.print("  Run tests with parallel workers:")
-                console.print("  (1) - Run with 1 worker (single-threaded)")
-                console.print("  (2) - Run with 2 parallel workers")
-                console.print("  (3) - Run with 3 parallel workers")
-                console.print("  (4) - Run with 5 parallel workers")
-                console.print("  (5) - Run with 8 parallel workers")
-                console.print("  (6) - Run with 13 parallel workers")
-                console.print("  (7) - Run with 21 parallel workers")
-                console.print("  (8) - Run with 34 parallel workers")
-                console.print("  (9) - Run with 55 parallel workers")
-                console.print("  (0) - Run with 89 parallel workers")
-                console.print()
-                console.print("  (r) - View requirements coverage")
-                console.print("  (c) - Clear screen")
-                console.print("  (q) - Quit (or press ESC)")
-                console.print()
-                continue  # Go back to menu without changing show_options
-            elif choice in ["s", "sqlite"]:
-                selected_db = "sqlite"
-                console.print("✅ Selected SQLite database", style="green")
-            elif choice in ["p", "postgresql"]:
-                selected_db = "postgresql"
-                console.print("✅ Selected PostgreSQL database", style="green")
-            elif choice == "f":
-                _rerun_individual_check("format")
-            elif choice == "l":
-                _rerun_individual_check("lint")
-            elif choice == "t":
-                _rerun_individual_check("typecheck")
-            elif choice == "n":
-                _rerun_individual_check("newlines")
-            elif choice == "a":
-                console.print("🔄 Rerunning all checks...", style="cyan")
-                # Recursively call the function with same parameters
-                _run_checks(
-                    False, False, False, False, False, True
-                )  # skip_tests=True to avoid double test menu
-            elif choice == "1":
-                test_success = _run_database_tests(
-                    selected_db
-                )  # Single-threaded, no -n flag
-                success &= test_success
-            elif choice == "2":
-                test_success = _run_database_tests(selected_db, parallel=2)
-                success &= test_success
-            elif choice == "3":
-                test_success = _run_database_tests(selected_db, parallel=3)
-                success &= test_success
-            elif choice == "4":
-                test_success = _run_database_tests(selected_db, parallel=5)
-                success &= test_success
-            elif choice == "5":
-                test_success = _run_database_tests(selected_db, parallel=8)
-                success &= test_success
-            elif choice == "6":
-                test_success = _run_database_tests(selected_db, parallel=13)
-                success &= test_success
-            elif choice == "7":
-                test_success = _run_database_tests(selected_db, parallel=21)
-                success &= test_success
-            elif choice == "8":
-                test_success = _run_database_tests(selected_db, parallel=34)
-                success &= test_success
-            elif choice == "9":
-                test_success = _run_database_tests(selected_db, parallel=55)
-                success &= test_success
-            elif choice == "0":
-                test_success = _run_database_tests(selected_db, parallel=89)
-                success &= test_success
-            elif choice in ["r", "requirements"]:
-                _show_requirements_coverage()
-            elif choice in ["c", "clear"]:
-                # Clear screen using ANSI escape sequence
-                import os
-
-                os.system("cls" if os.name == "nt" else "clear")
-                continue
-            elif choice in ["q", "quit"]:
-                console.print("Skipping tests.", style="yellow")
-                break
-            else:
-                console.print(
-                    "Please enter valid option: h/q (press 'h' for help)",
-                    style="yellow",
-                )
-                continue
-
-            # Continue the loop
-            console.print()
+        success = _interactive_menu(success)
 
     # Summary and interactive rerun options
     if fix_all or fix_format or fix_lint or fix_newlines:
@@ -868,6 +843,21 @@ def newlines_command(
         else:
             console.print("❌ Trailing newline issues found", style="red")
         sys.exit(1)
+
+
+@app.command("i")
+def interactive(
+    ctx: typer.Context,
+    help_flag: bool = typer.Option(
+        False, "-h", "--help", help="Show this message and exit"
+    ),
+) -> None:
+    """Interactive mode - shows options menu without running anything initially"""
+    if help_flag:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+
+    _interactive_menu(title="🔧 Interactive QA Mode")
 
 
 if __name__ == "__main__":

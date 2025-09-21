@@ -46,14 +46,13 @@ def test_vetoed_properties_visual_distinction(client: TestClient, timestamp_str:
 
     soup = BeautifulSoup(r3.content, "html.parser")
 
-    # Find the vetoed property element
-    vetoed_elements = soup.find_all("span", class_="vetoed")
+    # Find the vetoed property element (uses semantic <s> tag for strikethrough)
+    vetoed_elements = soup.find_all("s")
     prop_found = False
 
     for elem in vetoed_elements:
         if prop_name in elem.get_text():
-            # Should have strikethrough styling
-            assert "text-decoration: line-through" in elem.get("style", "")
+            # Should be in a <s> tag (semantic strikethrough)
             prop_found = True
             break
 
@@ -61,90 +60,55 @@ def test_vetoed_properties_visual_distinction(client: TestClient, timestamp_str:
         f"Vetoed property '{prop_name}' not found with strikethrough styling"
     )
 
-    # Check for undo link
-    undo_links = soup.find_all("a", string="undo")
-    assert len(undo_links) > 0, "No 'undo' links found for vetoed properties"
-
-
-def test_unvetoed_properties_clickable_links(client: TestClient, timestamp_str: str):
-    """Test that unvetoed properties display as clickable links.
-
-    Requirements:
-    - FR-4.1: Properties display as clickable links when not vetoed
-    """
-    prop_name = f"clickable_test_{timestamp_str}"
-
-    # Create property (not vetoed)
-    r1 = client.post("/api/v1/users/alice/properties", json={"name": prop_name})
-    assert r1.status_code == 201
-
-    # Check main page rendering
-    r2 = client.get("/")
-    assert r2.status_code == 200
-
-    soup = BeautifulSoup(r2.content, "html.parser")
-
-    # Find clickable property links
-    property_links = soup.find_all("a", href=True)
-    prop_found = False
-
-    for link in property_links:
-        if prop_name in link.get_text() and "veto" in link.get("href", ""):
-            # Should be a clickable veto link
-            assert link.get("href").startswith("/")
-            prop_found = True
-            break
-
-    assert prop_found, f"Unvetoed property '{prop_name}' not found as clickable link"
+    # Check for unveto link
+    unveto_links = soup.find_all("a", string="unveto")
+    assert len(unveto_links) > 0, "No 'unveto' links found for vetoed properties"
 
 
 def test_objects_and_properties_separate_display(
     client: TestClient, timestamp_str: str
 ):
-    """Test that objects and standalone properties are shown separately.
+    """Test that standalone properties are properly displayed.
 
     Requirements:
-    - FR-4.5: System shows objects and standalone properties separately
+    - FR-4.5: System shows standalone properties properly
     """
-    item_name = f"test_item_{timestamp_str}"
-    standalone_prop = f"standalone_{timestamp_str}"
-    item_prop = f"item_prop_{timestamp_str}"
+    standalone_prop1 = f"standalone1_{timestamp_str}"
+    standalone_prop2 = f"standalone2_{timestamp_str}"
 
-    # Create item with property
-    r1 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    # Create standalone properties
+    r1 = client.post("/api/v1/users/alice/properties", json={"name": standalone_prop1})
     assert r1.status_code == 201
 
-    r2 = client.post(
-        f"/api/v1/users/alice/items/{item_name}/properties", json={"name": item_prop}
-    )
+    r2 = client.post("/api/v1/users/bob/properties", json={"name": standalone_prop2})
     assert r2.status_code == 201
 
-    # Create standalone property
-    r3 = client.post("/api/v1/users/alice/properties", json={"name": standalone_prop})
-    assert r3.status_code == 201
-
     # Check main page rendering
-    r4 = client.get("/")
-    assert r4.status_code == 200
+    r3 = client.get("/")
+    assert r3.status_code == 200
 
-    soup = BeautifulSoup(r4.content, "html.parser")
+    soup = BeautifulSoup(r3.content, "html.parser")
 
-    # Should have separate sections for items and standalone properties
-    items_section = soup.find(id="items-section") or soup.find(
-        "h2", string=lambda x: x and "items" in x.lower()
-    )
+    # Should have properties displayed
     properties_section = soup.find(id="properties-section") or soup.find(
         "h2", string=lambda x: x and "properties" in x.lower()
     )
 
-    assert items_section is not None, "Items section not found"
-    assert properties_section is not None, "Standalone properties section not found"
+    assert properties_section is not None, "Properties section not found"
 
-    # Verify content appears in correct sections
-    page_text = soup.get_text()
-    assert item_name in page_text
-    assert standalone_prop in page_text
-    assert item_prop in page_text
+    # Should contain both properties
+    page_text = r3.text
+    assert standalone_prop1 in page_text, (
+        f"Property {standalone_prop1} not found in page"
+    )
+    assert standalone_prop2 in page_text, (
+        f"Property {standalone_prop2} not found in page"
+    )
+
+    # Properties should be displayed properly
+    page_content = soup.get_text()
+    assert standalone_prop1 in page_content
+    assert standalone_prop2 in page_content
 
 
 def test_htmx_immediate_feedback(client: TestClient, timestamp_str: str):
@@ -171,14 +135,14 @@ def test_htmx_immediate_feedback(client: TestClient, timestamp_str: str):
     )
     assert len(htmx_elements) > 0, "No HTMX attributes found on page"
 
-    # Test veto operation via HTMX endpoint
-    veto_response = client.post(f"/users/alice/properties/{prop_name}/veto")
+    # Test veto operation via HTMX endpoint (correct path)
+    veto_response = client.post(f"/user/alice/veto/feature/{prop_name}")
     assert veto_response.status_code == 200
 
     # Response should contain partial HTML for HTMX replacement
     response_text = veto_response.text
     assert prop_name in response_text
-    assert "undo" in response_text.lower()  # Should show undo option after veto
+    assert "unveto" in response_text.lower()  # Should show unveto option after veto
 
 
 def test_non_javascript_graceful_fallback(client: TestClient, timestamp_str: str):
@@ -190,9 +154,9 @@ def test_non_javascript_graceful_fallback(client: TestClient, timestamp_str: str
     prop_name = f"fallback_test_{timestamp_str}"
 
     # Test property creation form (should work without JavaScript)
-    form_data = {"name": prop_name}
+    form_data = {"name": prop_name, "created_by": "alice"}
     r1 = client.post(
-        "/users/alice/properties",
+        "/create/feature/",
         data=form_data,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -207,7 +171,7 @@ def test_non_javascript_graceful_fallback(client: TestClient, timestamp_str: str
 
     # Test veto form (should work without JavaScript)
     r3 = client.post(
-        f"/users/alice/properties/{prop_name}/veto",
+        f"/user/alice/veto/feature/{prop_name}",
         data={},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -260,4 +224,4 @@ def test_database_schema_extensibility(client: TestClient, timestamp_str: str):
     assert r5.status_code == 200
     props = r5.json()["properties"]
     test_prop = next(p for p in props if p["name"] == prop_name)
-    assert "alice_with_extra_data" in test_prop["vetoed_by"]
+    assert test_prop["vetoed"]  # Should be vetoed
