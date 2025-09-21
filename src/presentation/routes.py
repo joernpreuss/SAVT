@@ -1,16 +1,7 @@
 import asyncio
 from typing import Final
 
-from fastapi import (
-    APIRouter,
-    Cookie,
-    Depends,
-    Form,
-    Query,
-    Request,
-    Response,
-    status,
-)
+from fastapi import APIRouter, Cookie, Depends, Form, Query, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +26,8 @@ from ..application.item_service import (
 from ..application.undo_service import undo_feature_deletion, undo_item_deletion
 from ..config import settings
 from ..domain.exceptions import DomainError
-from ..infrastructure.database.database import get_async_session, get_session
+from ..infrastructure.database.database import get_async_engine, get_session
+from ..infrastructure.database.database import get_async_session as get_async_session
 from ..infrastructure.database.models import Feature, Item
 from ..logging_config import get_logger
 from ..utils import truncate_name
@@ -119,10 +111,12 @@ async def render_full_page_response_async(
     performance."""
 
     async def get_features_task():
-        return await get_features_async(session)
+        async with AsyncSession(get_async_engine()) as task_session:
+            return await get_features_async(task_session)
 
     async def get_items_task():
-        return await get_items_async(session)
+        async with AsyncSession(get_async_engine()) as task_session:
+            return await get_items_async(task_session)
 
     async with asyncio.TaskGroup() as tg:
         features_task = tg.create_task(get_features_task())
@@ -178,14 +172,14 @@ def _render_fragment_response(request: Request, session: Session, item: str | No
 
 
 @router.get("/", response_class=HTMLResponse)
-async def list_features(
+def list_features(
     *,
-    session: AsyncSession = Depends(get_async_session),
+    session: Session = Depends(get_session),
     request: Request,
     item_id: str | None = Cookie(default=None),
 ):
     logger.info("Debug item_id", item_id=item_id)
-    return await render_full_page_response_async(request, session, item_id)
+    return render_full_page_response(request, session, item_id)
 
 
 @router.post("/create/item/")

@@ -651,6 +651,7 @@ def _run_checks(
             console.print("  (0) - Run with 89 parallel workers")
             console.print()
             console.print("  (r) - View requirements coverage")
+            console.print("  (c) - Clear screen")
             console.print("  (q) - Quit (or press ESC)")
             console.print()
 
@@ -710,12 +711,18 @@ def _run_checks(
                 success &= test_success
             elif choice in ["r", "requirements"]:
                 _show_requirements_coverage()
+            elif choice in ["c", "clear"]:
+                # Clear screen using ANSI escape sequence
+                import os
+
+                os.system("cls" if os.name == "nt" else "clear")
+                continue
             elif choice in ["q", "quit"]:
                 console.print("Skipping tests.", style="yellow")
                 break
             else:
                 console.print(
-                    "Please enter valid option: s/p/f/l/t/n/a/0-9/r/q",
+                    "Please enter valid option: s/p/f/l/t/n/a/0-9/r/c/q",
                     style="yellow",
                 )
                 continue

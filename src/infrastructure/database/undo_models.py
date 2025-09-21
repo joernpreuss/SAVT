@@ -39,7 +39,7 @@ class DeletedFeatureRecord(SQLModel, table=True):  # type: ignore[call-arg]
     original_feature_id: int = Field(index=True)
     original_name: str
     original_kind: str | None = None
-    original_item_id: int
+    original_item_id: int | None
     original_vetoed_by: str  # JSON serialized list
 
     # Deletion metadata

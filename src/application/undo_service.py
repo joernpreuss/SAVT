@@ -96,7 +96,7 @@ def store_deleted_feature(session: Session, feature: Feature) -> None:
     deleted_record = DeletedFeatureRecord(
         original_feature_id=feature.id,
         original_name=feature.name,
-        original_kind=feature.kind,
+        original_kind=None,  # Features don't have a kind attribute
         original_item_id=feature.item_id,
         original_vetoed_by=json.dumps(feature.vetoed_by),
         deleted_at=datetime.now(),
