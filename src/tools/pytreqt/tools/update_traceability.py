@@ -34,26 +34,28 @@ def main():
     # Check for requirement changes
     print("1️⃣  Checking for requirement changes...")
     try:
-        result = subprocess.run(
-            ["uv", "run", "python", "pytreqt/tools/change_detector.py"],
-            cwd=Path.cwd(),
-            capture_output=True,
-            text=True,
-        )
-        # Note: change_detector exits with 1 if changes found, 0 if no changes
-        if result.returncode == 1:
+        from .change_detector import RequirementChangeDetector
+
+        detector = RequirementChangeDetector()
+        changes = detector.detect_changes()
+        if changes["file_changed"]:
             print("   ⚠️  Changes detected - continuing with updates...\n")
         else:
             print("   ✅ No changes detected\n")
-    except subprocess.CalledProcessError:
+    except Exception:
         print("   ⚠️  Warning: Could not check for changes\n")
 
     # Regenerate coverage report
-    success = _run_command(
-        ["uv", "run", "python", "pytreqt/tools/generate_coverage_report.py"],
-        "2️⃣  Regenerating TEST_COVERAGE.md",
-        suppress_output=True,
-    )
+    print("🔄 2️⃣  Regenerating TEST_COVERAGE.md...")
+    try:
+        from .generate_coverage_report import main as generate_main
+
+        generate_main()
+        print("✅ 2️⃣  Regenerating TEST_COVERAGE.md completed\n")
+        success = True
+    except Exception as e:
+        print(f"❌ 2️⃣  Regenerating TEST_COVERAGE.md failed: {e}\n")
+        success = False
 
     if not success:
         sys.exit(1)

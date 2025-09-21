@@ -72,35 +72,60 @@ class RequirementChangeDetector:
             print(f"Warning: Could not save cache: {e}")
 
     def get_test_coverage_mapping(self):
-        """Get mapping of requirements to tests from pytest output."""
+        """Get mapping of requirements to tests, only including passing tests."""
         try:
+            # Run full test suite to get actual results
             result = subprocess.run(
-                ["uv", "run", "pytest", "--requirements-only", "-v"],
+                ["uv", "run", "pytest", "--requirements-report", "-v"],
                 capture_output=True,
                 text=True,
                 cwd=Path.cwd(),
+                env={**dict(__import__("os").environ), "DATABASE_URL": "sqlite://"},
             )
 
-            if result.returncode != 0 and "skipped" not in result.stdout:
-                print(f"Warning: pytest failed: {result.stderr}")
-                return {}
-
-            # Parse requirements to tests mapping
+            # Parse both the requirements mapping and test results
             req_to_tests = defaultdict(list)
+            test_results = {}  # test_name -> passed/failed
             lines = result.stdout.split("\n")
 
-            current_req = None
+            # First pass: collect test results
             for line in lines:
                 line = line.strip()
+                if " PASSED " in line or " FAILED " in line:
+                    # Extract test name from pytest output lines
+                    parts = line.split("::")
+                    if len(parts) >= 2:
+                        test_name = parts[-1].split()[
+                            0
+                        ]  # Get test name before PASSED/FAILED
+                        test_results[test_name] = "PASSED" in line
+
+            # Second pass: collect requirements mapping (only from passing tests)
+            in_requirements_section = False
+            current_req = None
+
+            for line in lines:
+                line = line.strip()
+
+                if "Requirements Coverage" in line:
+                    in_requirements_section = True
+                    continue
+                elif "Requirements Coverage Summary" in line:
+                    break
+
+                if not in_requirements_section:
+                    continue
 
                 # Look for requirement headers like "  BR-3.3:"
                 if re.match(r"^[A-Z]+-\d+\.?\d*:$", line):
                     current_req = line.rstrip(":")
 
-                # Look for test entries like "    ⊝ test_veto_idempotency"
-                elif current_req and line.startswith("⊝"):
-                    test_name = line[2:].strip()  # Remove "⊝ " prefix
-                    req_to_tests[current_req].append(test_name)
+                # Look for test entries like "    ✓ test_veto_idempotency"
+                elif current_req and line.startswith("✓"):
+                    test_name = line[2:].strip()  # Remove "✓ " prefix
+                    # Only include if test actually passed
+                    if test_results.get(test_name, False):
+                        req_to_tests[current_req].append(test_name)
 
             return dict(req_to_tests)
 

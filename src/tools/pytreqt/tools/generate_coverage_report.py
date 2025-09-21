@@ -4,13 +4,11 @@ Generate TEST_COVERAGE.md from requirements and test coverage data.
 """
 
 import re
-import subprocess
 import sys
-from collections import defaultdict
 from pathlib import Path
 
 
-def _extract_requirements_from_specs():
+def extract_requirements_from_specs():
     """Extract all defined requirements from REQUIREMENTS.md."""
     requirements_file = Path("specs/spec/REQUIREMENTS.md")
     if not requirements_file.exists():
@@ -32,39 +30,12 @@ def _extract_requirements_from_specs():
 
 
 def _get_test_coverage():
-    """Run pytest to get requirements coverage data."""
+    """Get requirements coverage data from change detector."""
     try:
-        # Run pytest with requirements analysis only
-        result = subprocess.run(
-            ["uv", "run", "pytest", "--requirements-only", "-v"],
-            capture_output=True,
-            text=True,
-            cwd=Path.cwd(),
-        )
+        from .change_detector import RequirementChangeDetector
 
-        if result.returncode != 0 and "skipped" not in result.stdout:
-            print(f"ERROR running pytest: {result.stderr}")
-            return {}
-
-        # Parse the requirements coverage output
-        coverage_data = defaultdict(list)
-        lines = result.stdout.split("\n")
-
-        current_req = None
-        for line in lines:
-            line = line.strip()
-
-            # Look for requirement headers like "  BR-3.3:"
-            if re.match(r"^[A-Z]+-\d+\.?\d*:$", line):
-                current_req = line.rstrip(":")
-
-            # Look for test entries like "    ⊝ test_veto_idempotency"
-            elif current_req and line.startswith("⊝"):
-                test_name = line[2:].strip()  # Remove "⊝ " prefix
-                coverage_data[current_req].append(test_name)
-
-        return coverage_data
-
+        detector = RequirementChangeDetector()
+        return detector.get_test_coverage_mapping()
     except Exception as e:
         print(f"ERROR getting test coverage: {e}")
         return {}
@@ -131,7 +102,7 @@ def _coverage_changed(previous, current):
 def _generate_coverage_matrix():
     """Generate the complete coverage matrix."""
     print("Extracting requirements from specifications...")
-    all_requirements = _extract_requirements_from_specs()
+    all_requirements = extract_requirements_from_specs()
 
     print("Analyzing test coverage...")
     test_coverage = _get_test_coverage()
@@ -274,7 +245,7 @@ def main():
     print(f"✅ Coverage report generated: {coverage_file}")
     print(
         "📊 Coverage summary: "
-        + f"{len(_extract_requirements_from_specs())} total requirements"
+        + f"{len(extract_requirements_from_specs())} total requirements"
     )
 
 

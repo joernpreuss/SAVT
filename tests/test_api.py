@@ -48,9 +48,8 @@ def _setup_logging_once() -> None:
 def test_create_feature(client: TestClient, timestamp_str: str):
     """Test feature creation via API endpoint.
 
-    Covers:
-    - FR-2.1: Users can create features with names
-    - API responds with 200 status and created feature data
+    Requirements:
+    - FR-2.1: Users can create properties with names
     """
     _setup_logging_once()
     response = client.post(
@@ -97,9 +96,8 @@ def test_two_vetos(client: TestClient, timestamp_str: str):
 def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
     """Test that multiple veto attempts by same user are idempotent via API.
 
-    Covers:
-    - FR-3.2: Users can only veto once per feature (idempotent operation)
-    - API properly handles duplicate veto attempts
+    Requirements:
+    - FR-3.2: Users can only veto once per property (idempotent operation)
     """
     _setup_logging_once()
     feature_name = f"test_feature_controversial_same_{timestamp_str}"
@@ -132,8 +130,8 @@ def test_two_vetos_by_same_user(client: TestClient, timestamp_str: str):
 def test_create_feature_conflict(client: TestClient, timestamp_str: str):
     """Test that duplicate feature names are now allowed via API.
 
-    Covers:
-    - Duplicate feature names are allowed for independent veto control
+    Requirements:
+    - FR-2.1: Users can create properties with names
     """
     name = f"dup_feature_{timestamp_str}"
     r1 = client.post("/api/v1/users/alice/properties", json={"name": name})
@@ -145,10 +143,10 @@ def test_create_feature_conflict(client: TestClient, timestamp_str: str):
 def test_veto_then_unveto_feature(client: TestClient, timestamp_str: str):
     """Test veto/unveto cycle via API.
 
-    Covers:
-    - FR-3.1: Any user can veto any feature
+    Requirements:
+    - FR-3.1: Any user can veto any property
     - FR-3.3: Users can unveto their own vetoes
-    - FR-3.5: System tracks which users vetoed each feature
+    - FR-3.5: System tracks which users vetoed each property
     - FR-3.6: Veto/unveto operations are immediate and persistent
     """
     name = f"veto_toggle_{timestamp_str}"
@@ -195,3 +193,172 @@ def test_list_features_sorted_and_flags(client: TestClient, timestamp_str: str):
         (i for i, v in enumerate(vetoed_flags) if v), len(vetoed_flags)
     )
     assert all(not v for v in vetoed_flags[:first_true_index])
+
+
+def test_property_duplicate_prevention(client: TestClient, timestamp_str: str):
+    """Test that duplicate property names within scope return proper error.
+
+    Requirements:
+    - FR-2.3: Property names must be unique within their scope (object or standalone)
+    - FR-2.4: System prevents duplicate property creation (returns 409 error)
+    """
+    # Test standalone property duplicates
+    name = f"dup_standalone_{timestamp_str}"
+    r1 = client.post("/api/v1/users/alice/properties", json={"name": name})
+    assert r1.status_code == 201
+
+    # Same scope (standalone) should conflict
+    r2 = client.post("/api/v1/users/alice/properties", json={"name": name})
+    assert r2.status_code == 409
+
+    # Test item-scoped property duplicates
+    item_name = f"test_item_{timestamp_str}"
+    r3 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    assert r3.status_code == 201
+
+    prop_name = f"scoped_prop_{timestamp_str}"
+    r4 = client.post(
+        f"/api/v1/users/alice/items/{item_name}/properties", json={"name": prop_name}
+    )
+    assert r4.status_code == 201
+
+    # Same scope (item) should conflict
+    r5 = client.post(
+        f"/api/v1/users/alice/items/{item_name}/properties", json={"name": prop_name}
+    )
+    assert r5.status_code == 409
+
+
+def test_data_immutability(client: TestClient, timestamp_str: str):
+    """Test that created items and properties cannot be deleted.
+
+    Requirements:
+    - FR-1.3: Objects cannot be deleted (data persistence)
+    - FR-2.5: Properties cannot be deleted (data persistence)
+    - BR-3.1: Immutable history - Created items cannot be deleted
+    - FR-5.2: No data is ever deleted (append-only system)
+    """
+    # Create item and property
+    item_name = f"persistent_item_{timestamp_str}"
+    prop_name = f"persistent_prop_{timestamp_str}"
+
+    r1 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    assert r1.status_code == 201
+
+    r2 = client.post("/api/v1/users/alice/properties", json={"name": prop_name})
+    assert r2.status_code == 201
+
+    # Verify no DELETE endpoints exist for items/properties
+    r3 = client.delete(f"/api/v1/items/{item_name}")
+    assert r3.status_code == 405  # Method Not Allowed
+
+    r4 = client.delete(f"/api/v1/properties/{prop_name}")
+    assert r4.status_code == 405  # Method Not Allowed
+
+    # Verify data persists in listings
+    r5 = client.get("/api/v1/items")
+    assert r5.status_code == 200
+    item_names = [item["name"] for item in r5.json()["items"]]
+    assert item_name in item_names
+
+    r6 = client.get("/api/v1/properties")
+    assert r6.status_code == 200
+    prop_names = [prop["name"] for prop in r6.json()["properties"]]
+    assert prop_name in prop_names
+
+
+def test_database_persistence(client: TestClient, timestamp_str: str):
+    """Test that all data persists in SQLite database.
+
+    Requirements:
+    - FR-5.1: All data persists in SQLite database
+    - FR-5.3: System maintains complete audit trail of all actions
+    """
+    # Create and veto a property to generate audit trail
+    prop_name = f"audit_prop_{timestamp_str}"
+
+    r1 = client.post("/api/v1/users/alice/properties", json={"name": prop_name})
+    assert r1.status_code == 201
+
+    r2 = client.post(f"/api/v1/users/alice/properties/{prop_name}/veto")
+    assert r2.status_code == 200
+
+    r3 = client.post(f"/api/v1/users/alice/properties/{prop_name}/unveto")
+    assert r3.status_code == 200
+
+    # Verify final state persists
+    r4 = client.get("/api/v1/properties")
+    assert r4.status_code == 200
+    props = r4.json()["properties"]
+    test_prop = next(p for p in props if p["name"] == prop_name)
+    assert not test_prop["vetoed"]  # Should be unvetoed
+    assert test_prop["vetoed_by"] == []  # No active vetoes
+
+
+def test_referential_integrity(client: TestClient, timestamp_str: str):
+    """Test that properties maintain references to objects.
+
+    Requirements:
+    - BR-3.2: Referential integrity - Properties maintain references to objects
+    - FR-1.4: Objects display all their associated properties
+    """
+    item_name = f"ref_item_{timestamp_str}"
+    prop_name = f"ref_prop_{timestamp_str}"
+
+    # Create item
+    r1 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    assert r1.status_code == 201
+
+    # Create property associated with item
+    r2 = client.post(
+        f"/api/v1/users/alice/items/{item_name}/properties", json={"name": prop_name}
+    )
+    assert r2.status_code == 201
+
+    # Verify item shows its associated property
+    r3 = client.get(f"/api/v1/items/{item_name}")
+    assert r3.status_code == 200
+    item_data = r3.json()
+    assert "properties" in item_data
+    prop_names = [p["name"] for p in item_data["properties"]]
+    assert prop_name in prop_names
+
+    # Verify property references correct item
+    r4 = client.get("/api/v1/properties")
+    assert r4.status_code == 200
+    props = r4.json()["properties"]
+    test_prop = next(p for p in props if p["name"] == prop_name)
+    assert test_prop["item_name"] == item_name
+
+
+def test_unique_constraints(client: TestClient, timestamp_str: str):
+    """Test that unique constraints are enforced within scope.
+
+    Requirements:
+    - BR-3.4: Unique constraints - Names must be unique within scope
+    """
+    # Test item name uniqueness
+    item_name = f"unique_item_{timestamp_str}"
+    r1 = client.post("/api/v1/users/alice/items", json={"name": item_name})
+    assert r1.status_code == 201
+
+    r2 = client.post("/api/v1/users/bob/items", json={"name": item_name})
+    assert r2.status_code == 409  # Conflict - item names must be globally unique
+
+    # Test property scope uniqueness
+    prop_name = f"scoped_unique_{timestamp_str}"
+
+    # Same name in different scopes should be allowed
+    r3 = client.post(
+        "/api/v1/users/alice/properties", json={"name": prop_name}
+    )  # Standalone
+    assert r3.status_code == 201
+
+    item2_name = f"scope_item_{timestamp_str}"
+    r4 = client.post("/api/v1/users/alice/items", json={"name": item2_name})
+    assert r4.status_code == 201
+
+    r5 = client.post(
+        f"/api/v1/users/alice/items/{item2_name}/properties", json={"name": prop_name}
+    )  # Item-scoped
+    assert r5.status_code == 201  # Different scope, should be allowed

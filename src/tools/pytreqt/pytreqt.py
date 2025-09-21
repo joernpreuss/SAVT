@@ -13,6 +13,8 @@ from pathlib import Path
 import click
 import pytest
 
+REQUIREMENTS_FILE = Path() / "specs" / "spec" / "REQUIREMENTS.md"
+
 
 class RequirementsCollector:
     """Collects requirements coverage from test docstrings."""
@@ -38,14 +40,11 @@ class RequirementsCollector:
         if self._valid_requirements is not None:
             return self._valid_requirements
 
-        requirements_file = (
-            Path(__file__).parent.parent / "specs" / "spec" / "REQUIREMENTS.md"
-        )
-        if not requirements_file.exists():
+        if not REQUIREMENTS_FILE.exists():
             self._valid_requirements = set()
             return self._valid_requirements
 
-        content = requirements_file.read_text(encoding="utf-8")
+        content = REQUIREMENTS_FILE.read_text(encoding="utf-8")
 
         # Extract FR- and BR- IDs from markdown headers and bullet points
         pattern = r"(?:^|\s|-\s\*\*)((?:FR|BR)-\d+\.?\d*)"
@@ -399,6 +398,21 @@ def update():
     from .tools.update_traceability import main as update_main
 
     update_main()
+
+
+@cli.command()
+@click.option(
+    "--format",
+    type=click.Choice(["text", "json", "csv"]),
+    default="text",
+    help="Output format",
+)
+@click.help_option("-h", "--help")
+def stats(format):
+    """Show detailed requirements statistics"""
+    from .tools.requirements_stats import show_stats
+
+    show_stats(format=format)
 
 
 def _save_coverage_data():

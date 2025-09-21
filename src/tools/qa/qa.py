@@ -130,7 +130,6 @@ def _run_command(cmd: list[str], description: str, show_output: bool = False) ->
             result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         return result.returncode == 0
     except subprocess.CalledProcessError as e:
-        console.print(f"❌ {description} failed", style="red")
         if show_output:
             # Output was already shown during execution
             pass
@@ -580,18 +579,6 @@ def _run_checks(
         while True:
             console.print("🧪 Test Selection", style="cyan")
             console.print(f"Current database: [bold]{selected_db.upper()}[/bold]")
-            console.print()
-
-            # Show available commands
-            console.print("📋 SQLite command: [dim]uv run pytest --color=yes[/dim]")
-            psql_cmd = (
-                "TEST_DATABASE=postgresql DATABASE_URL="
-                "postgresql://savt_user:savt_password@localhost:5432/savt "
-                "uv run pytest --color=yes"
-            )
-            console.print(f"📋 PostgreSQL command: [dim]{psql_cmd}[/dim]")
-            req_cmd = "uv run pytest --requirements-report -q"
-            console.print(f"📋 Requirements command: [dim]{req_cmd}[/dim]")
             console.print()
 
             console.print("  (h) - Show help/options")

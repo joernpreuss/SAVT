@@ -2,7 +2,7 @@
 
 This document shows the traceability between functional requirements (FR), business rules (BR), and test cases.
 
-**Last updated**: 2025-09-18**
+**Last updated**: 2025-09-21**
 
 ## Coverage Summary
 
@@ -76,6 +76,7 @@ This document shows the traceability between functional requirements (FR), busin
 
 **Test Cases**:
 - `test_create_feature`
+- `test_create_feature_conflict`
 - `test_create_feature_without_item`
 - `test_create_item_with_feature`
 
@@ -225,9 +226,9 @@ The following requirements have no test coverage:
 
 ## Test Statistics
 
-- **Total Test Cases with Requirements**: 23
+- **Total Test Cases with Requirements**: 24
 - **Unique Requirements Tested**: 11
-- **Average Tests per Requirement**: 2.1
+- **Average Tests per Requirement**: 2.2
 
 ---
 
