@@ -10,14 +10,36 @@ from rich.console import Console
 
 console = Console(force_terminal=True)
 
-# Command constants to avoid duplication
-CODE_FORMAT_CMD = ["uv", "tool", "run", "ruff", "format", "src/", "tests/"]
-CODE_FORMAT_CHECK_CMD = CODE_FORMAT_CMD + ["--check", "--diff"]
-TEMPLATE_FORMAT_CMD = ["uv", "run", "djlint", "templates/", "--reformat"]
-TEMPLATE_FORMAT_CHECK_CMD = ["uv", "run", "djlint", "templates/"]
-LINT_CMD = ["uv", "tool", "run", "ruff", "check", "src/", "tests/"]
-LINT_FIX_CMD = LINT_CMD + ["--fix"]
-TYPECHECK_CMD = ["uv", "tool", "run", "mypy", "src/"]
+
+# Command builders to avoid duplication and improve flexibility
+def _code_format_cmd(check: bool = False) -> list[str]:
+    """Build ruff format command."""
+    cmd = ["uv", "tool", "run", "ruff", "format", "src/", "tests/"]
+    if check:
+        cmd.extend(["--check", "--diff"])
+    return cmd
+
+
+def _template_format_cmd(check: bool = False) -> list[str]:
+    """Build djlint format command."""
+    if check:
+        return ["uv", "run", "djlint", "templates/"]
+    return ["uv", "run", "djlint", "templates/", "--reformat"]
+
+
+def _lint_cmd(fix: bool = False, unsafe: bool = False) -> list[str]:
+    """Build ruff check command with optional fixes."""
+    cmd = ["uv", "tool", "run", "ruff", "check", "src/", "tests/"]
+    if fix:
+        cmd.append("--fix")
+        if unsafe:
+            cmd.append("--unsafe-fixes")
+    return cmd
+
+
+def _typecheck_cmd() -> list[str]:
+    """Build mypy command."""
+    return ["uv", "tool", "run", "mypy", "src/"]
 
 
 def _get_single_key() -> str:
@@ -323,9 +345,9 @@ def _rerun_individual_check(check_type: str) -> bool:
     if check_type == "format":
         console.print("✨ Re-running formatter...", style="cyan")
         # Format code
-        code_success = _run_command(CODE_FORMAT_CMD, "Code formatting")
+        code_success = _run_command(_code_format_cmd(), "Code formatting")
         # Format templates
-        template_success = _run_command(TEMPLATE_FORMAT_CMD, "Template formatting")
+        template_success = _run_command(_template_format_cmd(), "Template formatting")
         success = code_success and template_success
         if success:
             console.print("✅ Formatting completed", style="green")
@@ -337,7 +359,7 @@ def _rerun_individual_check(check_type: str) -> bool:
         console.print("🔍 Re-running linter...", style="cyan")
 
         # First, just check without fixing to show results
-        check_success = _run_command(LINT_CMD, "Linting", show_output=True)
+        check_success = _run_command(_lint_cmd(), "Linting", show_output=True)
 
         if check_success:
             console.print("✅ No linting issues found", style="green")
@@ -352,9 +374,7 @@ def _rerun_individual_check(check_type: str) -> bool:
                 return False
 
             # Apply fixes based on choice
-            cmd = LINT_FIX_CMD.copy()
-            if choice == "u":
-                cmd.append("--unsafe-fixes")
+            cmd = _lint_cmd(fix=True, unsafe=(choice == "u"))
 
             fix_success = _run_command(cmd, "Applying fixes", show_output=True)
             if fix_success:
@@ -365,7 +385,7 @@ def _rerun_individual_check(check_type: str) -> bool:
 
     elif check_type == "typecheck":
         console.print("🔎 Re-running type checker...", style="cyan")
-        success = _run_command(TYPECHECK_CMD, "Type checking")
+        success = _run_command(_typecheck_cmd(), "Type checking")
         if success:
             console.print("✅ Type checking passed", style="green")
         else:
@@ -462,18 +482,18 @@ def _run_checks(
     console.print("✨ Running formatter...", style="cyan")
     if fix_format:
         # Format code
-        code_success = _run_command(CODE_FORMAT_CMD, "Code formatting")
+        code_success = _run_command(_code_format_cmd(), "Code formatting")
         # Format templates
-        template_success = _run_command(TEMPLATE_FORMAT_CMD, "Template formatting")
+        template_success = _run_command(_template_format_cmd(), "Template formatting")
         success &= code_success and template_success
     else:
         # Check code formatting
         code_format_result = _run_command(
-            CODE_FORMAT_CHECK_CMD, "Code format check", show_output=True
+            _code_format_cmd(check=True), "Code format check", show_output=True
         )
         # Check template formatting
         template_format_result = _run_command(
-            TEMPLATE_FORMAT_CHECK_CMD, "Template format check", show_output=True
+            _template_format_cmd(check=True), "Template format check", show_output=True
         )
 
         format_result = code_format_result and template_format_result
@@ -483,8 +503,8 @@ def _run_checks(
             had_issues = True
             choice = _prompt_fix_skip_quit("Formatting")
             if choice == "fix":
-                _run_command(CODE_FORMAT_CMD, "Code formatting")
-                _run_command(TEMPLATE_FORMAT_CMD, "Template formatting")
+                _run_command(_code_format_cmd(), "Code formatting")
+                _run_command(_template_format_cmd(), "Template formatting")
                 interactive_fixes.append("format")
         else:
             console.print("✅ No formatting issues found", style="green")
@@ -493,32 +513,26 @@ def _run_checks(
     # Linter
     console.print("🔍 Running linter...", style="cyan")
     if fix_lint:
-        lint_cmd = LINT_FIX_CMD.copy()
-        if unsafe_fixes:
-            lint_cmd.append("--unsafe-fixes")
-        success &= _run_command(lint_cmd, "Linting with fixes")
+        success &= _run_command(
+            _lint_cmd(fix=True, unsafe=unsafe_fixes), "Linting with fixes"
+        )
     else:
-        lint_result = _run_command(LINT_CMD, "Linting", show_output=True)
+        lint_result = _run_command(_lint_cmd(), "Linting", show_output=True)
         success &= lint_result
         if not lint_result:
             had_issues = True
             choice = _prompt_fix_skip_quit("Linting")
             if choice in ["fix", "unsafe_fix"]:
-                lint_cmd = LINT_FIX_CMD.copy()
-                if unsafe_fixes or choice == "unsafe_fix":
-                    lint_cmd.append("--unsafe-fixes")
+                use_unsafe = unsafe_fixes or choice == "unsafe_fix"
+                lint_cmd = _lint_cmd(fix=True, unsafe=use_unsafe)
 
-                fix_type = (
-                    "unsafe fixes"
-                    if (unsafe_fixes or choice == "unsafe_fix")
-                    else "fixes"
-                )
+                fix_type = "unsafe fixes" if use_unsafe else "fixes"
                 _run_command(lint_cmd, f"Linting with {fix_type}")
                 interactive_fixes.append("lint")
 
                 # Check if issues remain after fix attempt
                 recheck_result = _run_command(
-                    LINT_CMD, "Re-checking linting", show_output=True
+                    _lint_cmd(), "Re-checking linting", show_output=True
                 )
 
                 # If issues still exist, offer unsafe fix option again
@@ -528,8 +542,10 @@ def _run_checks(
                     )
                     retry_choice = _prompt_fix_skip_quit("Linting")
                     if retry_choice == "unsafe_fix":
-                        unsafe_lint_cmd = LINT_FIX_CMD + ["--unsafe-fixes"]
-                        _run_command(unsafe_lint_cmd, "Linting with unsafe fixes")
+                        _run_command(
+                            _lint_cmd(fix=True, unsafe=True),
+                            "Linting with unsafe fixes",
+                        )
                         interactive_fixes.append("lint-unsafe")
         else:
             console.print("✅ No linting issues found", style="green")
@@ -537,7 +553,7 @@ def _run_checks(
 
     # Type checker
     console.print("🔎 Running type checker...", style="cyan")
-    success &= _run_command(TYPECHECK_CMD, "Type checking")
+    success &= _run_command(_typecheck_cmd(), "Type checking")
     console.print()
 
     # Trailing newlines
@@ -755,11 +771,11 @@ def format_command(
     if check_only:
         # Check code formatting
         code_success = _run_command(
-            CODE_FORMAT_CHECK_CMD, "Code format check", show_output=True
+            _code_format_cmd(check=True), "Code format check", show_output=True
         )
         # Check template formatting
         template_success = _run_command(
-            TEMPLATE_FORMAT_CHECK_CMD, "Template format check", show_output=True
+            _template_format_cmd(check=True), "Template format check", show_output=True
         )
 
         success = code_success and template_success
@@ -770,9 +786,9 @@ def format_command(
             sys.exit(1)
     else:
         # Format code
-        code_success = _run_command(CODE_FORMAT_CMD, "Code formatting")
+        code_success = _run_command(_code_format_cmd(), "Code formatting")
         # Format templates
-        template_success = _run_command(TEMPLATE_FORMAT_CMD, "Template formatting")
+        template_success = _run_command(_template_format_cmd(), "Template formatting")
 
         success = code_success and template_success
         if success:
@@ -800,11 +816,7 @@ def lint_command(
 
     console.print("🔍 Running linter...", style="cyan")
 
-    cmd = LINT_CMD.copy()
-    if fix:
-        cmd.append("--fix")
-        if unsafe_fixes:
-            cmd.append("--unsafe-fixes")
+    cmd = _lint_cmd(fix=fix, unsafe=unsafe_fixes)
 
     success = _run_command(cmd, "Linting", show_output=True)
 
@@ -832,7 +844,7 @@ def typecheck_command(
 
     console.print("🔎 Running type checker...", style="cyan")
 
-    success = _run_command(TYPECHECK_CMD, "Type checking")
+    success = _run_command(_typecheck_cmd(), "Type checking")
 
     if success:
         console.print("✅ Type checking passed", style="green")
