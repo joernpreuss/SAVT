@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import structlog
+from opentelemetry import trace
 from rich.logging import RichHandler
 
 from .config import settings
@@ -75,21 +76,34 @@ def _configure_third_party_loggers() -> None:
     logging.getLogger("uvicorn").setLevel(logging.INFO)
 
 
+def _add_trace_context(logger, method_name, event_dict):
+    """Add OpenTelemetry trace context to log entries."""
+    current_span = trace.get_current_span()
+    if current_span and current_span.is_recording():
+        span_context = current_span.get_span_context()
+        if span_context.is_valid:
+            event_dict["trace_id"] = f"0x{format(span_context.trace_id, '032x')}"
+            event_dict["span_id"] = f"0x{format(span_context.span_id, '016x')}"
+    return event_dict
+
+
 def _configure_structlog() -> None:
     """Configure structlog for enhanced structured logging."""
     # Configure structlog to output directly (not through stdlib logging)
     # This avoids conflicts with existing Rich logging setup
     if settings.debug:
-        # Development: Pretty console output
+        # Development: Pretty console output with trace context
         processors = [
+            _add_trace_context,
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.dev.ConsoleRenderer(colors=False),
         ]
         logger_factory = structlog.WriteLoggerFactory()
         wrapper_class = structlog.make_filtering_bound_logger(logging.INFO)
     else:
-        # Production: JSON to stdout (which can be captured by log management)
+        # Production: JSON to stdout with trace context
         processors = [
+            _add_trace_context,
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.JSONRenderer(),
         ]
