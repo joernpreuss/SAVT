@@ -22,6 +22,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - HTML/CSS/JS: 2 spaces (web standard, defined in `.editorconfig`)
 - File endings: All files must end with newline (enforced by `.editorconfig` and QA tool)
 - Package management: Use `uv add` instead of `pip install` (faster, better dependency resolution)
+- Dependencies: Always pin versions with `==` in pyproject.toml for reproducible builds
 - djLint: Integrated HTML/Jinja2 formatter, ignores J018/J004 (FastAPI-specific)
 - Ruff format: Run `ruff format` after every change
 - **When user says "qa"**: Run `./qa check` - interactive menu with linting, formatting, type checking, tests. Press `h` for help, `echo '1' | ./qa check` for automation (example)

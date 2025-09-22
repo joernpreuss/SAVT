@@ -3,11 +3,14 @@
 import os
 import sys
 
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from prometheus_client import start_http_server
 
 from .logging_config import get_logger
 
@@ -15,12 +18,27 @@ logger = get_logger(__name__)
 
 
 def setup_telemetry(app):
-    """Configure OpenTelemetry tracing for the FastAPI application."""
+    """Configure OpenTelemetry tracing and metrics for the FastAPI application."""
     try:
         # Skip telemetry setup during tests to avoid I/O issues
         if "pytest" in sys.modules or os.getenv("TESTING"):
             logger.info("Skipping OpenTelemetry setup during tests")
             return
+
+        # Set up metrics provider with Prometheus exporter
+        prometheus_reader = PrometheusMetricReader()
+        metrics.set_meter_provider(MeterProvider(metric_readers=[prometheus_reader]))
+
+        # Start Prometheus metrics server on port 8080 (or next available port)
+        metrics_port = 8080
+        try:
+            start_http_server(metrics_port)
+            logger.info(f"Prometheus metrics server started on port {metrics_port}")
+        except OSError:
+            # Try next port if 8080 is busy
+            metrics_port = 8081
+            start_http_server(metrics_port)
+            logger.info(f"Prometheus metrics server started on port {metrics_port}")
 
         # Set up tracer provider
         trace.set_tracer_provider(TracerProvider())
@@ -40,7 +58,7 @@ def setup_telemetry(app):
         SQLAlchemyInstrumentor().instrument()
         logger.info("SQLAlchemy instrumentation enabled")
 
-        logger.info("OpenTelemetry tracing setup completed")
+        logger.info("OpenTelemetry tracing and metrics setup completed")
 
     except Exception as e:
         logger.error(f"Failed to setup OpenTelemetry: {e}")
