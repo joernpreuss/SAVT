@@ -334,3 +334,445 @@ def test_unique_constraints(client: TestClient, timestamp_str: str):
     properties = r3.json()["properties"]
     prop_names = [prop["name"] for prop in properties]
     assert prop_name in prop_names
+
+
+# Item API Endpoint Tests
+
+
+def test_create_item(client: TestClient, timestamp_str: str):
+    """Test item creation via API endpoint.
+
+    Requirements:
+    - FR-1.1: Users can create objects with unique names
+    - FR-1.2: Object names must be unique within the system
+    """
+    _setup_logging_once()
+    item_name = f"test_item_{timestamp_str}"
+    response = client.post(
+        "/api/v1/items",
+        json={"name": item_name, "kind": "test"},
+    )
+    assert response.status_code == 201
+    logging.info(f"create_item status: {response.status_code}")
+    data = response.json()
+    _log_response_json("create_item response", data)
+    assert "created" in data
+    assert data["created"]["name"] == item_name
+    assert data["created"]["kind"] == "test"
+    assert data["created"]["features"] == []
+    assert data["message"] == "Item created successfully"
+
+
+def test_create_item_with_user(client: TestClient, timestamp_str: str):
+    """Test item creation with user attribution via API.
+
+    Requirements:
+    - FR-1.1: Users can create objects with unique names
+    - User attribution tracking
+    """
+    _setup_logging_once()
+    item_name = f"user_item_{timestamp_str}"
+    response = client.post(
+        "/api/v1/users/alice/items",
+        json={"name": item_name, "kind": "user_test"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    _log_response_json("create_item_with_user response", data)
+    assert data["created"]["name"] == item_name
+    assert data["created"]["created_by"] == "alice"
+    assert data["created"]["kind"] == "user_test"
+
+
+def test_create_item_duplicate_conflict(client: TestClient, timestamp_str: str):
+    """Test that duplicate item names are rejected via API.
+
+    Requirements:
+    - FR-1.2: Object names must be unique within the system
+    - FR-1.5: System prevents duplicate object creation (returns 409 error)
+    """
+    _setup_logging_once()
+    item_name = f"duplicate_item_{timestamp_str}"
+
+    # Create first item
+    r1 = client.post("/api/v1/items", json={"name": item_name})
+    assert r1.status_code == 201
+    logging.info(f"First item creation status: {r1.status_code}")
+
+    # Attempt to create duplicate
+    r2 = client.post("/api/v1/items", json={"name": item_name})
+    assert r2.status_code == 409
+    logging.info(f"Duplicate item creation status: {r2.status_code}")
+    error_data = r2.json()
+    _log_response_json("duplicate_item_error", error_data)
+    assert "already exists" in error_data["detail"]
+
+
+def test_list_items_empty(client: TestClient):
+    """Test listing items when none exist.
+
+    Requirements:
+    - FR-1.4: Objects display all their associated properties
+    """
+    response = client.get("/api/v1/items")
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert isinstance(data["items"], list)
+
+
+def test_list_items_with_data(client: TestClient, timestamp_str: str):
+    """Test listing items with feature counts.
+
+    Requirements:
+    - FR-1.4: Objects display all their associated properties
+    - Feature counting and sorting
+    """
+    _setup_logging_once()
+
+    # Create test items
+    item1_name = f"list_item_1_{timestamp_str}"
+    item2_name = f"list_item_2_{timestamp_str}"
+
+    r1 = client.post("/api/v1/items", json={"name": item1_name, "kind": "type1"})
+    assert r1.status_code == 201
+
+    r2 = client.post("/api/v1/items", json={"name": item2_name, "kind": "type2"})
+    assert r2.status_code == 201
+
+    # List items
+    response = client.get("/api/v1/items")
+    assert response.status_code == 200
+    data = response.json()
+    _log_response_json("list_items response", data)
+
+    assert "items" in data
+    items = data["items"]
+
+    # Find our test items
+    test_items = [item for item in items if item["name"] in [item1_name, item2_name]]
+    assert len(test_items) == 2
+
+    # Verify structure
+    for item in test_items:
+        assert "id" in item
+        assert "name" in item
+        assert "kind" in item
+        assert "feature_count" in item
+        assert "vetoed_feature_count" in item
+        assert item["feature_count"] == 0  # No features added yet
+
+
+def test_get_item_by_name(client: TestClient, timestamp_str: str):
+    """Test retrieving specific item by name.
+
+    Requirements:
+    - FR-1.4: Objects display all their associated properties
+    - Detailed item information retrieval
+    """
+    _setup_logging_once()
+    item_name = f"get_item_{timestamp_str}"
+
+    # Create item
+    r1 = client.post(
+        "/api/v1/users/bob/items", json={"name": item_name, "kind": "detailed"}
+    )
+    assert r1.status_code == 201
+
+    # Get item details
+    response = client.get(f"/api/v1/items/{item_name}")
+    assert response.status_code == 200
+    data = response.json()
+    _log_response_json("get_item response", data)
+
+    assert data["name"] == item_name
+    assert data["kind"] == "detailed"
+    assert data["created_by"] == "bob"
+    assert isinstance(data["features"], list)
+    assert len(data["features"]) == 0  # No features added yet
+
+
+def test_get_item_not_found(client: TestClient, timestamp_str: str):
+    """Test retrieving non-existent item.
+
+    Requirements:
+    - Proper 404 error handling
+    """
+    non_existent_name = f"non_existent_{timestamp_str}"
+    response = client.get(f"/api/v1/items/{non_existent_name}")
+    assert response.status_code == 404
+    error_data = response.json()
+    assert "not found" in error_data["detail"]
+
+
+def test_delete_item(client: TestClient, timestamp_str: str):
+    """Test soft deleting an item.
+
+    Requirements:
+    - FR-1.3: Objects cannot be deleted (data persistence)
+    - BR-3.1: Immutable history - Created items cannot be deleted (soft delete only)
+    - Soft delete functionality
+    """
+    _setup_logging_once()
+    item_name = f"delete_item_{timestamp_str}"
+
+    # Create item
+    r1 = client.post("/api/v1/items", json={"name": item_name})
+    assert r1.status_code == 201
+
+    # Delete item
+    response = client.delete(f"/api/v1/items/{item_name}")
+    assert response.status_code == 200
+    data = response.json()
+    _log_response_json("delete_item response", data)
+
+    assert data["success"] is True
+    assert "deleted successfully" in data["message"]
+    assert data["item_name"] == item_name
+
+    # Verify item no longer appears in listings
+    r3 = client.get("/api/v1/items")
+    assert r3.status_code == 200
+    items = r3.json()["items"]
+    item_names = [item["name"] for item in items]
+    assert item_name not in item_names
+
+    # Verify item no longer accessible by name
+    r4 = client.get(f"/api/v1/items/{item_name}")
+    assert r4.status_code == 404
+
+
+def test_delete_item_not_found(client: TestClient, timestamp_str: str):
+    """Test deleting non-existent item.
+
+    Requirements:
+    - Proper 404 error handling for delete operations
+    """
+    non_existent_name = f"delete_non_existent_{timestamp_str}"
+    response = client.delete(f"/api/v1/items/{non_existent_name}")
+    assert response.status_code == 404
+    error_data = response.json()
+    assert "not found" in error_data["detail"]
+
+
+def test_restore_item(client: TestClient, timestamp_str: str):
+    """Test restoring a soft-deleted item.
+
+    Requirements:
+    - Data recovery functionality
+    - Reversible soft delete operations
+    """
+    _setup_logging_once()
+    item_name = f"restore_item_{timestamp_str}"
+
+    # Create and delete item
+    r1 = client.post("/api/v1/items", json={"name": item_name, "kind": "restorable"})
+    assert r1.status_code == 201
+
+    r2 = client.delete(f"/api/v1/items/{item_name}")
+    assert r2.status_code == 200
+
+    # Restore item
+    response = client.post(f"/api/v1/items/{item_name}/restore")
+    assert response.status_code == 200
+    data = response.json()
+    _log_response_json("restore_item response", data)
+
+    assert data["success"] is True
+    assert "restored successfully" in data["message"]
+    assert data["item_name"] == item_name
+
+    # Verify item reappears in listings
+    r4 = client.get("/api/v1/items")
+    assert r4.status_code == 200
+    items = r4.json()["items"]
+    item_names = [item["name"] for item in items]
+    assert item_name in item_names
+
+    # Verify item accessible by name again
+    r5 = client.get(f"/api/v1/items/{item_name}")
+    assert r5.status_code == 200
+    assert r5.json()["name"] == item_name
+    assert r5.json()["kind"] == "restorable"
+
+
+def test_restore_item_not_found(client: TestClient, timestamp_str: str):
+    """Test restoring non-existent deleted item.
+
+    Requirements:
+    - Proper 404 error handling for restore operations
+    """
+    non_existent_name = f"restore_non_existent_{timestamp_str}"
+    response = client.post(f"/api/v1/items/{non_existent_name}/restore")
+    assert response.status_code == 404
+    error_data = response.json()
+    assert "not found" in error_data["detail"]
+
+
+def test_item_feature_relationship(client: TestClient, timestamp_str: str):
+    """Test item-feature relationship through API.
+
+    Requirements:
+    - FR-1.4: Objects display all their associated properties
+    - FR-2.2: Properties can be standalone or associated with objects
+    - Feature-item associations
+    """
+    _setup_logging_once()
+    item_name = f"feature_item_{timestamp_str}"
+    feature_name = f"item_feature_{timestamp_str}"
+
+    # Create item first
+    r1 = client.post("/api/v1/items", json={"name": item_name, "kind": "featured"})
+    assert r1.status_code == 201
+
+    # Create standalone feature
+    r2 = client.post("/api/v1/properties", json={"name": feature_name})
+    assert r2.status_code == 201
+
+    # Get item details to verify no features initially
+    r3 = client.get(f"/api/v1/items/{item_name}")
+    assert r3.status_code == 200
+    data = r3.json()
+    _log_response_json("item_before_features", data)
+    assert len(data["features"]) == 0
+
+    # Verify item appears in listing with correct feature count
+    r4 = client.get("/api/v1/items")
+    assert r4.status_code == 200
+    items = r4.json()["items"]
+    test_item = next(item for item in items if item["name"] == item_name)
+    assert test_item["feature_count"] == 0
+    assert test_item["vetoed_feature_count"] == 0
+
+
+def test_item_data_immutability(client: TestClient, timestamp_str: str):
+    """Test that created items follow immutability principles.
+
+    Requirements:
+    - FR-1.3: Objects cannot be deleted (data persistence)
+    - BR-3.1: Immutable history - Created items cannot be deleted
+    - FR-5.2: No data is ever deleted (append-only system)
+    - FR-5.3: System maintains complete audit trail of all actions
+    """
+    _setup_logging_once()
+    item_name = f"immutable_item_{timestamp_str}"
+
+    # Create item
+    r1 = client.post(
+        "/api/v1/users/alice/items", json={"name": item_name, "kind": "permanent"}
+    )
+    assert r1.status_code == 201
+    original_data = r1.json()["created"]
+
+    # Verify item data persists
+    r2 = client.get(f"/api/v1/items/{item_name}")
+    assert r2.status_code == 200
+    current_data = r2.json()
+
+    # Core data should remain unchanged
+    assert current_data["name"] == original_data["name"]
+    assert current_data["kind"] == original_data["kind"]
+    assert current_data["created_by"] == original_data["created_by"]
+    assert current_data["id"] == original_data["id"]
+
+    # Soft delete and verify data still accessible for audit
+    r3 = client.delete(f"/api/v1/items/{item_name}")
+    assert r3.status_code == 200
+
+    # After soft delete, item shouldn't appear in normal listings
+    r4 = client.get("/api/v1/items")
+    assert r4.status_code == 200
+    active_items = [item["name"] for item in r4.json()["items"]]
+    assert item_name not in active_items
+
+    # But can be restored (proving data wasn't destroyed)
+    r5 = client.post(f"/api/v1/items/{item_name}/restore")
+    assert r5.status_code == 200
+
+    # After restore, data should be exactly the same
+    r6 = client.get(f"/api/v1/items/{item_name}")
+    assert r6.status_code == 200
+    restored_data = r6.json()
+    assert restored_data["name"] == original_data["name"]
+    assert restored_data["kind"] == original_data["kind"]
+    assert restored_data["created_by"] == original_data["created_by"]
+
+
+def test_item_api_comprehensive_workflow(client: TestClient, timestamp_str: str):
+    """Test complete item management workflow via API.
+
+    Requirements:
+    - Complete item lifecycle management
+    - Integration between all item endpoints
+    """
+    _setup_logging_once()
+
+    # Create multiple items with different users and types
+    items_data = [
+        {
+            "name": f"workflow_item_1_{timestamp_str}",
+            "kind": "priority",
+            "user": "alice",
+        },
+        {"name": f"workflow_item_2_{timestamp_str}", "kind": "normal", "user": "bob"},
+        {"name": f"workflow_item_3_{timestamp_str}", "kind": None, "user": None},
+    ]
+
+    created_items = []
+
+    # Create items
+    for item_data in items_data:
+        if item_data["user"]:
+            response = client.post(
+                f"/api/v1/users/{item_data['user']}/items",
+                json={"name": item_data["name"], "kind": item_data["kind"]},
+            )
+        else:
+            response = client.post(
+                "/api/v1/items",
+                json={"name": item_data["name"], "kind": item_data["kind"]},
+            )
+        assert response.status_code == 201
+        created_items.append(response.json()["created"])
+
+    # Verify all items in listing
+    r1 = client.get("/api/v1/items")
+    assert r1.status_code == 200
+    all_items = r1.json()["items"]
+    created_names = [item["name"] for item in created_items]
+    listed_names = [item["name"] for item in all_items]
+
+    for name in created_names:
+        assert name in listed_names
+
+    # Get individual item details
+    for item_data in items_data:
+        response = client.get(f"/api/v1/items/{item_data['name']}")
+        assert response.status_code == 200
+        details = response.json()
+        assert details["name"] == item_data["name"]
+        assert details["kind"] == item_data["kind"]
+        assert details["created_by"] == item_data["user"]
+
+    # Delete one item
+    delete_target = items_data[0]["name"]
+    r2 = client.delete(f"/api/v1/items/{delete_target}")
+    assert r2.status_code == 200
+
+    # Verify it's removed from listings
+    r3 = client.get("/api/v1/items")
+    assert r3.status_code == 200
+    remaining_items = [item["name"] for item in r3.json()["items"]]
+    assert delete_target not in remaining_items
+
+    # Restore deleted item
+    r4 = client.post(f"/api/v1/items/{delete_target}/restore")
+    assert r4.status_code == 200
+
+    # Verify it's back in listings
+    r5 = client.get("/api/v1/items")
+    assert r5.status_code == 200
+    final_items = [item["name"] for item in r5.json()["items"]]
+    assert delete_target in final_items
+
+    _log_response_json("workflow_final_state", {"total_items": len(final_items)})

@@ -40,9 +40,9 @@ Convert SAVT into a platform that external systems can easily integrate with, en
 - **Benefits**: Future-proof API evolution, backward compatibility
 - **Quick win**: Regex route grouping in FastAPI
 
-#### 1.3 REST API Rate Limiting (90 mins)
+#### 1.3 REST API Rate Limiting (60 mins)
 - **Library**: `slowapi` (FastAPI-compatible rate limiting)
-- **Strategy**: Per-IP limits with Redis backend (fallback to in-memory)
+- **Strategy**: In-memory rate limiting (simple and sufficient)
 - **Limits**:
   - General API: 100 req/min per IP
   - Write operations: 30 req/min per IP
@@ -125,10 +125,10 @@ Convert SAVT into a platform that external systems can easily integrate with, en
   ```
 - **Reliability**: Signature verification, retry logic, dead letter queue
 
-#### 3.2 Real-time Updates (1.5 hours)
+#### 3.2 Real-time Updates (1 hour)
 - **WebSocket support** for live UI updates
 - **Server-Sent Events** for simpler integrations
-- **Implementation**: FastAPI WebSocket with Redis pub/sub
+- **Implementation**: FastAPI WebSocket with in-memory broadcasting
 
 ### **Phase 4: Ecosystem Features** (2-3 hours)
 **Goal: Platform-ready capabilities**
@@ -149,10 +149,10 @@ GET /api/v1/export         # Export decisions as JSON/CSV
 
 ## ⚡ **Quick Implementation Plan**
 
-### **Day 1** (Total: ~4 hours)
+### **Day 1** (Total: ~3.5 hours)
 - ✅ Enhanced OpenAPI docs (45m)
 - ✅ API versioning (30m)
-- ✅ Rate limiting (90m)
+- ✅ Rate limiting (60m)
 - ✅ Error handling standards (60m)
 
 ### **Day 2** (Total: ~3 hours)
@@ -163,8 +163,8 @@ GET /api/v1/export         # Export decisions as JSON/CSV
 - ✅ Webhook system (3h)
 - ✅ Bulk operations (1h)
 
-### **Day 4** (Total: ~2 hours)
-- ✅ Real-time updates (1.5h)
+### **Day 4** (Total: ~1.5 hours)
+- ✅ Real-time updates (1h)
 - ✅ Documentation & examples (30m)
 
 ## 📊 **Success Metrics**
@@ -177,7 +177,7 @@ GET /api/v1/export         # Export decisions as JSON/CSV
 
 ## 🔧 **Technical Stack Additions**
 
-- **Rate Limiting**: `slowapi` + Redis
+- **Rate Limiting**: `slowapi` (in-memory)
 - **Webhooks**: `httpx` async client + signature verification
 - **WebSockets**: FastAPI native WebSocket support
 - **Monitoring**: `prometheus-client` for metrics
