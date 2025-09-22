@@ -18,6 +18,7 @@ from .middleware import log_requests_middleware
 from .presentation.api_routes import api_router
 from .presentation.routes import router
 from .rate_limiting import rate_limit_middleware
+from .telemetry import setup_telemetry
 
 
 @asynccontextmanager
@@ -121,6 +122,9 @@ Future versions will include proper authentication and authorization.
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Setup OpenTelemetry tracing
+setup_telemetry(app)
 
 # Add middleware (order matters: rate limiting before logging)
 app.middleware("http")(rate_limit_middleware)
