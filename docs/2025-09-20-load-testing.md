@@ -1,5 +1,5 @@
 # Frontend Load Testing for 33 Concurrent Users
-*Documentation updated: September 20, 2025*
+*Documentation updated: 2025-09-20*
 
 This document describes the load testing implementation for validating that SAVT can handle 33 concurrent users as required.
 

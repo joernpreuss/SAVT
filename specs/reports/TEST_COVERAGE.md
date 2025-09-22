@@ -2,7 +2,7 @@
 
 This document shows the traceability between functional requirements (FR), business rules (BR), and test cases.
 
-**Last updated**: 2025-09-21**
+**Last updated**: 2025-09-21
 
 ## Coverage Summary
 

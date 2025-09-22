@@ -138,7 +138,7 @@ def _generate_coverage_matrix():
         "This document shows the traceability between functional requirements (FR), "
         + "business rules (BR), and test cases.",
         "",
-        f"**Last updated**: {timestamp}**",
+        f"**Last updated**: {timestamp}",
         "",
         "## Coverage Summary",
         "",

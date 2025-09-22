@@ -27,6 +27,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - Ruff format: Run `ruff format` after every change
 - **When user says "qa"**: Run `./qa check` - interactive menu with linting, formatting, type checking, tests. Press `h` for help, `echo '1' | ./qa check` for automation (example)
 - When user says "rr": This means "reduce redundancy" - Check the codebase for redundancy and reduce it by removing duplicate code, unused files, dead code, and consolidating similar functions across modules.
+- **Date formatting**: Always use ISO 8601 format (YYYY-MM-DD) for all dates in documentation. Always check the environment's "Today's date" before writing any dates.
 
 
 ## Development Protocol
