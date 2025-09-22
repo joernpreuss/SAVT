@@ -1,8 +1,11 @@
 # SAVT Concurrency Scaling Plan - 33 Simultaneous Users
 
 **Created**: 2025-09-18
+**Updated**: 2025-09-23
 **Target**: Support 33 simultaneous users without performance degradation
 **Current State**: SQLite with single-threaded writes, full page reloads, no connection pooling
+
+> **IMPORTANT NOTE (2025-09-23)**: Data migration FROM SQLite TO PostgreSQL will never be needed because SQLite will always only contain test data. Production deployments start fresh with PostgreSQL - no data migration tooling required.
 
 ## Problem Analysis
 
