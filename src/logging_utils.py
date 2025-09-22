@@ -4,6 +4,8 @@ from typing import Any
 
 from fastapi import Request
 
+from .request_utils import get_client_ip
+
 
 def log_user_action(
     action: str, user: str, logger_name: str = "user_actions", **kwargs: Any
@@ -48,7 +50,7 @@ def log_api_request(
         "method": request.method,
         "path": request.url.path,
         "status_code": response_status,
-        "client_ip": request.client.host if request.client else None,
+        "client_ip": get_client_ip(request),
         "user_agent": request.headers.get("user-agent", "Unknown")[:100],
     }
 

@@ -1,10 +1,35 @@
 import os
 from datetime import datetime
+from typing import Any
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+
+
+class TestSession(Session):
+    """Extended Session class for testing with database URL tracking."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.test_database_url: str | None = None
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiting_for_tests():
+    """Disable rate limiting for most tests to avoid interference."""
+    from src.rate_limiting import rate_limiter
+
+    # Reset and disable rate limiting for tests
+    rate_limiter.reset()
+    rate_limiter.disable()
+
+    yield
+
+    # Re-enable rate limiting after test
+    rate_limiter.enable()
+    rate_limiter.reset()
 
 
 @pytest.fixture(scope="function")
@@ -107,9 +132,9 @@ def session_fixture():
         SQLModel.metadata.create_all(file_engine)  # type: ignore[misc]
 
         # Create session from file engine
-        with Session(file_engine) as session:
+        with TestSession(file_engine) as session:
             # Store the database URL for async session creation
-            session._test_database_url = file_database_url
+            session.test_database_url = file_database_url
             yield session
 
         # Clean up the temporary file
@@ -119,9 +144,9 @@ def session_fixture():
             pass
     else:
         # For PostgreSQL, use committed sessions to share data
-        with Session(engine) as session:
+        with TestSession(engine) as session:
             # Store the database URL for async session creation
-            session._test_database_url = database_url
+            session.test_database_url = database_url
             yield session
             # Session commits automatically when exiting the context
 

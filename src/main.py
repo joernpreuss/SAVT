@@ -17,6 +17,7 @@ from .logging_utils import log_system_info
 from .middleware import log_requests_middleware
 from .presentation.api_routes import api_router
 from .presentation.routes import router
+from .rate_limiting import rate_limit_middleware
 
 
 @asynccontextmanager
@@ -78,6 +79,15 @@ This REST API enables programmatic integration with SAVT for:
 - **Custom UI development** and mobile applications
 - **Bulk operations** and reporting for analytics
 
+## Rate Limiting
+
+API endpoints are rate limited for stability and fair usage:
+- **General endpoints**: 100 requests per minute per IP
+- **Write operations**: 30 requests per minute per IP
+- **Bulk operations**: 10 requests per minute per IP
+
+Rate limit headers (`X-RateLimit-*`) are included in all API responses.
+
 ## Authentication
 
 Currently, user identification is handled via simple string usernames.
@@ -112,7 +122,8 @@ Future versions will include proper authentication and authorization.
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Add request logging middleware
+# Add middleware (order matters: rate limiting before logging)
+app.middleware("http")(rate_limit_middleware)
 app.middleware("http")(log_requests_middleware)
 
 # Include routers

@@ -48,16 +48,15 @@ def _get_single_key() -> str:
         # Windows
         import msvcrt  # type: ignore
 
-        key_bytes = msvcrt.getch()  # type: ignore
-        key = key_bytes.decode("utf-8")
+        key_bytes: bytes = msvcrt.getch()  # type: ignore
+        key: str = key_bytes.decode("utf-8")
         # Handle ESC key (ASCII 27)
-        if ord(key) == 27:
+        if ord(key[0]) == 27:
             return "q"  # Treat ESC as quit
         return key.lower()  # type: ignore
     except ImportError:
         try:
             # Unix/Linux/macOS
-            import sys
             import termios
             import tty
 
@@ -160,7 +159,7 @@ def _check_trailing_newlines(fix: bool = False) -> bool:
 
     exclude_dirs = {".venv", ".git", ".pytest_cache", ".ruff_cache", ".mypy_cache"}
 
-    missing_files = []
+    missing_files: list[str] = []
 
     # Check files with extensions
     for pattern in extensions:
@@ -171,7 +170,7 @@ def _check_trailing_newlines(fix: bool = False) -> bool:
                 with open(file_path, "rb") as f:
                     f.seek(-1, 2)  # Go to last byte
                     if f.read(1) != b"\n":
-                        missing_files.append(file_path)
+                        missing_files.append(str(file_path))
 
     # Check specific root-level executable scripts
     root_executables = ["pytreqt", "qa"]
@@ -181,16 +180,16 @@ def _check_trailing_newlines(fix: bool = False) -> bool:
             with open(file_path, "rb") as f:
                 f.seek(-1, 2)  # Go to last byte
                 if f.read(1) != b"\n":
-                    missing_files.append(file_path)
+                    missing_files.append(str(file_path))
 
     if missing_files:
         console.print("❌ Files missing trailing newlines:", style="red")
-        for file_path in missing_files:
-            console.print(f"  {file_path}", style="dim")
+        for file_name in missing_files:
+            console.print(f"  {file_name}", style="dim")
 
         if fix:
-            for file_path in missing_files:
-                with open(file_path, "a") as f:
+            for file_name in missing_files:
+                with open(file_name, "a") as f:
                     f.write("\n")
             console.print("✅ Added trailing newlines", style="green")
             return True
@@ -339,8 +338,9 @@ def _show_requirements_coverage() -> None:
     console.print(f"  Requirements covered: {summary['total_requirements']}")
 
 
-def _run_individual_check(check_type: str) -> None:
+def _run_individual_check(check_type: str, exit_on_failure: bool = False) -> bool:
     """Run a specific check using existing logic."""
+    success = False
     try:
         if check_type == "format":
             console.print("✨ Running formatter...", style="cyan")
@@ -380,12 +380,34 @@ def _run_individual_check(check_type: str) -> None:
                 console.print("❌ Trailing newline issues found", style="red")
     except Exception:
         # Continue the interactive loop on any error
-        pass
+        success = False
+
+    if exit_on_failure and not success:
+        sys.exit(1)
+
+    return success
 
 
 def _interactive_menu(success: bool = True, title: str = "🧪 Test Selection") -> bool:
     """Run the interactive menu for test selection and individual checks."""
     selected_db = "sqlite"  # Default database
+
+    # Mapping of choice to parallel workers (Fibonacci sequence)
+    parallel_workers = {
+        "1": 1,  # Single-threaded
+        "2": 2,
+        "3": 3,
+        "4": 5,
+        "5": 8,
+        "6": 13,
+        "7": 21,
+        "8": 34,
+        "9": 55,
+        "0": 89,
+        "x": 120,
+        "y": 160,
+        "z": 200,
+    }
 
     while True:
         console.print(title, style="cyan")
@@ -413,16 +435,13 @@ def _interactive_menu(success: bool = True, title: str = "🧪 Test Selection") 
             console.print("  (a) - Run all checks")
             console.print()
             console.print("  Run tests with parallel workers:")
-            console.print("  (1) - Run with 1 worker (single-threaded)")
-            console.print("  (2) - Run with 2 parallel workers")
-            console.print("  (3) - Run with 3 parallel workers")
-            console.print("  (4) - Run with 5 parallel workers")
-            console.print("  (5) - Run with 8 parallel workers")
-            console.print("  (6) - Run with 13 parallel workers")
-            console.print("  (7) - Run with 21 parallel workers")
-            console.print("  (8) - Run with 34 parallel workers")
-            console.print("  (9) - Run with 55 parallel workers")
-            console.print("  (0) - Run with 89 parallel workers")
+            for key, workers in parallel_workers.items():
+                if workers == 1:
+                    console.print(
+                        f"  ({key}) - Run with {workers} worker (single-threaded)"
+                    )
+                else:
+                    console.print(f"  ({key}) - Run with {workers} parallel workers")
             console.print()
             console.print("  (r) - View requirements coverage")
             console.print("  (c) - Clear screen")
@@ -449,37 +468,14 @@ def _interactive_menu(success: bool = True, title: str = "🧪 Test Selection") 
             _run_checks(
                 False, False, False, False, False, True
             )  # skip_tests=True to avoid double test menu
-        elif choice == "1":
-            test_success = _run_database_tests(
-                selected_db
-            )  # Single-threaded, no -n flag
-            success &= test_success
-        elif choice == "2":
-            test_success = _run_database_tests(selected_db, parallel=2)
-            success &= test_success
-        elif choice == "3":
-            test_success = _run_database_tests(selected_db, parallel=3)
-            success &= test_success
-        elif choice == "4":
-            test_success = _run_database_tests(selected_db, parallel=5)
-            success &= test_success
-        elif choice == "5":
-            test_success = _run_database_tests(selected_db, parallel=8)
-            success &= test_success
-        elif choice == "6":
-            test_success = _run_database_tests(selected_db, parallel=13)
-            success &= test_success
-        elif choice == "7":
-            test_success = _run_database_tests(selected_db, parallel=21)
-            success &= test_success
-        elif choice == "8":
-            test_success = _run_database_tests(selected_db, parallel=34)
-            success &= test_success
-        elif choice == "9":
-            test_success = _run_database_tests(selected_db, parallel=55)
-            success &= test_success
-        elif choice == "0":
-            test_success = _run_database_tests(selected_db, parallel=89)
+        elif choice in parallel_workers:
+            parallel = parallel_workers[choice]
+            if parallel == 1:
+                test_success = _run_database_tests(
+                    selected_db
+                )  # Single-threaded, no -n flag
+            else:
+                test_success = _run_database_tests(selected_db, parallel=parallel)
             success &= test_success
         elif choice in ["r", "requirements"]:
             _show_requirements_coverage()
@@ -564,7 +560,7 @@ def _run_checks(
         console.print()
 
     success = True
-    interactive_fixes = []
+    interactive_fixes: list[str] = []
     had_issues = False
 
     # Formatter (includes code and templates)
@@ -728,9 +724,8 @@ def format_command(
         typer.echo(ctx.get_help())
         raise typer.Exit()
 
-    console.print("✨ Running formatter...", style="cyan")
-
     if check_only:
+        console.print("✨ Running formatter...", style="cyan")
         # Check code formatting
         code_success = _run_command(
             _code_format_cmd(check=True), "Code format check", show_output=True
@@ -747,17 +742,7 @@ def format_command(
             console.print("❌ Formatting issues found", style="red")
             sys.exit(1)
     else:
-        # Format code
-        code_success = _run_command(_code_format_cmd(), "Code formatting")
-        # Format templates
-        template_success = _run_command(_template_format_cmd(), "Template formatting")
-
-        success = code_success and template_success
-        if success:
-            console.print("✅ Formatting completed", style="green")
-        else:
-            console.print("❌ Formatting failed", style="red")
-            sys.exit(1)
+        _run_individual_check("format", exit_on_failure=True)
 
 
 @app.command("lint")
@@ -776,20 +761,18 @@ def lint_command(
         typer.echo(ctx.get_help())
         raise typer.Exit()
 
-    console.print("🔍 Running linter...", style="cyan")
+    if fix:
+        console.print("🔍 Running linter...", style="cyan")
+        cmd = _lint_cmd(fix=fix, unsafe=unsafe_fixes)
+        success = _run_command(cmd, "Linting", show_output=True)
 
-    cmd = _lint_cmd(fix=fix, unsafe=unsafe_fixes)
-
-    success = _run_command(cmd, "Linting", show_output=True)
-
-    if success:
-        console.print("✅ No linting issues found", style="green")
-    else:
-        if fix:
-            console.print("❌ Some linting issues could not be fixed", style="red")
+        if success:
+            console.print("✅ No linting issues found", style="green")
         else:
-            console.print("❌ Linting issues found", style="red")
-        sys.exit(1)
+            console.print("❌ Some linting issues could not be fixed", style="red")
+            sys.exit(1)
+    else:
+        _run_individual_check("lint", exit_on_failure=True)
 
 
 @app.command("typecheck")
@@ -804,15 +787,7 @@ def typecheck_command(
         typer.echo(ctx.get_help())
         raise typer.Exit()
 
-    console.print("🔎 Running type checker...", style="cyan")
-
-    success = _run_command(_typecheck_cmd(), "Type checking")
-
-    if success:
-        console.print("✅ Type checking passed", style="green")
-    else:
-        console.print("❌ Type checking failed", style="red")
-        sys.exit(1)
+    _run_individual_check("typecheck", exit_on_failure=True)
 
 
 @app.command("newlines")
@@ -828,21 +803,17 @@ def newlines_command(
         typer.echo(ctx.get_help())
         raise typer.Exit()
 
-    console.print("📄 Checking file endings...", style="cyan")
+    if fix:
+        console.print("📄 Checking file endings...", style="cyan")
+        success = _check_trailing_newlines(fix)
 
-    success = _check_trailing_newlines(fix)
-
-    if success:
-        if fix:
+        if success:
             console.print("✅ All files have proper trailing newlines", style="green")
         else:
-            console.print("✅ All files have proper trailing newlines", style="green")
-    else:
-        if fix:
             console.print("❌ Failed to fix trailing newline issues", style="red")
-        else:
-            console.print("❌ Trailing newline issues found", style="red")
-        sys.exit(1)
+            sys.exit(1)
+    else:
+        _run_individual_check("newlines", exit_on_failure=True)
 
 
 @app.command("i")

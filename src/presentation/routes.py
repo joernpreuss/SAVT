@@ -31,6 +31,7 @@ from ..infrastructure.database.database import get_async_engine, get_session
 from ..infrastructure.database.database import get_async_session as get_async_session
 from ..infrastructure.database.models import Feature, Item
 from ..logging_config import get_logger
+from ..request_utils import is_htmx_request
 from ..utils import truncate_name
 from .error_handlers import handle_domain_error, handle_validation_error
 
@@ -228,7 +229,7 @@ async def route_create_item(
         raise handle_validation_error(e) from e
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(request, session, item_id)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -269,7 +270,7 @@ async def route_create_feature(
         raise handle_validation_error(e) from e
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(
             request, session, created_feature.item_id, message
         )
@@ -320,7 +321,7 @@ async def route_veto_item_feature(
         )
 
     # If HTMX request, return updated fragment
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return _render_fragment_response(request, session, item)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -365,7 +366,7 @@ async def route_unveto_item_feature(
         )
 
     # If HTMX request, return updated fragment
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return _render_fragment_response(request, session, item)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -403,7 +404,7 @@ async def route_move_feature(
         )
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -438,7 +439,7 @@ async def route_merge_items(
         )
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -464,7 +465,7 @@ async def route_split_item(
         logger.warning("Item split failed", item_name=item_name)
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -494,7 +495,7 @@ async def route_delete_item(
         message = f"{settings.object_name_singular.title()} '{item_name}' not found"
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -524,7 +525,7 @@ async def route_delete_feature(
         message = f"{settings.property_name_singular.title()} not found"
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -548,7 +549,7 @@ async def route_undo_item_deletion(
         message = f"Failed to restore item '{item_name}'"
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -572,7 +573,7 @@ async def route_undo_feature_deletion(
         message = "Failed to restore feature"
 
     # If HTMX request, return full page
-    if "HX-Request" in request.headers:
+    if is_htmx_request(request):
         return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
