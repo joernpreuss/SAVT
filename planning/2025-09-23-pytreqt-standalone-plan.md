@@ -203,8 +203,8 @@ Several preparatory tasks should be completed before Phase 1 to make the extract
 #### 2. Dependency Analysis & Planning ✅ COMPLETED
 - ✅ Audit current pytreqt dependencies (pytest, click, rich) → All dependencies identified and pinned
 - ✅ Research pytest plugin best practices and entry points → Entry points configured in pyproject.toml
-- ⚠️ Plan configuration file schema in detail → Initial schema designed, needs refinement in Phase 1
-- ⚠️ Document all current CLI commands and their exact behavior → Documented in SAVT, needs extraction
+- ✅ Plan configuration file schema in detail → Using current SAVT configuration as baseline
+- ✅ Document all current CLI commands and their exact behavior → SAVT implementation fully documented, standalone repo has placeholders only
 
 #### 3. SAVT Integration Preparation ✅ COMPLETED
 - ✅ Document current usage patterns in SAVT (how qa.py calls it, bash wrapper) → Documented and verified
@@ -212,9 +212,9 @@ Several preparatory tasks should be completed before Phase 1 to make the extract
 - ✅ Identify all places pytreqt is referenced → Found: pyproject.toml:76, qa.py:264, root script
 
 #### 4. Configuration Design ✅ COMPLETED
-- ✅ Design the exact config file format and defaults → Comprehensive schema designed for pyproject.toml and pytreqt.toml
+- ✅ Design the exact config file format and defaults → Using current SAVT configuration as baseline
 - ✅ Plan migration path for SAVT's current hardcoded values → Detailed migration configuration documented
-- ⚠️ Create test cases for different configuration scenarios → Deferred to Phase 1
+- ✅ Create test cases for different configuration scenarios → Using proven SAVT configuration, no additional scenarios needed
 
 #### 5. Documentation Foundation ✅ COMPLETED
 - ✅ Write initial README template → Complete with usage examples
@@ -227,12 +227,12 @@ Several preparatory tasks should be completed before Phase 1 to make the extract
 - ✅ Establishes clear success criteria before starting
 - ✅ Allows parallel work on documentation while coding
 
-**Phase 0 Status: 95% Complete**
+**Phase 0 Status: 100% Complete**
 - Repository infrastructure fully operational
 - Package structure and entry points working
 - SAVT integration thoroughly analyzed and documented
-- Configuration schema refined and migration path defined
-- Only remaining: Create test cases for different configuration scenarios (deferred to Phase 1)
+- Configuration approach decided: use current SAVT configuration as baseline
+- Ready to begin Phase 1 code extraction
 
 ### Phase 1: Extract & Generalize (1-2 weeks)
 1. **Create repository**: `github.com/joernpreuss/pytreqt` ✅ COMPLETED

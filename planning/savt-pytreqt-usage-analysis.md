@@ -62,11 +62,64 @@ output_file = Path("specs") / "reports" / "TEST_COVERAGE.md"
 
 ## Current CLI Commands
 
-1. `./pytreqt coverage` - Generate TEST_COVERAGE.md report
-2. `./pytreqt show` - Display last run results
-3. `./pytreqt stats` - Show detailed statistics
-4. `./pytreqt changes` - Check for requirement changes
-5. `./pytreqt update` - Update all artifacts
+### Main Usage
+```
+Usage: python -m src.tools.pytreqt [OPTIONS] COMMAND [ARGS]...
+  pytreqt - pytest requirements tracking
+```
+
+### Available Commands
+
+#### 1. `coverage` - Generate TEST_COVERAGE.md report
+```
+Usage: python -m src.tools.pytreqt coverage [OPTIONS]
+  Generate TEST_COVERAGE.md report
+Options:
+  -h, --help  Show this message and exit.
+```
+- **Function**: Extracts requirements from specifications, analyzes test coverage
+- **Output**: Creates `specs/reports/TEST_COVERAGE.md` with traceability matrix
+- **Example output**: "✅ Coverage report generated: specs/reports/TEST_COVERAGE.md"
+
+#### 2. `stats` - Show detailed requirements statistics
+```
+Usage: python -m src.tools.pytreqt stats [OPTIONS]
+  Show detailed requirements statistics
+Options:
+  --format [text|json|csv]  Output format
+  -h, --help                Show this message and exit.
+```
+- **Function**: Displays coverage statistics in table format
+- **Formats**: text (default), json, csv
+- **Output**: Rich table with metrics like total requirements, tested count, coverage %
+
+#### 3. `show` - Display last run results
+```
+Usage: python -m src.tools.pytreqt show [OPTIONS]
+  Show requirements coverage from last test run
+Options:
+  -h, --help  Show this message and exit.
+```
+- **Function**: Shows requirements coverage from cached test results
+- **Data source**: `.pytest_cache/requirements_coverage.json`
+
+#### 4. `changes` - Check for requirement changes
+```
+Usage: python -m src.tools.pytreqt changes [OPTIONS]
+  Check for requirement changes
+Options:
+  -h, --help  Show this message and exit.
+```
+- **Function**: Detects changes in requirements file and affected tests
+
+#### 5. `update` - Update all traceability artifacts
+```
+Usage: python -m src.tools.pytreqt update [OPTIONS]
+  Update all traceability artifacts
+Options:
+  -h, --help  Show this message and exit.
+```
+- **Function**: Runs all update operations (coverage, changes, stats)
 
 ## Current Dependencies
 
@@ -146,3 +199,28 @@ output_dir = "specs/reports"
 - CLI commands generate proper reports
 - QA tool integration functions as expected
 - No breaking changes anticipated with proper configuration
+
+## Standalone Repository Current State
+
+**Repository**: https://github.com/joernpreuss/pytreqt
+**Status**: Phase 0 complete, Phase 1 pending
+
+### Current CLI Implementation
+```bash
+$ pytreqt --help
+pytreqt CLI - Coming soon in Phase 1!
+```
+
+### Placeholder Commands (Not Implemented)
+- `pytreqt init` - Configuration generation (planned)
+- `pytreqt coverage` - Coverage analysis (planned)
+- `pytreqt show` - Display results (planned)
+
+### Current Code Status
+- **Entry points**: Configured in pyproject.toml
+- **Dependencies**: click, rich, pytest properly configured
+- **CLI module**: Placeholder main() function only
+- **Plugin module**: Empty RequirementsPlugin class with pytest hooks
+- **Tools**: Empty directory structure
+
+**Ready for Phase 1**: All infrastructure in place, needs real functionality from SAVT
