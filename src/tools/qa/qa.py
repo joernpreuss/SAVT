@@ -173,7 +173,7 @@ def _check_trailing_newlines(fix: bool = False) -> bool:
                         missing_files.append(str(file_path))
 
     # Check specific root-level executable scripts
-    root_executables = ["pytreqt", "qa"]
+    root_executables = ["qa"]
     for name in root_executables:
         file_path = Path(name)
         if file_path.is_file() and file_path.stat().st_size > 0:
@@ -261,7 +261,7 @@ def check(
 
 def _show_requirements_coverage() -> None:
     """Show requirements coverage from last test run using pytreqt."""
-    cmd = ["uv", "run", "python", "-m", "src.tools.pytreqt", "show"]
+    cmd = ["uv", "run", "pytreqt", "show"]
     _run_command(cmd, "Requirements coverage", show_output=True)
 
 
