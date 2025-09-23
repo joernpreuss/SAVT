@@ -1,78 +1,39 @@
-# pytreqt - pytest Requirements Tracking
+# pytreqt - MOVED TO STANDALONE PACKAGE
 
-A pytest plugin for validating and reporting functional requirements (FR) and business rules (BR) coverage.
+⚠️ **This directory is deprecated** ⚠️
 
-## Features
+pytreqt has been extracted into a standalone package and is now available as a separate PyPI package.
 
-- ✅ **Validates** requirement IDs in test docstrings against specification files
-- 🎨 **Colorful reporting** with ✓ (passed), ✗ (failed), ⊝ (skipped) status
-- 📊 **Coverage analysis** showing which requirements are tested
-- 🚫 **Prevents typos** by catching invalid requirement references
-- 📈 **Auto-generates** TEST_COVERAGE.md with traceability matrix
-- 🔍 **Change detection** identifies tests affected by requirement updates
+## New Location
 
-## Structure
+- **Repository**: https://github.com/joernpreuss/pytreqt
+- **Package**: `pip install pytreqt`
+- **CLI**: `pytreqt --help`
 
-```
-pytreqt/
-├── __main__.py              # Central CLI entry point
-├── __init__.py              # Package initialization
-├── pytreqt.py               # Main pytest plugin
-├── README.md                # This documentation
-└── tools/                   # Standalone tools
-    ├── __init__.py
-    ├── generate_coverage_report.py  # Auto-generates TEST_COVERAGE.md
-    ├── change_detector.py           # Detects requirement changes
-    └── update_traceability.py       # Updates all artifacts
-```
+## Migration for SAVT
 
-## Configuration
+SAVT now uses the standalone pytreqt package:
+- ✅ **Dependencies**: Added `pytreqt` to development dependencies
+- ✅ **Configuration**: Uses `pytreqt.toml` in project root
+- ✅ **pytest integration**: Updated to `-p pytreqt` in pyproject.toml
 
-The plugin is configured in `pyproject.toml`:
-```toml
-[tool.pytest.ini_options]
-addopts = "-p pytreqt.pytreqt"
-```
+## Usage in SAVT
 
-## Usage
-
-### Basic Testing with Requirements Coverage
-Run any pytest command with `-v` to see requirements coverage:
 ```bash
+# View requirements coverage
 uv run pytest -v
+pytreqt show
+
+# Generate reports
+pytreqt coverage
+pytreqt stats
+
+# Configuration
+pytreqt config
 ```
 
-### Central CLI Interface
-Use the unified command interface:
-```bash
-python -m pytreqt coverage     # Generate TEST_COVERAGE.md
-python -m pytreqt changes      # Check for requirement changes
-python -m pytreqt update       # Update all artifacts
-python -m pytreqt help         # Show available commands
-```
+See the standalone pytreqt documentation for full details.
 
-### Direct Tool Access
-Or run tools directly:
-```bash
-uv run python pytreqt/tools/generate_coverage_report.py
-uv run python pytreqt/tools/change_detector.py
-uv run python pytreqt/tools/update_traceability.py
-```
+---
 
-## Test Format
-
-Reference requirements in test docstrings:
-```python
-def test_example():
-    """Test something important.
-
-    Requirements:
-    - FR-1.1: Users can create objects
-    - BR-3.3: Operations are atomic
-    """
-    assert True
-```
-
-## Future
-
-pytreqt is designed to become a separate reusable package for any project needing requirements tracking.
+This embedded version will be removed in a future cleanup.

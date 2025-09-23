@@ -714,6 +714,27 @@ wheels = [
 ]
 
 [[package]]
+name = "pytreqt"
+version = "0.1.0"
+source = { editable = "../pytreqt" }
+dependencies = [
+    { name = "click" },
+    { name = "pytest" },
+    { name = "rich" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "build", marker = "extra == 'dev'", specifier = ">=0.10" },
+    { name = "click", specifier = ">=8.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0" },
+    { name = "pytest", specifier = ">=6.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
+    { name = "rich", specifier = ">=12.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -799,6 +820,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-xdist" },
+    { name = "pytreqt" },
     { name = "rich" },
     { name = "typer" },
     { name = "uvicorn" },
@@ -835,6 +857,7 @@ dev = [
     { name = "pytest", specifier = "==8.4.2" },
     { name = "pytest-asyncio", specifier = "==1.2.0" },
     { name = "pytest-xdist", specifier = "==3.8.0" },
+    { name = "pytreqt", editable = "../pytreqt" },
     { name = "rich", specifier = "==14.1.0" },
     { name = "typer", specifier = "==0.17.4" },
     { name = "uvicorn", specifier = "==0.35.0" },

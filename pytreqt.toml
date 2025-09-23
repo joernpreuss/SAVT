@@ -1,0 +1,11 @@
+requirements_file = "specs/spec/REQUIREMENTS.md"
+requirement_patterns = ["FR-\\d+\\.?\\d*", "BR-\\d+\\.?\\d*"]
+cache_dir = ".pytest_cache"
+
+[database]
+detect_from_env = ["TEST_DATABASE"]
+default_type = "SQLite"
+
+[reports]
+output_dir = "specs/reports"
+coverage_filename = "TEST_COVERAGE.md"

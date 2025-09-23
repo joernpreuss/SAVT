@@ -12,23 +12,38 @@ specs/
 └── reports/        # Output: Generated reports
     ├── TEST_COVERAGE.md   # Coverage matrix
     └── README.md
-
-pytest_requirements/    # Tooling (future separate package)
-├── pytest_requirements.py    # Validation plugin
-├── __init__.py
-└── README.md
 ```
 
 ## Workflow
 
 1. **Define requirements** in `spec/REQUIREMENTS.md`
 2. **Reference in tests** using docstring format
-3. **Auto-validate** with `pytest_requirements/` tooling
-4. **Generate reports** in `reports/` (planned)
+3. **Auto-validate** with pytreqt plugin
+4. **Generate reports** in `reports/`
 
 ## Usage
 
-Run tests with requirements coverage:
+**View requirements coverage:**
 ```bash
-uv run pytest -v
+uv run pytest -v  # Shows coverage in test output
+pytreqt show       # Rich-formatted coverage from last run
 ```
+
+**Generate coverage reports:**
+```bash
+pytreqt coverage  # Generate TEST_COVERAGE.md
+pytreqt stats     # Show detailed statistics
+```
+
+**Validate requirements:**
+```bash
+pytreqt validate  # Check requirements file format
+pytreqt changes   # Detect requirement changes
+```
+
+## Configuration
+
+Requirements tracking is configured via `pytreqt.toml` in the project root. This configures:
+- Requirements file location (`specs/spec/REQUIREMENTS.md`)
+- Requirement ID patterns (FR-*, BR-*)
+- Report output directory (`specs/reports/`)

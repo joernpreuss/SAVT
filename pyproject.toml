@@ -47,7 +47,11 @@ dev-dependencies = [
     "pytest-asyncio==1.2.0",
     "pytest-xdist==3.8.0",
     "mypy>=1.18.2",
+    "pytreqt",
 ]
+
+[tool.uv.sources]
+pytreqt = { path = "../pytreqt", editable = true }
 
 [tool.ruff]
 target-version = "py313"
@@ -74,7 +78,7 @@ indent-style = "space"
 
 [tool.pytest.ini_options]
 # Enable custom requirements plugin and async support
-addopts = "-p src.tools.pytreqt.pytreqt"
+addopts = "-p pytreqt"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
