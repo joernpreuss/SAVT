@@ -260,82 +260,9 @@ def check(
 
 
 def _show_requirements_coverage() -> None:
-    """Show requirements coverage from last test run."""
-    import json
-    from pathlib import Path
-
-    console.print("📋 Showing requirements coverage from last run...", style="cyan")
-
-    cache_file = Path(".pytest_cache") / "requirements_coverage.json"
-    if not cache_file.exists():
-        console.print(
-            "❌ No cached requirements coverage found. Run tests first.", style="red"
-        )
-        return
-
-    try:
-        with open(cache_file, encoding="utf-8") as f:
-            coverage_data = json.load(f)
-    except (json.JSONDecodeError, OSError) as e:
-        console.print(f"❌ Error reading cached coverage: {e}", style="red")
-        return
-
-    console.print("Requirements Coverage (Last Run)", style="green")
-    console.print()
-
-    # Show command info
-    command_info = coverage_data.get("command_info", {})
-    if command_info:
-        console.print(
-            f"Database: {command_info.get('database', 'unknown')}", style="dim"
-        )
-        console.print(
-            f"Generated: {command_info.get('timestamp', 'unknown')}", style="dim"
-        )
-        console.print(f"Command: {command_info.get('command', 'unknown')}", style="dim")
-
-        git_info = command_info.get("git", {})
-        if "error" not in git_info and git_info:
-            branch = git_info.get("branch", "unknown")
-            commit_short = git_info.get("commit_short", "unknown")
-            clean_status = "clean" if git_info.get("clean", False) else "dirty"
-            console.print(f"Git: {branch}@{commit_short} ({clean_status})", style="dim")
-
-        env_vars = command_info.get("environment_variables", {})
-        if env_vars:
-            env_str = ", ".join(f"{k}={v}" for k, v in env_vars.items())
-            console.print(f"Environment: {env_str}", style="dim")
-
-        console.print()
-
-    # Display requirements and their tests
-    for req in sorted(coverage_data["requirements"].keys()):
-        tests = coverage_data["requirements"][req]
-        console.print(f"  {req}:", style="white")
-
-        for test_info in tests:
-            result = test_info["result"]
-            if result == "passed":
-                symbol = "✓"
-                color = "green"
-            elif result == "failed":
-                symbol = "✗"
-                color = "red"
-            elif result == "skipped":
-                symbol = "⊝"
-                color = "yellow"
-            else:
-                symbol = "?"
-                color = "purple"
-
-            console.print(f"    {symbol} {test_info['test_name']}", style=color)
-
-    # Summary statistics
-    summary = coverage_data["summary"]
-    console.print()
-    console.print("Requirements Coverage Summary:", style="cyan")
-    console.print(f"  Tests with requirements: {summary['total_tests']}")
-    console.print(f"  Requirements covered: {summary['total_requirements']}")
+    """Show requirements coverage from last test run using pytreqt."""
+    cmd = ["uv", "run", "python", "-m", "src.tools.pytreqt", "show"]
+    _run_command(cmd, "Requirements coverage", show_output=True)
 
 
 def _run_individual_check(check_type: str, exit_on_failure: bool = False) -> bool:
