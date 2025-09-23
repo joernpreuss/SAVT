@@ -91,18 +91,52 @@ Support both `pyproject.toml` and standalone `pytreqt.toml`:
 
 ```toml
 [tool.pytreqt]
-requirements_file = "docs/requirements.md"  # Default: "requirements.md"
-requirement_patterns = ["REQ-\\d+", "US-\\d+"]  # Default: ["FR-\\d+\\.?\\d*", "BR-\\d+\\.?\\d*"]
+# Requirements file location (relative to project root)
+requirements_file = "requirements.md"  # Default: "requirements.md"
+
+# Requirement ID patterns (regex patterns)
+requirement_patterns = [
+    "FR-\\d+\\.?\\d*",  # Functional Requirements: FR-1.1, FR-2.3
+    "BR-\\d+\\.?\\d*"   # Business Rules: BR-3.1, BR-4.2
+]
+
+# Cache directory for storing test results
 cache_dir = ".pytest_cache"  # Default: ".pytest_cache"
-output_formats = ["markdown", "json", "csv"]  # Available formats
+
+# Available output formats
+output_formats = ["markdown", "json", "csv"]
 
 [tool.pytreqt.database]
-detect_from_env = ["DATABASE_URL", "DB_TYPE"]  # Environment variables to check
+# Environment variables to check for database type detection
+detect_from_env = ["TEST_DATABASE", "DATABASE_URL", "DB_TYPE"]
+# Default database type when no environment variables are set
 default_type = "SQLite"
 
 [tool.pytreqt.reports]
-output_dir = "docs/reports"  # Default: "."
-template_dir = "templates"   # Custom templates
+# Output directory for generated reports (relative to project root)
+output_dir = "."  # Default: current directory
+# Custom template directory (for future extensibility)
+template_dir = "templates"
+# Default output filename for coverage reports
+coverage_filename = "TEST_COVERAGE.md"
+```
+
+### SAVT-Specific Configuration
+For SAVT migration, the configuration would be:
+
+```toml
+[tool.pytreqt]
+requirements_file = "specs/spec/REQUIREMENTS.md"
+requirement_patterns = ["FR-\\d+\\.?\\d*", "BR-\\d+\\.?\\d*"]
+cache_dir = ".pytest_cache"
+
+[tool.pytreqt.database]
+detect_from_env = ["TEST_DATABASE"]
+default_type = "SQLite"
+
+[tool.pytreqt.reports]
+output_dir = "specs/reports"
+coverage_filename = "TEST_COVERAGE.md"
 ```
 
 
@@ -172,16 +206,15 @@ Several preparatory tasks should be completed before Phase 1 to make the extract
 - ⚠️ Plan configuration file schema in detail → Initial schema designed, needs refinement in Phase 1
 - ⚠️ Document all current CLI commands and their exact behavior → Documented in SAVT, needs extraction
 
-#### 3. SAVT Integration Preparation ⚠️ PARTIALLY COMPLETED
-- ❌ Create branch in SAVT for pytreqt migration → Not yet started
-- ⚠️ Document current usage patterns in SAVT (how qa.py calls it, bash wrapper) → Documented but needs verification
-- ❌ Test current pytreqt functionality thoroughly to establish baseline → Needs completion before Phase 1
+#### 3. SAVT Integration Preparation ✅ COMPLETED
+- ✅ Document current usage patterns in SAVT (how qa.py calls it, bash wrapper) → Documented and verified
+- ✅ Test current pytreqt functionality thoroughly to establish baseline → All functionality verified working
 - ✅ Identify all places pytreqt is referenced → Found: pyproject.toml:76, qa.py:264, root script
 
-#### 4. Configuration Design ⚠️ PARTIALLY COMPLETED
-- ✅ Design the exact config file format and defaults → Schema designed for pyproject.toml and pytreqt.toml
-- ⚠️ Plan migration path for SAVT's current hardcoded values → Identified but migration path needs detailing
-- ❌ Create test cases for different configuration scenarios → Deferred to Phase 1
+#### 4. Configuration Design ✅ COMPLETED
+- ✅ Design the exact config file format and defaults → Comprehensive schema designed for pyproject.toml and pytreqt.toml
+- ✅ Plan migration path for SAVT's current hardcoded values → Detailed migration configuration documented
+- ⚠️ Create test cases for different configuration scenarios → Deferred to Phase 1
 
 #### 5. Documentation Foundation ✅ COMPLETED
 - ✅ Write initial README template → Complete with usage examples
@@ -194,10 +227,12 @@ Several preparatory tasks should be completed before Phase 1 to make the extract
 - ✅ Establishes clear success criteria before starting
 - ✅ Allows parallel work on documentation while coding
 
-**Phase 0 Status: 85% Complete**
+**Phase 0 Status: 95% Complete**
 - Repository infrastructure fully operational
 - Package structure and entry points working
-- Some SAVT integration work and testing remains
+- SAVT integration thoroughly analyzed and documented
+- Configuration schema refined and migration path defined
+- Only remaining: Create test cases for different configuration scenarios (deferred to Phase 1)
 
 ### Phase 1: Extract & Generalize (1-2 weeks)
 1. **Create repository**: `github.com/joernpreuss/pytreqt` ✅ COMPLETED
