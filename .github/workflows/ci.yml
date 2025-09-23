@@ -13,6 +13,24 @@ jobs:
       # Ensure terminology matches tests (e.g., placeholder expects "Pizza-1, Pizza-2")
       OBJECT_NAME_SINGULAR: pizza
       PROPERTY_NAME_SINGULAR: topping
+      # Database configuration for tests
+      DATABASE_URL: postgresql://savt_user:savt_password@localhost:5432/savt_test
+      TEST_DATABASE: postgresql
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: savt_user
+          POSTGRES_PASSWORD: savt_password
+          POSTGRES_DB: savt_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     strategy:
       matrix:
         python-version: ["3.13"]
