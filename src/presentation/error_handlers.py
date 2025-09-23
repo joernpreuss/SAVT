@@ -3,7 +3,7 @@
 from typing import Any
 
 from fastapi import HTTPException, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from ..config import settings
@@ -233,26 +233,3 @@ def _extract_field_errors_from_value_error(error: ValueError) -> list[dict[str, 
         )
 
     return errors
-
-
-def render_error_response(
-    request: Request, error_message: str, status_code: int = 400
-) -> HTMLResponse:
-    """Render error response for HTML requests."""
-
-    # For HTML responses, show the error message on the main page
-    try:
-        from .routes import get_session, render_full_page_response
-
-        session = next(get_session())
-        response = render_full_page_response(request, session, message=error_message)
-        response.status_code = status_code
-        return response
-    except Exception:
-        # Fallback if main page rendering fails
-        return templates.TemplateResponse(
-            request,
-            "error.html",
-            {"error_message": error_message, "settings": settings},
-            status_code=status_code,
-        )

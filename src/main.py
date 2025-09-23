@@ -200,7 +200,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         )
     else:
         # For HTML requests, return a user-friendly error
-        from .presentation.error_handlers import render_error_response
+        from .presentation.routes import render_error_response
 
         return render_error_response(
             request, "Please check your input and try again.", status_code=422
@@ -238,7 +238,7 @@ async def database_error_handler(request: Request, exc: SQLAlchemyError):
             content=problem.model_dump(exclude_none=True),
         )
     else:
-        from .presentation.error_handlers import render_error_response
+        from .presentation.routes import render_error_response
 
         return render_error_response(
             request, "A database error occurred. Please try again.", status_code=500
@@ -268,7 +268,7 @@ async def general_exception_handler(request: Request, exc: Exception):
             content=problem.model_dump(exclude_none=True),
         )
     else:
-        from .presentation.error_handlers import render_error_response
+        from .presentation.routes import render_error_response
 
         return render_error_response(
             request, "Something went wrong. Please try again.", status_code=500

@@ -33,5 +33,11 @@
   "pythonVersion": "3.13",
   "pythonPlatform": "All",
   "venvPath": ".",
-  "venv": ".venv"
+  "venv": ".venv",
+  "executionEnvironments": [
+    {
+      "root": "src",
+      "extraPaths": ["."]
+    }
+  ]
 }

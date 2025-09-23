@@ -46,6 +46,7 @@ dev-dependencies = [
     "typer==0.17.4",
     "pytest-asyncio==1.2.0",
     "pytest-xdist==3.8.0",
+    "mypy>=1.18.2",
 ]
 
 [tool.ruff]

@@ -577,3 +577,23 @@ async def route_undo_feature_deletion(
         return render_full_page_response(request, session, message=message)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+def render_error_response(
+    request: Request, error_message: str, status_code: int = 400
+) -> HTMLResponse:
+    """Render error response for HTML requests."""
+    # For HTML responses, show the error message on the main page
+    try:
+        session = next(get_session())
+        response = render_full_page_response(request, session, message=error_message)
+        response.status_code = status_code
+        return response
+    except Exception:
+        # Fallback if main page rendering fails
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {"error_message": error_message, "settings": settings},
+            status_code=status_code,
+        )
