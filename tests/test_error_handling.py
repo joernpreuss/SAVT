@@ -2,14 +2,23 @@
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
+from src.infrastructure.database.database import get_session
 from src.main import app
 
 
-@pytest.fixture
-def client():
-    """Create test client."""
-    return TestClient(app)
+@pytest.fixture(name="client")
+def client_fixture(session: Session):
+    """Create test client with database session."""
+
+    def get_session_override():
+        return session
+
+    app.dependency_overrides[get_session] = get_session_override
+    client = TestClient(app)
+    yield client
+    app.dependency_overrides.clear()
 
 
 def test_api_validation_error_returns_problem_details(client):
