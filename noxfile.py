@@ -2,6 +2,9 @@
 
 import nox  # pyright: ignore[reportMissingImports] # noqa: I001
 
+# Configure nox to use uv for faster package installs
+nox.options.default_venv_backend = "uv"
+
 # Python versions to test (SAVT uses Python 3.13)
 PYTHON_VERSIONS = ["3.13"]
 
