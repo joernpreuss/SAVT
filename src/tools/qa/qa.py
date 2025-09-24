@@ -172,37 +172,33 @@ def _prompt_single_key(message: str, options: list[str], default: str = "") -> s
 
 def _run_command(cmd: list[str], description: str, show_output: bool = False) -> bool:
     """Run a command and return success status."""
+
+    def _print_with_warning_filter(output: str) -> None:
+        """Print output and add explanation for VIRTUAL_ENV warnings."""
+        lines = output.splitlines()
+        for line in lines:
+            print(line)
+            if "VIRTUAL_ENV=" in line and "does not match" in line:
+                console.print(
+                    "ℹ️  Harmless - nox isolation working as expected", style="dim cyan"
+                )
+
     try:
         if show_output:
-            # Flush console output before running subprocess
-            console.file.flush()
-            sys.stdout.flush()
-            sys.stderr.flush()
-            # Add a small delay to let output settle
-            import time
-
-            time.sleep(0.01)
-            # Let output go directly to terminal to preserve colors
-            result = subprocess.run(cmd, check=True, text=True)
-            # Flush again after subprocess completes
-            sys.stdout.flush()
-            sys.stderr.flush()
-            # Print a newline to separate from subprocess output
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            if result.stdout:
+                _print_with_warning_filter(result.stdout)
+            if result.stderr:
+                _print_with_warning_filter(result.stderr)
             print()
         else:
             result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         return result.returncode == 0
     except subprocess.CalledProcessError as e:
-        if show_output:
-            # Output was already shown during execution, just flush
-            sys.stdout.flush()
-            sys.stderr.flush()
-        else:
-            # Show captured output
-            if e.stdout:
-                print(e.stdout, end="")
-            if e.stderr:
-                print(e.stderr, end="")
+        if e.stdout:
+            _print_with_warning_filter(e.stdout)
+        if e.stderr:
+            _print_with_warning_filter(e.stderr)
         return False
 
 

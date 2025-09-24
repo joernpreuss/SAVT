@@ -9,41 +9,13 @@ from ..infrastructure.database.models import Feature
 from ..logging_config import get_logger
 from ..logging_utils import log_database_operation, log_user_action
 from ..utils import apply_veto_to_feature
-from .validation import validate_entity_name_with_logging
+from .validation import commit_and_refresh_entity, validate_entity_name_with_logging
 
 logger: Final = get_logger(__name__)
 
 
 class FeatureAlreadyExistsError(ValueError):
     pass
-
-
-def _validate_feature_name(name: str) -> None:
-    """Validate feature name using shared validation logic.
-
-    Args:
-        name: The name to validate
-
-    Raises:
-        ValueError: If name is empty, too long, or contains problematic characters
-    """
-    validate_entity_name_with_logging(name, "feature")
-
-
-def _commit_and_refresh_feature(session: Session, feature: Feature) -> Feature:
-    """Common pattern for committing and refreshing features.
-
-    Args:
-        session: Database session
-        feature: Feature to commit and refresh
-
-    Returns:
-        The refreshed feature
-    """
-    session.add(feature)
-    session.commit()
-    session.refresh(feature)
-    return feature
 
 
 def get_features(session: Session) -> Sequence[Feature]:
@@ -95,7 +67,7 @@ def create_feature(session: Session, feature: Feature) -> tuple[Feature, str | N
     )
 
     # Validate name using feature-specific validation function
-    _validate_feature_name(feature.name)
+    validate_entity_name_with_logging(feature.name, "feature")
 
     # Check if feature with same name and item_id already exists
     existing_feature: Final = get_feature(session, feature.name, feature.item_id)
@@ -139,7 +111,7 @@ def create_feature(session: Session, feature: Feature) -> tuple[Feature, str | N
             return existing_feature, message
 
     # Create new feature if none exists
-    _commit_and_refresh_feature(session, feature)
+    commit_and_refresh_entity(session, feature)
 
     log_database_operation(
         operation="create",

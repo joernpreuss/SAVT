@@ -48,6 +48,8 @@ def main(fix: bool, files: tuple[Path, ...]) -> None:
             ".mypy_cache",
             ".nox",
             "__pycache__",
+            "htmlcov",  # Coverage report files
+            ".claude",  # Local Claude settings
         }
 
         # Check files with extensions

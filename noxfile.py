@@ -18,7 +18,6 @@ TYPECHECK_PATHS = ["src/", "tests/"]
 DJLINT_TOOL = ["uv", "run", "djlint"]
 DJLINT_PATHS = ["templates/"]
 
-
 def get_lint_command(
     fix: bool = False, unsafe: bool = False, path: str = "."
 ) -> list[str]:
@@ -60,42 +59,42 @@ def get_djlint_command(check: bool = False, path: str = ".") -> list[str]:
 def lint(session: nox.Session) -> None:
     """Run linting with ruff check."""
     session.install("-e", ".[dev]")
-    session.run(*get_lint_command())
+    session.run(*get_lint_command(), external=True)
 
 
 @nox.session(python=PYTHON_VERSIONS)
 def mypy(session: nox.Session) -> None:
     """Run type checking with mypy."""
     session.install("-e", ".[dev]")
-    session.run(*get_typecheck_command())
+    session.run(*get_typecheck_command(), external=True)
 
 
 @nox.session(python=PYTHON_VERSIONS)
 def format_check(session: nox.Session) -> None:
     """Check code formatting with ruff format."""
     session.install("-e", ".[dev]")
-    session.run(*get_format_command(check=True))
+    session.run(*get_format_command(check=True), external=True)
 
 
 @nox.session(python=PYTHON_VERSIONS)
 def format(session: nox.Session) -> None:
     """Format code with ruff format."""
     session.install("-e", ".[dev]")
-    session.run(*get_format_command())
+    session.run(*get_format_command(), external=True)
 
 
 @nox.session(python=PYTHON_VERSIONS)
 def djlint_check(session: nox.Session) -> None:
     """Check HTML template formatting with djlint."""
     session.install("-e", ".[dev]")
-    session.run(*get_djlint_command(check=True))
+    session.run(*get_djlint_command(check=True), external=True)
 
 
 @nox.session(python=PYTHON_VERSIONS)
 def djlint_format(session: nox.Session) -> None:
     """Format HTML templates with djlint."""
     session.install("-e", ".[dev]")
-    session.run(*get_djlint_command())
+    session.run(*get_djlint_command(), external=True)
 
 
 @nox.session(python=PYTHON_VERSIONS)

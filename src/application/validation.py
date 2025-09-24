@@ -4,6 +4,8 @@ This module provides common validation functions used across different services
 to ensure consistent business rule enforcement and eliminate code duplication.
 """
 
+from sqlmodel import Session, SQLModel
+
 from ..domain.entities import validate_entity_name
 from ..domain.exceptions import ValidationError
 from ..logging_config import get_logger
@@ -47,3 +49,19 @@ def validate_entity_name_with_logging(name: str, entity_type: str = "entity") ->
 
         # Convert ValidationError to ValueError for backward compatibility
         raise ValueError(str(e)) from e
+
+
+def commit_and_refresh_entity[T: SQLModel](session: Session, entity: T) -> T:
+    """Common pattern for committing and refreshing entities.
+
+    Args:
+        session: Database session
+        entity: Entity to commit and refresh
+
+    Returns:
+        The refreshed entity
+    """
+    session.add(entity)
+    session.commit()
+    session.refresh(entity)
+    return entity

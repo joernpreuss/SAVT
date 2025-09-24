@@ -8,41 +8,13 @@ from sqlmodel import Session, select
 from ..infrastructure.database.models import Item
 from ..logging_config import get_logger
 from ..logging_utils import log_database_operation
-from .validation import validate_entity_name_with_logging
+from .validation import commit_and_refresh_entity, validate_entity_name_with_logging
 
 logger: Final = get_logger(__name__)
 
 
 class ItemAlreadyExistsError(ValueError):
     pass
-
-
-def _validate_item_name(name: str) -> None:
-    """Validate item name using shared validation logic.
-
-    Args:
-        name: The name to validate
-
-    Raises:
-        ValueError: If name is empty, too long, or contains problematic characters
-    """
-    validate_entity_name_with_logging(name, "item")
-
-
-def _commit_and_refresh_item(session: Session, item: Item) -> Item:
-    """Common pattern for committing and refreshing items.
-
-    Args:
-        session: Database session
-        item: Item to commit and refresh
-
-    Returns:
-        The refreshed item
-    """
-    session.add(item)
-    session.commit()
-    session.refresh(item)
-    return item
 
 
 def get_items(session: Session) -> Sequence[Item]:
@@ -75,12 +47,12 @@ def create_item(session: Session, item: Item) -> Item:
     logger.debug("Creating item", item_name=item.name)
 
     # Validate name using item-specific validation function
-    _validate_item_name(item.name)
+    validate_entity_name_with_logging(item.name, "item")
 
     same_name_item: Final = get_item(session, item.name)
 
     if not same_name_item:
-        _commit_and_refresh_item(session, item)
+        commit_and_refresh_entity(session, item)
 
         log_database_operation(
             operation="create",
@@ -220,7 +192,7 @@ async def create_item_async(session: AsyncSession, item: Item) -> Item:
     logger.debug("Creating item async", item_name=item.name)
 
     # Validate name using item-specific validation function
-    _validate_item_name(item.name)
+    validate_entity_name_with_logging(item.name, "item")
 
     same_name_item: Final = await get_item_async(session, item.name)
 
