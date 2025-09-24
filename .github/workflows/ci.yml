@@ -44,8 +44,6 @@ jobs:
       - name: Run type checker
         run: uv tool run mypy src/
 
-      - name: Debug CI environment
-        run: uv run python debug_ci.py
 
       - name: Run tests
         run: uv run pytest --verbose
