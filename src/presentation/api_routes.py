@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Final, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from pydantic import BaseModel, Field
@@ -19,6 +19,14 @@ from ..application.item_service import (
 )
 from ..infrastructure.database.database import get_session
 from ..infrastructure.database.models import Feature, Item
+
+
+def _ensure_id(model_id: int | None, model_name: Literal["Feature", "Item"]) -> int:
+    """Ensure that a model ID is not None, raising an error if it is."""
+    if model_id is None:
+        raise ValueError(f"{model_name} ID should not be None for saved records")
+    return model_id
+
 
 api_router: Final = APIRouter(
     prefix="/api/v1",
@@ -198,7 +206,7 @@ async def api_create_feature(
     feature, message = create_feature(session, Feature(name=feature_name.name))
     return FeatureCreateResponse(
         created=FeatureResponse(
-            id=feature.id,
+            id=_ensure_id(feature.id, "Feature"),
             name=feature.name,
             amount=feature.amount,
             item_id=feature.item_id,
@@ -256,7 +264,7 @@ async def api_user_create_feature(
     )
     return FeatureCreateResponse(
         created=FeatureResponse(
-            id=feature.id,
+            id=_ensure_id(feature.id, "Feature"),
             name=feature.name,
             amount=feature.amount,
             item_id=feature.item_id,
@@ -317,13 +325,14 @@ async def api_user_veto_feature(
     if feature:
         return FeatureActionResponse(
             vetoed=FeatureResponse(
-                id=feature.id,
+                id=_ensure_id(feature.id, "Feature"),
                 name=feature.name,
                 amount=feature.amount,
                 item_id=feature.item_id,
                 vetoed_by=feature.vetoed_by,
                 created_by=feature.created_by,
-            )
+            ),
+            unvetoed=None,
         )
     else:
         raise HTTPException(
@@ -380,14 +389,15 @@ async def api_user_unveto_feature(
 
     if feature:
         return FeatureActionResponse(
+            vetoed=None,
             unvetoed=FeatureResponse(
-                id=feature.id,
+                id=_ensure_id(feature.id, "Feature"),
                 name=feature.name,
                 amount=feature.amount,
                 item_id=feature.item_id,
                 vetoed_by=feature.vetoed_by,
                 created_by=feature.created_by,
-            )
+            ),
         )
     else:
         raise HTTPException(
@@ -515,7 +525,7 @@ async def api_create_item(
         item = create_item(session, Item(name=item_data.name, kind=item_data.kind))
         return ItemCreateResponse(
             created=ItemResponse(
-                id=item.id,
+                id=_ensure_id(item.id, "Item"),
                 name=item.name,
                 kind=item.kind,
                 created_by=item.created_by,
@@ -574,7 +584,7 @@ async def api_user_create_item(
         )
         return ItemCreateResponse(
             created=ItemResponse(
-                id=item.id,
+                id=_ensure_id(item.id, "Item"),
                 name=item.name,
                 kind=item.kind,
                 created_by=item.created_by,
@@ -641,7 +651,7 @@ async def api_list_items(
     item_list = sorted(
         [
             ItemListItem(
-                id=item.id,
+                id=_ensure_id(item.id, "Item"),
                 name=item.name,
                 kind=item.kind,
                 feature_count=len(item.features),
@@ -721,13 +731,13 @@ async def api_get_item(
         )
 
     return ItemResponse(
-        id=item.id,
+        id=_ensure_id(item.id, "Item"),
         name=item.name,
         kind=item.kind,
         created_by=item.created_by,
         features=[
             FeatureResponse(
-                id=feature.id,
+                id=_ensure_id(feature.id, "Feature"),
                 name=feature.name,
                 amount=feature.amount,
                 item_id=feature.item_id,

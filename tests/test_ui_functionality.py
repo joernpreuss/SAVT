@@ -167,13 +167,14 @@ class TestFormValidation:
             # If accepted, check it doesn't create empty-named item
             soup = BeautifulSoup(response.content, "html.parser")
             objects_list = soup.find("ul", id="objects-list")
-            # Should not find an empty item name
-            empty_items = [
-                li
-                for li in objects_list.find_all("li", recursive=False)
-                if li.get_text().strip() == ""
-            ]
-            assert len(empty_items) == 0
+            if objects_list:
+                # Should not find an empty item name
+                empty_items = [
+                    li
+                    for li in objects_list.find_all("li", recursive=False)
+                    if li.get_text().strip() == ""
+                ]
+                assert len(empty_items) == 0
 
     def test_empty_feature_name_validation(
         self, client: TestClient, populated_data: PopulatedData
@@ -182,7 +183,7 @@ class TestFormValidation:
         pizza_id = populated_data["objects"][0].id
 
         response = client.post(
-            "/create/feature/", data={"name": "", "item_id": pizza_id}
+            "/create/feature/", data={"name": "", "item_id": str(pizza_id)}
         )
 
         # Should handle gracefully

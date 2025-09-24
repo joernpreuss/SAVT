@@ -110,6 +110,35 @@ Pylance's workspace indexing gets corrupted and references temporary git-related
 
 ---
 
+## Issue 3: F2/F12 (Go to Definition, Rename) Not Working
+
+### Problem
+F2 (rename symbol) and F12 (go to definition) stop working in VS Code.
+
+### Solution
+This is usually caused by the Python language server being disabled.
+
+1. **Check Python language server setting:**
+   - Press `Ctrl+,` (or `Cmd+,`) to open Settings
+   - Search for "python language server"
+   - Ensure it's set to "Pylance" (not "None")
+
+2. **Or edit settings JSON directly:**
+   - Press `Ctrl+Shift+P`, type "Preferences: Open Settings (JSON)"
+   - Change `"python.languageServer": "None"` to `"python.languageServer": "Pylance"`
+
+3. **Verify Pylance is installed and enabled:**
+   - Press `Ctrl+Shift+X` to open Extensions
+   - Search for "Pylance" and ensure it's installed and enabled
+
+4. **Restart language server:**
+   - Press `Ctrl+Shift+P`, type "Pylance: Restart Server"
+
+### Root Cause
+The setting `"python.languageServer": "None"` completely disables language server features including F2/F12 functionality.
+
+---
+
 ## Language Server Alternatives
 
 If Pylance issues persist, consider switching:

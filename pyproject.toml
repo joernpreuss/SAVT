@@ -26,8 +26,8 @@ dependencies = [
     "opentelemetry-exporter-prometheus==0.58b0",
 ]
 
-[project.optional-dependencies]
-dev = []
+[project.scripts]
+qa = "src.tools.qa.qa:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

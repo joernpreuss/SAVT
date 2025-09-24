@@ -8,28 +8,61 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+
+# Use subprocess to call check_newlines script directly
+def _check_newlines_impl(fix: bool = False, path: str = ".") -> bool:
+    """Check newlines by calling the check_newlines.py script."""
+    script_dir = Path(__file__).parent
+    tools_dir = script_dir.parent  # Go up from src/tools/qa to src/tools
+    check_newlines_path = tools_dir / "check_newlines.py"
+
+    if check_newlines_path.exists():
+        cmd = ["python3", str(check_newlines_path)]
+        if fix:
+            cmd.append("--fix")
+
+        result = subprocess.run(cmd, cwd=path, capture_output=True, text=True)
+        return result.returncode == 0
+    else:
+        # Fallback implementation
+        return _check_trailing_newlines_fallback(fix, path)
+
+
 console = Console(force_terminal=True)
 
 
 # Command builders to avoid duplication and improve flexibility
-def _code_format_cmd(check: bool = False) -> list[str]:
+def _code_format_cmd(check: bool = False, path: str = ".") -> list[str]:
     """Build ruff format command."""
-    cmd = ["uv", "tool", "run", "ruff", "format", "src/", "tests/"]
+    src_path = f"{path}/src/" if path != "." else "src/"
+    tests_path = f"{path}/tests/" if path != "." else "tests/"
+    cmd = ["uv", "tool", "run", "ruff", "format", src_path, tests_path]
     if check:
         cmd.extend(["--check", "--diff"])
     return cmd
 
 
-def _template_format_cmd(check: bool = False) -> list[str]:
+def _template_format_cmd(check: bool = False, path: str = ".") -> list[str]:
     """Build djlint format command."""
+    templates_path = f"{path}/templates/" if path != "." else "templates/"
     if check:
-        return ["uv", "run", "djlint", "templates/"]
-    return ["uv", "run", "djlint", "templates/", "--reformat"]
+        return ["uv", "run", "djlint", templates_path]
+    return ["uv", "run", "djlint", templates_path, "--reformat"]
 
 
-def _lint_cmd(fix: bool = False, unsafe: bool = False) -> list[str]:
+def _has_templates_directory(path: str = ".") -> bool:
+    """Check if templates directory exists."""
+    from pathlib import Path
+
+    templates_path = Path(path) / "templates"
+    return templates_path.exists() and templates_path.is_dir()
+
+
+def _lint_cmd(fix: bool = False, unsafe: bool = False, path: str = ".") -> list[str]:
     """Build ruff check command with optional fixes."""
-    cmd = ["uv", "tool", "run", "ruff", "check", "src/", "tests/"]
+    src_path = f"{path}/src/" if path != "." else "src/"
+    tests_path = f"{path}/tests/" if path != "." else "tests/"
+    cmd = ["uv", "tool", "run", "ruff", "check", src_path, tests_path]
     if fix:
         cmd.append("--fix")
         if unsafe:
@@ -37,9 +70,11 @@ def _lint_cmd(fix: bool = False, unsafe: bool = False) -> list[str]:
     return cmd
 
 
-def _typecheck_cmd() -> list[str]:
+def _typecheck_cmd(path: str = ".") -> list[str]:
     """Build mypy command."""
-    return ["uv", "tool", "run", "mypy", "src/"]
+    src_path = f"{path}/src/" if path != "." else "src/"
+    tests_path = f"{path}/tests/" if path != "." else "tests/"
+    return ["uv", "tool", "run", "mypy", src_path, tests_path]
 
 
 def _get_single_key() -> str:
@@ -123,15 +158,29 @@ def _run_command(cmd: list[str], description: str, show_output: bool = False) ->
     """Run a command and return success status."""
     try:
         if show_output:
+            # Flush console output before running subprocess
+            console.file.flush()
+            sys.stdout.flush()
+            sys.stderr.flush()
+            # Add a small delay to let output settle
+            import time
+
+            time.sleep(0.01)
             # Let output go directly to terminal to preserve colors
             result = subprocess.run(cmd, check=True, text=True)
+            # Flush again after subprocess completes
+            sys.stdout.flush()
+            sys.stderr.flush()
+            # Print a newline to separate from subprocess output
+            print()
         else:
             result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         return result.returncode == 0
     except subprocess.CalledProcessError as e:
         if show_output:
-            # Output was already shown during execution
-            pass
+            # Output was already shown during execution, just flush
+            sys.stdout.flush()
+            sys.stderr.flush()
         else:
             # Show captured output
             if e.stdout:
@@ -141,8 +190,8 @@ def _run_command(cmd: list[str], description: str, show_output: bool = False) ->
         return False
 
 
-def _check_trailing_newlines(fix: bool = False) -> bool:
-    """Check and optionally fix trailing newlines."""
+def _check_trailing_newlines_fallback(fix: bool = False, path: str = ".") -> bool:
+    """Fallback implementation for checking trailing newlines (original version)."""
     extensions = [
         "*.py",
         "*.md",
@@ -163,7 +212,7 @@ def _check_trailing_newlines(fix: bool = False) -> bool:
 
     # Check files with extensions
     for pattern in extensions:
-        for file_path in Path(".").rglob(pattern):
+        for file_path in Path(path).rglob(pattern):
             if any(part in exclude_dirs for part in file_path.parts):
                 continue
             if file_path.is_file() and file_path.stat().st_size > 0:
@@ -175,7 +224,7 @@ def _check_trailing_newlines(fix: bool = False) -> bool:
     # Check specific root-level executable scripts
     root_executables = ["qa"]
     for name in root_executables:
-        file_path = Path(name)
+        file_path = Path(path) / name
         if file_path.is_file() and file_path.stat().st_size > 0:
             with open(file_path, "rb") as f:
                 f.seek(-1, 2)  # Go to last byte
@@ -202,12 +251,30 @@ def _check_trailing_newlines(fix: bool = False) -> bool:
         return True
 
 
+def _check_trailing_newlines(fix: bool = False, path: str = ".") -> bool:
+    """Check and optionally fix trailing newlines using the standalone script."""
+    try:
+        # Use the standalone implementation
+        success = _check_newlines_impl(fix=fix, path=path)
+
+        if not success and not fix:
+            console.print(
+                "Run with --fix-newlines to auto-fix these issues", style="yellow"
+            )
+
+        return success
+    except Exception as e:
+        console.print(f"Error checking newlines: {e}", style="red")
+        return False
+
+
 app = typer.Typer(
     name="qa",
     help="""SAVT Quality Assurance Tool
 
     Examples:
       qa check                   - run all checks (no fixes)
+      qa check /path/to/project  - run checks on specific path
       qa check --fix-all         - run checks with all fixes
       qa check --fix-format      - fix formatting only
       qa check --fix-lint        - fix linting only
@@ -236,6 +303,7 @@ def main():
 @app.command()
 def check(
     ctx: typer.Context,
+    path: str = typer.Argument(".", help="Path to the project directory to check"),
     fix_all: bool = typer.Option(False, "--fix-all", help="Auto-fix all issues"),
     fix_format: bool = typer.Option(
         False, "--fix-format", help="Auto-fix formatting issues"
@@ -256,7 +324,9 @@ def check(
     if help_flag:
         typer.echo(ctx.get_help())
         raise typer.Exit()
-    _run_checks(fix_all, fix_format, fix_lint, fix_newlines, unsafe_fixes, skip_tests)
+    _run_checks(
+        path, fix_all, fix_format, fix_lint, fix_newlines, unsafe_fixes, skip_tests
+    )
 
 
 def _show_requirements_coverage() -> None:
@@ -265,18 +335,22 @@ def _show_requirements_coverage() -> None:
     _run_command(cmd, "Requirements coverage", show_output=True)
 
 
-def _run_individual_check(check_type: str, exit_on_failure: bool = False) -> bool:
+def _run_individual_check(
+    check_type: str, path: str = ".", exit_on_failure: bool = False
+) -> bool:
     """Run a specific check using existing logic."""
     success = False
     try:
         if check_type == "format":
             console.print("✨ Running formatter...", style="cyan")
             # Format code
-            code_success = _run_command(_code_format_cmd(), "Code formatting")
-            # Format templates
-            template_success = _run_command(
-                _template_format_cmd(), "Template formatting"
-            )
+            code_success = _run_command(_code_format_cmd(path=path), "Code formatting")
+            # Format templates only if they exist
+            template_success = True
+            if _has_templates_directory(path):
+                template_success = _run_command(
+                    _template_format_cmd(path=path), "Template formatting"
+                )
             success = code_success and template_success
             if success:
                 console.print("✅ Formatting completed", style="green")
@@ -284,21 +358,21 @@ def _run_individual_check(check_type: str, exit_on_failure: bool = False) -> boo
                 console.print("❌ Formatting failed", style="red")
         elif check_type == "lint":
             console.print("🔍 Running linter...", style="cyan")
-            success = _run_command(_lint_cmd(), "Linting", show_output=True)
+            success = _run_command(_lint_cmd(path=path), "Linting", show_output=True)
             if success:
                 console.print("✅ No linting issues found", style="green")
             else:
                 console.print("❌ Linting issues found", style="red")
         elif check_type == "typecheck":
             console.print("🔎 Running type checker...", style="cyan")
-            success = _run_command(_typecheck_cmd(), "Type checking")
+            success = _run_command(_typecheck_cmd(path=path), "Type checking")
             if success:
                 console.print("✅ Type checking passed", style="green")
             else:
                 console.print("❌ Type checking failed", style="red")
         elif check_type == "newlines":
             console.print("📄 Checking file endings...", style="cyan")
-            success = _check_trailing_newlines(False)
+            success = _check_trailing_newlines(False, path=path)
             if success:
                 console.print(
                     "✅ All files have proper trailing newlines", style="green"
@@ -382,18 +456,18 @@ def _interactive_menu(success: bool = True, title: str = "🧪 Test Selection") 
             selected_db = "postgresql"
             console.print("✅ Selected PostgreSQL database", style="green")
         elif choice == "f":
-            _run_individual_check("format")
+            _run_individual_check("format", path=".")
         elif choice == "l":
-            _run_individual_check("lint")
+            _run_individual_check("lint", path=".")
         elif choice == "t":
-            _run_individual_check("typecheck")
+            _run_individual_check("typecheck", path=".")
         elif choice == "n":
-            _run_individual_check("newlines")
+            _run_individual_check("newlines", path=".")
         elif choice == "a":
             console.print("🔄 Rerunning all checks...", style="cyan")
             # Recursively call the function with same parameters
             _run_checks(
-                False, False, False, False, False, True
+                ".", False, False, False, False, False, True
             )  # skip_tests=True to avoid double test menu
         elif choice in parallel_workers:
             parallel = parallel_workers[choice]
@@ -470,6 +544,7 @@ def _run_database_tests(db_type: str, parallel: int = 1) -> bool:
 
 
 def _run_checks(
+    path: str,
     fix_all: bool,
     fix_format: bool,
     fix_lint: bool,
@@ -494,19 +569,29 @@ def _run_checks(
     console.print("✨ Running formatter...", style="cyan")
     if fix_format:
         # Format code
-        code_success = _run_command(_code_format_cmd(), "Code formatting")
-        # Format templates
-        template_success = _run_command(_template_format_cmd(), "Template formatting")
+        code_success = _run_command(_code_format_cmd(path=path), "Code formatting")
+        # Format templates only if they exist
+        template_success = True
+        if _has_templates_directory(path):
+            template_success = _run_command(
+                _template_format_cmd(path=path), "Template formatting"
+            )
         success &= code_success and template_success
     else:
         # Check code formatting
         code_format_result = _run_command(
-            _code_format_cmd(check=True), "Code format check", show_output=True
+            _code_format_cmd(check=True, path=path),
+            "Code format check",
+            show_output=True,
         )
-        # Check template formatting
-        template_format_result = _run_command(
-            _template_format_cmd(check=True), "Template format check", show_output=True
-        )
+        # Check template formatting only if templates exist
+        template_format_result = True
+        if _has_templates_directory(path):
+            template_format_result = _run_command(
+                _template_format_cmd(check=True, path=path),
+                "Template format check",
+                show_output=True,
+            )
 
         format_result = code_format_result and template_format_result
         success &= format_result
@@ -515,8 +600,9 @@ def _run_checks(
             had_issues = True
             choice = _prompt_fix_skip_quit("Formatting")
             if choice == "fix":
-                _run_command(_code_format_cmd(), "Code formatting")
-                _run_command(_template_format_cmd(), "Template formatting")
+                _run_command(_code_format_cmd(path=path), "Code formatting")
+                if _has_templates_directory(path):
+                    _run_command(_template_format_cmd(path=path), "Template formatting")
                 interactive_fixes.append("format")
         else:
             console.print("✅ No formatting issues found", style="green")
@@ -526,17 +612,17 @@ def _run_checks(
     console.print("🔍 Running linter...", style="cyan")
     if fix_lint:
         success &= _run_command(
-            _lint_cmd(fix=True, unsafe=unsafe_fixes), "Linting with fixes"
+            _lint_cmd(fix=True, unsafe=unsafe_fixes, path=path), "Linting with fixes"
         )
     else:
-        lint_result = _run_command(_lint_cmd(), "Linting", show_output=True)
+        lint_result = _run_command(_lint_cmd(path=path), "Linting", show_output=True)
         success &= lint_result
         if not lint_result:
             had_issues = True
             choice = _prompt_fix_skip_quit("Linting")
             if choice in ["fix", "unsafe_fix"]:
                 use_unsafe = unsafe_fixes or choice == "unsafe_fix"
-                lint_cmd = _lint_cmd(fix=True, unsafe=use_unsafe)
+                lint_cmd = _lint_cmd(fix=True, unsafe=use_unsafe, path=path)
 
                 fix_type = "unsafe fixes" if use_unsafe else "fixes"
                 _run_command(lint_cmd, f"Linting with {fix_type}")
@@ -544,7 +630,7 @@ def _run_checks(
 
                 # Check if issues remain after fix attempt
                 recheck_result = _run_command(
-                    _lint_cmd(), "Re-checking linting", show_output=True
+                    _lint_cmd(path=path), "Re-checking linting", show_output=True
                 )
 
                 # If issues still exist, offer unsafe fix option again
@@ -555,7 +641,7 @@ def _run_checks(
                     retry_choice = _prompt_fix_skip_quit("Linting")
                     if retry_choice == "unsafe_fix":
                         _run_command(
-                            _lint_cmd(fix=True, unsafe=True),
+                            _lint_cmd(fix=True, unsafe=True, path=path),
                             "Linting with unsafe fixes",
                         )
                         interactive_fixes.append("lint-unsafe")
@@ -565,21 +651,23 @@ def _run_checks(
 
     # Type checker
     console.print("🔎 Running type checker...", style="cyan")
-    success &= _run_command(_typecheck_cmd(), "Type checking")
+    success &= _run_command(
+        _typecheck_cmd(path=path), "Type checking", show_output=True
+    )
     console.print()
 
     # Trailing newlines
     console.print("📄 Checking file endings...", style="cyan")
     if fix_newlines:
-        success &= _check_trailing_newlines(fix_newlines)
+        success &= _check_trailing_newlines(fix_newlines, path=path)
     else:
-        newlines_result = _check_trailing_newlines(fix_newlines)
+        newlines_result = _check_trailing_newlines(fix_newlines, path=path)
         success &= newlines_result
         if not newlines_result:
             had_issues = True
             choice = _prompt_fix_skip_quit("Trailing newline")
             if choice == "fix":
-                _check_trailing_newlines(True)
+                _check_trailing_newlines(True, path=path)
                 interactive_fixes.append("newlines")
         else:
             console.print("✅ All files have proper trailing newlines", style="green")
@@ -622,6 +710,7 @@ def _run_checks(
 @app.command("fix-all")
 def fix_all_command(
     ctx: typer.Context,
+    path: str = typer.Argument(".", help="Path to the project directory to check"),
     skip_tests: bool = typer.Option(False, "--skip-tests", help="Skip running tests"),
     help_flag: bool = typer.Option(
         False, "-h", "--help", help="Show this message and exit"
@@ -632,13 +721,14 @@ def fix_all_command(
         typer.echo(ctx.get_help())
         raise typer.Exit()
     _run_checks(
-        True, False, False, False, False, skip_tests
+        path, True, False, False, False, False, skip_tests
     )  # fix_all=True enables all fixes
 
 
 @app.command("format")
 def format_command(
     ctx: typer.Context,
+    path: str = typer.Argument(".", help="Path to the project directory to check"),
     check_only: bool = typer.Option(
         False, "--check", help="Check formatting without fixing"
     ),
@@ -655,12 +745,18 @@ def format_command(
         console.print("✨ Running formatter...", style="cyan")
         # Check code formatting
         code_success = _run_command(
-            _code_format_cmd(check=True), "Code format check", show_output=True
+            _code_format_cmd(check=True, path=path),
+            "Code format check",
+            show_output=True,
         )
-        # Check template formatting
-        template_success = _run_command(
-            _template_format_cmd(check=True), "Template format check", show_output=True
-        )
+        # Check template formatting only if templates exist
+        template_success = True
+        if _has_templates_directory(path):
+            template_success = _run_command(
+                _template_format_cmd(check=True, path=path),
+                "Template format check",
+                show_output=True,
+            )
 
         success = code_success and template_success
         if success:
@@ -669,12 +765,13 @@ def format_command(
             console.print("❌ Formatting issues found", style="red")
             sys.exit(1)
     else:
-        _run_individual_check("format", exit_on_failure=True)
+        _run_individual_check("format", path=path, exit_on_failure=True)
 
 
 @app.command("lint")
 def lint_command(
     ctx: typer.Context,
+    path: str = typer.Argument(".", help="Path to the project directory to check"),
     fix: bool = typer.Option(False, "--fix", help="Fix linting issues"),
     unsafe_fixes: bool = typer.Option(
         False, "--unsafe-fixes", help="Enable unsafe fixes"
@@ -690,7 +787,7 @@ def lint_command(
 
     if fix:
         console.print("🔍 Running linter...", style="cyan")
-        cmd = _lint_cmd(fix=fix, unsafe=unsafe_fixes)
+        cmd = _lint_cmd(fix=fix, unsafe=unsafe_fixes, path=path)
         success = _run_command(cmd, "Linting", show_output=True)
 
         if success:
@@ -699,12 +796,13 @@ def lint_command(
             console.print("❌ Some linting issues could not be fixed", style="red")
             sys.exit(1)
     else:
-        _run_individual_check("lint", exit_on_failure=True)
+        _run_individual_check("lint", path=path, exit_on_failure=True)
 
 
 @app.command("typecheck")
 def typecheck_command(
     ctx: typer.Context,
+    path: str = typer.Argument(".", help="Path to the project directory to check"),
     help_flag: bool = typer.Option(
         False, "-h", "--help", help="Show this message and exit"
     ),
@@ -714,12 +812,13 @@ def typecheck_command(
         typer.echo(ctx.get_help())
         raise typer.Exit()
 
-    _run_individual_check("typecheck", exit_on_failure=True)
+    _run_individual_check("typecheck", path=path, exit_on_failure=True)
 
 
 @app.command("newlines")
 def newlines_command(
     ctx: typer.Context,
+    path: str = typer.Argument(".", help="Path to the project directory to check"),
     fix: bool = typer.Option(False, "--fix", help="Fix trailing newline issues"),
     help_flag: bool = typer.Option(
         False, "-h", "--help", help="Show this message and exit"
@@ -732,7 +831,7 @@ def newlines_command(
 
     if fix:
         console.print("📄 Checking file endings...", style="cyan")
-        success = _check_trailing_newlines(fix)
+        success = _check_trailing_newlines(fix, path=path)
 
         if success:
             console.print("✅ All files have proper trailing newlines", style="green")
@@ -740,7 +839,7 @@ def newlines_command(
             console.print("❌ Failed to fix trailing newline issues", style="red")
             sys.exit(1)
     else:
-        _run_individual_check("newlines", exit_on_failure=True)
+        _run_individual_check("newlines", path=path, exit_on_failure=True)
 
 
 @app.command("i")

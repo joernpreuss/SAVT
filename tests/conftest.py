@@ -75,7 +75,10 @@ def session_fixture():
 
         try:
             # Connect to default postgres database to create test database
-            admin_url = f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port}/postgres"
+            admin_url = (
+                f"postgresql://{parsed.username}:{parsed.password}"
+                f"@{parsed.hostname}:{parsed.port}/postgres"
+            )
             admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
             with admin_engine.connect() as conn:
                 # Check if database exists first

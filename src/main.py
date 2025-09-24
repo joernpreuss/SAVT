@@ -21,7 +21,11 @@ from .logging_utils import log_system_info
 from .middleware import log_requests_middleware
 from .presentation.api_routes import api_router
 from .presentation.error_handlers import handle_domain_error, handle_validation_error
-from .presentation.problem_details import ProblemDetailFactory
+from .presentation.problem_details import (
+    ConflictProblemDetail,
+    ProblemDetail,
+    ProblemDetailFactory,
+)
 from .presentation.routes import router
 from .rate_limiting import rate_limit_middleware
 from .telemetry import setup_telemetry
@@ -221,6 +225,7 @@ async def database_error_handler(request: Request, exc: SQLAlchemyError):
     )
 
     if request.url.path.startswith("/api/"):
+        problem: ProblemDetail | ConflictProblemDetail
         if isinstance(exc, IntegrityError):
             # Handle database constraint violations
             problem = ProblemDetailFactory.resource_already_exists(

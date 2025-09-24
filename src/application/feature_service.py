@@ -47,7 +47,9 @@ def _commit_and_refresh_feature(session: Session, feature: Feature) -> Feature:
 
 
 def get_features(session: Session) -> Sequence[Feature]:
-    statement: Final = select(Feature).where(Feature.deleted_at.is_(None))  # type: ignore[union-attr]
+    statement: Final = select(Feature).where(
+        Feature.deleted_at.is_(None)  # type: ignore[union-attr,attr-defined]
+    )
     results: Final = session.exec(statement)
     features: Final = results.all()
     return features  # type: ignore[no-any-return]
@@ -56,7 +58,9 @@ def get_features(session: Session) -> Sequence[Feature]:
 async def get_features_async(session: AsyncSession) -> Sequence[Feature]:
     """Get all features using async database operations for better concurrency."""
 
-    statement: Final = select(Feature).where(Feature.deleted_at.is_(None))  # type: ignore[union-attr]
+    statement: Final = select(Feature).where(
+        Feature.deleted_at.is_(None)  # type: ignore[union-attr,attr-defined]
+    )
     result = await session.execute(statement)
     features = result.scalars().all()
     return features  # type: ignore[no-any-return]
@@ -68,7 +72,7 @@ def get_feature(
     statement: Final = select(Feature).where(
         Feature.name == name,
         Feature.item_id == item_id,
-        Feature.deleted_at.is_(None),  # type: ignore[union-attr]
+        Feature.deleted_at.is_(None),  # type: ignore[union-attr,attr-defined]
     )
     results: Final = session.exec(statement)
     feature: Final = results.first()
@@ -78,7 +82,7 @@ def get_feature(
 def get_feature_by_id(session: Session, feature_id: int) -> Feature | None:
     statement: Final = select(Feature).where(
         Feature.id == feature_id,
-        Feature.deleted_at.is_(None),  # type: ignore[union-attr]
+        Feature.deleted_at.is_(None),  # type: ignore[union-attr,attr-defined]
     )
     results: Final = session.exec(statement)
     feature: Final = results.first()
@@ -273,7 +277,7 @@ def restore_feature(session: Session, feature_id: int) -> bool:
     # Look for soft deleted feature
     statement: Final = select(Feature).where(
         Feature.id == feature_id,
-        Feature.deleted_at.is_not(None),  # type: ignore[union-attr]
+        Feature.deleted_at.is_not(None),  # type: ignore[union-attr,attr-defined]
     )
     results: Final = session.exec(statement)
     feature: Final = results.first()

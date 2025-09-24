@@ -48,7 +48,7 @@ def setup_telemetry(app):
         # In production, this would be replaced with OTLP exporter
         console_exporter = ConsoleSpanExporter()
         span_processor = BatchSpanProcessor(console_exporter)
-        tracer_provider.add_span_processor(span_processor)
+        tracer_provider.add_span_processor(span_processor)  # type: ignore[attr-defined]
 
         # Instrument FastAPI automatically
         FastAPIInstrumentor.instrument_app(app)

@@ -14,8 +14,11 @@ from ..domain.exceptions import (
     ValidationError,
 )
 from .problem_details import (
+    ConflictProblemDetail,
     ErrorCodes,
+    ProblemDetail,
     ProblemDetailFactory,
+    ValidationProblemDetail,
 )
 
 templates = Jinja2Templates(directory="templates/")
@@ -76,15 +79,14 @@ class ErrorFormatter:
             return "Something went wrong. Please try again."
 
 
-def handle_domain_error(
-    error: DomainError, request: Request
-) -> HTTPException | JSONResponse:
+def handle_domain_error(error: DomainError, request: Request) -> JSONResponse:
     """Convert domain errors to appropriate HTTP responses."""
     user_message = ErrorFormatter.format_user_friendly_message(error)
 
     # Check if this is an API request
     if request.url.path.startswith("/api/"):
         # Return RFC 7807 Problem Details for API requests
+        problem: ProblemDetail | ValidationProblemDetail | ConflictProblemDetail
         if isinstance(error, ItemAlreadyExistsError):
             problem = ProblemDetailFactory.resource_already_exists(
                 resource_type="item",
@@ -117,25 +119,23 @@ def handle_domain_error(
             content=problem.model_dump(exclude_none=True),
         )
     else:
-        # Return traditional HTTPException for HTML requests
+        # Raise traditional HTTPException for HTML requests
         if isinstance(error, ItemAlreadyExistsError | FeatureAlreadyExistsError):
-            return HTTPException(
+            raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail=user_message
             )
         elif isinstance(error, ValidationError):
-            return HTTPException(
+            raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=user_message
             )
         else:
-            return HTTPException(
+            raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error occurred. Please try again.",
             )
 
 
-def handle_validation_error(
-    error: ValueError, request: Request
-) -> HTTPException | JSONResponse:
+def handle_validation_error(error: ValueError, request: Request) -> JSONResponse:
     """Convert validation errors to user-friendly HTTP responses."""
     user_message = ErrorFormatter.format_user_friendly_message(error)
 
@@ -152,7 +152,7 @@ def handle_validation_error(
             content=problem.model_dump(exclude_none=True),
         )
     else:
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=user_message
         )
 

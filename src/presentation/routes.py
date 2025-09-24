@@ -219,14 +219,14 @@ async def route_create_item(
             error=str(e),
             error_type=type(e).__name__,
         )
-        raise handle_domain_error(e, request) from e
+        return handle_domain_error(e, request)
     except ValueError as e:
         logger.warning(
             "Item creation failed - validation error",
             item_name=item.name,
             error=str(e),
         )
-        raise handle_validation_error(e, request) from e
+        return handle_validation_error(e, request)
 
     # If HTMX request, return full page
     if is_htmx_request(request):
@@ -260,14 +260,14 @@ async def route_create_feature(
             error=str(e),
             error_type=type(e).__name__,
         )
-        raise handle_domain_error(e, request) from e
+        return handle_domain_error(e, request)
     except ValueError as e:
         logger.warning(
             "Feature creation failed - validation error",
             feature_name=feature.name,
             error=str(e),
         )
-        raise handle_validation_error(e, request) from e
+        return handle_validation_error(e, request)
 
     # If HTMX request, return full page
     if is_htmx_request(request):

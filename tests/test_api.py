@@ -708,7 +708,7 @@ def test_item_api_comprehensive_workflow(client: TestClient, timestamp_str: str)
     _setup_logging_once()
 
     # Create multiple items with different users and types
-    items_data = [
+    items_data: list[dict[str, str | None]] = [
         {
             "name": f"workflow_item_1_{timestamp_str}",
             "kind": "priority",

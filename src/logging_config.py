@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 import structlog
 from opentelemetry import trace
@@ -91,6 +92,7 @@ def _configure_structlog() -> None:
     """Configure structlog for enhanced structured logging."""
     # Configure structlog to output directly (not through stdlib logging)
     # This avoids conflicts with existing Rich logging setup
+    processors: list[Any]
     if settings.debug:
         # Development: Pretty console output with trace context
         processors = [

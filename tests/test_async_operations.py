@@ -52,7 +52,10 @@ async def _create_test_session() -> AsyncSession:
             parsed = urlparse(async_url)
 
             # Connect to default postgres database to create test database
-            admin_url = f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port}/postgres"
+            admin_url = (
+                f"postgresql://{parsed.username}:{parsed.password}"
+                f"@{parsed.hostname}:{parsed.port}/postgres"
+            )
             admin_conn = await asyncpg.connect(admin_url)
 
             test_db_name = parsed.path[1:]  # Remove leading slash

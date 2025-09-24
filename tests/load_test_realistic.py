@@ -24,9 +24,16 @@ import re
 import statistics
 import time
 from dataclasses import dataclass
+from typing import Protocol
 from urllib.parse import quote
 
 import httpx
+
+
+class ResponseLike(Protocol):
+    """Protocol for response-like objects with a status_code attribute."""
+
+    status_code: int
 
 
 @dataclass
@@ -82,7 +89,7 @@ class RealisticUser:
         action_type: str,
         target: str,
         start_time: float,
-        response: httpx.Response,
+        response: ResponseLike,
         error_msg: str | None = None,
     ):
         """Record an action for analysis."""
@@ -113,26 +120,38 @@ class RealisticUser:
         except httpx.TimeoutException as e:
             # Timeout - server overloaded
             class TimeoutResponse:
-                status_code = 408  # Request Timeout
+                status_code: int = 408  # Request Timeout
 
             return self._record_action(
-                action_type, target, start_time, TimeoutResponse(), f"Timeout: {e}"
+                action_type,
+                target,
+                start_time,
+                TimeoutResponse(),
+                f"Timeout: {e}",
             )
         except httpx.ConnectError as e:
             # Connection failed - server unreachable
             class ConnectResponse:
-                status_code = 503  # Service Unavailable
+                status_code: int = 503  # Service Unavailable
 
             return self._record_action(
-                action_type, target, start_time, ConnectResponse(), f"Connection: {e}"
+                action_type,
+                target,
+                start_time,
+                ConnectResponse(),
+                f"Connection: {e}",
             )
         except Exception as e:
             # Other errors
             class ErrorResponse:
-                status_code = 500
+                status_code: int = 500
 
             return self._record_action(
-                action_type, target, start_time, ErrorResponse(), f"Error: {e}"
+                action_type,
+                target,
+                start_time,
+                ErrorResponse(),
+                f"Error: {e}",
             )
 
     def _parse_features_from_html(self, html: str):
@@ -482,7 +501,7 @@ class LoadTestCoordinator:
                 if a.action_type == action_type and a.success
             ]
             if times:
-                action_stats[action_type]["avg_time"] = statistics.mean(times)
+                action_stats[action_type]["avg_time"] = int(statistics.mean(times))
 
         print("📋 Action Performance:")
         for action_type, stats in sorted(action_stats.items()):

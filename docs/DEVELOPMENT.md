@@ -91,10 +91,10 @@ Extended development guidance for the SAVT project.
 
 ### QA Tool Improvements
 - **Interactive Rerun Options**: Enhanced QA tool with interactive menu allowing users to rerun individual checks (formatter, linter, typecheck, newlines) from test selection menu
-- **Template Formatting Integration**: Unified code + template formatting - `./qa format` now runs both ruff and djlint together
+- **Template Formatting Integration**: Unified code + template formatting - `uv run qa format` now runs both ruff and djlint together
 - **ESC Key Support**: Added ESC key support for quick quit from any menu
 - **Smart Workflow**: Improved user experience - shows results first, then asks for fixes (eliminates confusing blind fix prompts)
-- **Individual Commands**: Added standalone commands (`./qa format`, `./qa lint`, `./qa typecheck`, `./qa newlines`) for targeted checks
+- **Individual Commands**: Added standalone commands (`uv run qa format`, `uv run qa lint`, `uv run qa typecheck`, `uv run qa newlines`) for targeted checks
 
 ### Code Quality
 - **Type Annotations**: Added comprehensive type annotations to test fixtures improving IDE support and reducing Pylance warnings

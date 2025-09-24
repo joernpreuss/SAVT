@@ -48,8 +48,8 @@ def _commit_and_refresh_item(session: Session, item: Item) -> Item:
 def get_items(session: Session) -> Sequence[Item]:
     statement: Final = (
         select(Item)
-        .where(Item.deleted_at.is_(None))  # type: ignore[union-attr]
-        .options(selectinload(Item.features))
+        .where(Item.deleted_at.is_(None))  # type: ignore[union-attr,attr-defined]
+        .options(selectinload(Item.features))  # type: ignore[arg-type]
     )
     results: Final = session.exec(statement)
     items: Final = results.all()
@@ -62,7 +62,10 @@ def get_items(session: Session) -> Sequence[Item]:
 
 
 def get_item(session: Session, name: str) -> Item | None:
-    statement: Final = select(Item).where(Item.name == name, Item.deleted_at.is_(None))  # type: ignore[union-attr]
+    statement: Final = select(Item).where(
+        Item.name == name,
+        Item.deleted_at.is_(None),  # type: ignore[union-attr,attr-defined]
+    )
     results: Final = session.exec(statement)
     item: Final = results.first()
     return item  # type: ignore[no-any-return]
@@ -151,7 +154,7 @@ def restore_item(session: Session, item_name: str) -> bool:
     # Look for soft deleted item
     statement: Final = select(Item).where(
         Item.name == item_name,
-        Item.deleted_at.is_not(None),  # type: ignore[union-attr]
+        Item.deleted_at.is_not(None),  # type: ignore[union-attr,attr-defined]
     )
     results: Final = session.exec(statement)
     item: Final = results.first()
@@ -188,8 +191,8 @@ async def get_items_async(session: AsyncSession) -> Sequence[Item]:
     """Get all items with their features using async database operations."""
     statement: Final = (
         select(Item)
-        .where(Item.deleted_at.is_(None))  # type: ignore[union-attr]
-        .options(selectinload(Item.features))
+        .where(Item.deleted_at.is_(None))  # type: ignore[union-attr,attr-defined]
+        .options(selectinload(Item.features))  # type: ignore[arg-type]
     )
     result = await session.execute(statement)
     items = result.scalars().all()
@@ -203,7 +206,10 @@ async def get_items_async(session: AsyncSession) -> Sequence[Item]:
 
 async def get_item_async(session: AsyncSession, name: str) -> Item | None:
     """Get item by name using async database operations."""
-    statement: Final = select(Item).where(Item.name == name, Item.deleted_at.is_(None))  # type: ignore[union-attr]
+    statement: Final = select(Item).where(
+        Item.name == name,
+        Item.deleted_at.is_(None),  # type: ignore[union-attr,attr-defined]
+    )
     result = await session.execute(statement)
     item = result.scalars().first()
     return item  # type: ignore[no-any-return]
