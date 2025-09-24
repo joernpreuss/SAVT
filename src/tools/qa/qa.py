@@ -8,6 +8,51 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+# Import nox configurations for tool consistency
+try:
+    from noxfile import (
+        get_djlint_command,
+        get_format_command,
+        get_lint_command,
+        get_typecheck_command,
+    )
+except ImportError:
+    # Fallback if noxfile can't be imported
+    def get_lint_command(
+        fix: bool = False, unsafe: bool = False, path: str = "."
+    ) -> list[str]:
+        paths = (
+            ["src/", "tests/"] if path == "." else [f"{path}/src/", f"{path}/tests/"]
+        )
+        cmd = ["uv", "tool", "run", "ruff", "check"] + paths
+        if fix:
+            cmd.append("--fix")
+            if unsafe:
+                cmd.append("--unsafe-fixes")
+        return cmd
+
+    def get_format_command(check: bool = False, path: str = ".") -> list[str]:
+        paths = (
+            ["src/", "tests/"] if path == "." else [f"{path}/src/", f"{path}/tests/"]
+        )
+        cmd = ["uv", "tool", "run", "ruff", "format"] + paths
+        if check:
+            cmd.extend(["--check", "--diff"])
+        return cmd
+
+    def get_typecheck_command(path: str = ".") -> list[str]:
+        paths = (
+            ["src/", "tests/"] if path == "." else [f"{path}/src/", f"{path}/tests/"]
+        )
+        return ["uv", "tool", "run", "mypy"] + paths
+
+    def get_djlint_command(check: bool = False, path: str = ".") -> list[str]:
+        paths = ["templates/"] if path == "." else [f"{path}/templates/"]
+        cmd = ["uv", "run", "djlint"] + paths
+        if not check:
+            cmd.append("--reformat")
+        return cmd
+
 
 # Use subprocess to call check_newlines script directly
 def _check_newlines_impl(fix: bool = False, path: str = ".") -> bool:
@@ -39,50 +84,13 @@ def _check_newlines_impl(fix: bool = False, path: str = ".") -> bool:
 console = Console(force_terminal=True)
 
 
-# Command builders to avoid duplication and improve flexibility
-def _code_format_cmd(check: bool = False, path: str = ".") -> list[str]:
-    """Build ruff format command."""
-    src_path = f"{path}/src/" if path != "." else "src/"
-    tests_path = f"{path}/tests/" if path != "." else "tests/"
-    cmd = ["uv", "tool", "run", "ruff", "format", src_path, tests_path]
-    if check:
-        cmd.extend(["--check", "--diff"])
-    return cmd
-
-
-def _template_format_cmd(check: bool = False, path: str = ".") -> list[str]:
-    """Build djlint format command."""
-    templates_path = f"{path}/templates/" if path != "." else "templates/"
-    if check:
-        return ["uv", "run", "djlint", templates_path]
-    return ["uv", "run", "djlint", templates_path, "--reformat"]
-
-
+# Helper function for templates directory check
 def _has_templates_directory(path: str = ".") -> bool:
     """Check if templates directory exists."""
     from pathlib import Path
 
     templates_path = Path(path) / "templates"
     return templates_path.exists() and templates_path.is_dir()
-
-
-def _lint_cmd(fix: bool = False, unsafe: bool = False, path: str = ".") -> list[str]:
-    """Build ruff check command with optional fixes."""
-    src_path = f"{path}/src/" if path != "." else "src/"
-    tests_path = f"{path}/tests/" if path != "." else "tests/"
-    cmd = ["uv", "tool", "run", "ruff", "check", src_path, tests_path]
-    if fix:
-        cmd.append("--fix")
-        if unsafe:
-            cmd.append("--unsafe-fixes")
-    return cmd
-
-
-def _typecheck_cmd(path: str = ".") -> list[str]:
-    """Build mypy command."""
-    src_path = f"{path}/src/" if path != "." else "src/"
-    tests_path = f"{path}/tests/" if path != "." else "tests/"
-    return ["uv", "tool", "run", "mypy", src_path, tests_path]
 
 
 def _get_single_key() -> str:
@@ -351,13 +359,15 @@ def _run_individual_check(
     try:
         if check_type == "format":
             console.print("✨ Running formatter...", style="cyan")
-            # Format code
-            code_success = _run_command(_code_format_cmd(path=path), "Code formatting")
+            # Format code using nox config
+            code_success = _run_command(
+                get_format_command(path=path), "Code formatting"
+            )
             # Format templates only if they exist
             template_success = True
             if _has_templates_directory(path):
                 template_success = _run_command(
-                    _template_format_cmd(path=path), "Template formatting"
+                    get_djlint_command(path=path), "Template formatting"
                 )
             success = code_success and template_success
             if success:
@@ -366,14 +376,28 @@ def _run_individual_check(
                 console.print("❌ Formatting failed", style="red")
         elif check_type == "lint":
             console.print("🔍 Running linter...", style="cyan")
-            success = _run_command(_lint_cmd(path=path), "Linting", show_output=True)
+            if path == ".":
+                success = _run_command(
+                    ["nox", "-s", "lint"], "Linting", show_output=True
+                )
+            else:
+                success = _run_command(
+                    get_lint_command(path=path), "Linting", show_output=True
+                )
             if success:
                 console.print("✅ No linting issues found", style="green")
             else:
                 console.print("❌ Linting issues found", style="red")
         elif check_type == "typecheck":
             console.print("🔎 Running type checker...", style="cyan")
-            success = _run_command(_typecheck_cmd(path=path), "Type checking")
+            if path == ".":
+                success = _run_command(
+                    ["nox", "-s", "mypy"], "Type checking", show_output=True
+                )
+            else:
+                success = _run_command(
+                    get_typecheck_command(path=path), "Type checking", show_output=True
+                )
             if success:
                 console.print("✅ Type checking passed", style="green")
             else:
@@ -576,30 +600,42 @@ def _run_checks(
     # Formatter (includes code and templates)
     console.print("✨ Running formatter...", style="cyan")
     if fix_format:
-        # Format code
-        code_success = _run_command(_code_format_cmd(path=path), "Code formatting")
+        # Format code using nox config
+        code_success = _run_command(get_format_command(path=path), "Code formatting")
         # Format templates only if they exist
         template_success = True
         if _has_templates_directory(path):
             template_success = _run_command(
-                _template_format_cmd(path=path), "Template formatting"
+                get_djlint_command(path=path), "Template formatting"
             )
         success &= code_success and template_success
     else:
-        # Check code formatting
-        code_format_result = _run_command(
-            _code_format_cmd(check=True, path=path),
-            "Code format check",
-            show_output=True,
-        )
-        # Check template formatting only if templates exist
-        template_format_result = True
-        if _has_templates_directory(path):
-            template_format_result = _run_command(
-                _template_format_cmd(check=True, path=path),
-                "Template format check",
+        # Check formatting via nox for consistency
+        if path == ".":
+            code_format_result = _run_command(
+                ["nox", "-s", "format_check"], "Code format check", show_output=True
+            )
+            template_format_result = True
+            if _has_templates_directory(path):
+                template_format_result = _run_command(
+                    ["nox", "-s", "djlint_check"],
+                    "Template format check",
+                    show_output=True,
+                )
+        else:
+            # For non-root paths, use direct commands
+            code_format_result = _run_command(
+                get_format_command(check=True, path=path),
+                "Code format check",
                 show_output=True,
             )
+            template_format_result = True
+            if _has_templates_directory(path):
+                template_format_result = _run_command(
+                    get_djlint_command(check=True, path=path),
+                    "Template format check",
+                    show_output=True,
+                )
 
         format_result = code_format_result and template_format_result
         success &= format_result
@@ -608,9 +644,9 @@ def _run_checks(
             had_issues = True
             choice = _prompt_fix_skip_quit("Formatting")
             if choice == "fix":
-                _run_command(_code_format_cmd(path=path), "Code formatting")
+                _run_command(get_format_command(path=path), "Code formatting")
                 if _has_templates_directory(path):
-                    _run_command(_template_format_cmd(path=path), "Template formatting")
+                    _run_command(get_djlint_command(path=path), "Template formatting")
                 interactive_fixes.append("format")
         else:
             console.print("✅ No formatting issues found", style="green")
@@ -620,26 +656,43 @@ def _run_checks(
     console.print("🔍 Running linter...", style="cyan")
     if fix_lint:
         success &= _run_command(
-            _lint_cmd(fix=True, unsafe=unsafe_fixes, path=path), "Linting with fixes"
+            get_lint_command(fix=True, unsafe=unsafe_fixes, path=path),
+            "Linting with fixes",
         )
     else:
-        lint_result = _run_command(_lint_cmd(path=path), "Linting", show_output=True)
+        # Check linting via nox for consistency
+        if path == ".":
+            lint_result = _run_command(
+                ["nox", "-s", "lint"], "Linting", show_output=True
+            )
+        else:
+            lint_result = _run_command(
+                get_lint_command(path=path), "Linting", show_output=True
+            )
+
         success &= lint_result
         if not lint_result:
             had_issues = True
             choice = _prompt_fix_skip_quit("Linting")
             if choice in ["fix", "unsafe_fix"]:
                 use_unsafe = unsafe_fixes or choice == "unsafe_fix"
-                lint_cmd = _lint_cmd(fix=True, unsafe=use_unsafe, path=path)
+                lint_cmd = get_lint_command(fix=True, unsafe=use_unsafe, path=path)
 
                 fix_type = "unsafe fixes" if use_unsafe else "fixes"
                 _run_command(lint_cmd, f"Linting with {fix_type}")
                 interactive_fixes.append("lint")
 
                 # Check if issues remain after fix attempt
-                recheck_result = _run_command(
-                    _lint_cmd(path=path), "Re-checking linting", show_output=True
-                )
+                if path == ".":
+                    recheck_result = _run_command(
+                        ["nox", "-s", "lint"], "Re-checking linting", show_output=True
+                    )
+                else:
+                    recheck_result = _run_command(
+                        get_lint_command(path=path),
+                        "Re-checking linting",
+                        show_output=True,
+                    )
 
                 # If issues still exist, offer unsafe fix option again
                 if not recheck_result and choice != "unsafe_fix":
@@ -649,7 +702,7 @@ def _run_checks(
                     retry_choice = _prompt_fix_skip_quit("Linting")
                     if retry_choice == "unsafe_fix":
                         _run_command(
-                            _lint_cmd(fix=True, unsafe=True, path=path),
+                            get_lint_command(fix=True, unsafe=True, path=path),
                             "Linting with unsafe fixes",
                         )
                         interactive_fixes.append("lint-unsafe")
@@ -659,9 +712,14 @@ def _run_checks(
 
     # Type checker
     console.print("🔎 Running type checker...", style="cyan")
-    success &= _run_command(
-        _typecheck_cmd(path=path), "Type checking", show_output=True
-    )
+    if path == ".":
+        success &= _run_command(
+            ["nox", "-s", "mypy"], "Type checking", show_output=True
+        )
+    else:
+        success &= _run_command(
+            get_typecheck_command(path=path), "Type checking", show_output=True
+        )
     console.print()
 
     # Trailing newlines
@@ -751,20 +809,31 @@ def format_command(
 
     if check_only:
         console.print("✨ Running formatter...", style="cyan")
-        # Check code formatting
-        code_success = _run_command(
-            _code_format_cmd(check=True, path=path),
-            "Code format check",
-            show_output=True,
-        )
-        # Check template formatting only if templates exist
-        template_success = True
-        if _has_templates_directory(path):
-            template_success = _run_command(
-                _template_format_cmd(check=True, path=path),
-                "Template format check",
+        # Check code formatting via nox for consistency
+        if path == ".":
+            code_success = _run_command(
+                ["nox", "-s", "format_check"], "Code format check", show_output=True
+            )
+            template_success = True
+            if _has_templates_directory(path):
+                template_success = _run_command(
+                    ["nox", "-s", "djlint_check"],
+                    "Template format check",
+                    show_output=True,
+                )
+        else:
+            code_success = _run_command(
+                get_format_command(check=True, path=path),
+                "Code format check",
                 show_output=True,
             )
+            template_success = True
+            if _has_templates_directory(path):
+                template_success = _run_command(
+                    get_djlint_command(check=True, path=path),
+                    "Template format check",
+                    show_output=True,
+                )
 
         success = code_success and template_success
         if success:
@@ -795,7 +864,7 @@ def lint_command(
 
     if fix:
         console.print("🔍 Running linter...", style="cyan")
-        cmd = _lint_cmd(fix=fix, unsafe=unsafe_fixes, path=path)
+        cmd = get_lint_command(fix=fix, unsafe=unsafe_fixes, path=path)
         success = _run_command(cmd, "Linting", show_output=True)
 
         if success:
