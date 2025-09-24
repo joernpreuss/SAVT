@@ -43,6 +43,7 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
   - run "pytest" to run tests
 
 - When user says "qa": Run the individual QA commands listed above (not `uv run qa` tool, that is for the user)
+- Alternative QA with nox: Use `nox -s lint mypy format_check tests` for comprehensive QA across sessions
 - When user says "rr": This means "reduce redundancy" - Check the codebase for redundancy and reduce it by removing duplicate code, unused files, dead code, and consolidating similar functions across modules.
 - Date formatting: Always use ISO 8601 format (YYYY-MM-DD) for all dates in documentation. Always check the environment's "Today's date" before writing any dates.
 

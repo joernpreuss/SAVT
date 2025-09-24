@@ -22,6 +22,14 @@ def _check_newlines_impl(fix: bool = False, path: str = ".") -> bool:
             cmd.append("--fix")
 
         result = subprocess.run(cmd, cwd=path, capture_output=True, text=True)
+
+        # Show output if there are issues (non-zero exit code)
+        if result.returncode != 0:
+            if result.stdout:
+                print(result.stdout, end="")
+            if result.stderr:
+                print(result.stderr, end="")
+
         return result.returncode == 0
     else:
         # Fallback implementation
