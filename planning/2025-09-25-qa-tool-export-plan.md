@@ -125,16 +125,16 @@ Like nox and pytreqt, walk up the directory tree:
 Infrastructure setup before code extraction to reduce risk:
 
 #### 1. Repository & Infrastructure Setup
-- [ ] Create GitHub repository `qa-tool` with basic structure
-- [ ] Set up CI/CD pipeline (GitHub Actions) for multi-platform testing
-- [ ] Choose and add license (MIT recommended for wide adoption)
-- [ ] Create initial `pyproject.toml` with package metadata and entry points
+- [x] Create GitHub repository `qa` with basic structure (local at /Users/joern/code/qa/)
+- [x] Set up CI/CD pipeline (GitHub Actions) for multi-platform testing
+- [x] Choose and add license (MIT recommended for wide adoption)
+- [x] Create initial `pyproject.toml` with package metadata and entry points
 
 #### 2. Dependency Analysis & Planning
-- [ ] Audit current qa.py dependencies (typer, rich, subprocess, pathlib)
-- [ ] Research uv tool best practices and distribution methods
-- [ ] Plan configuration file schema using SAVT as baseline
-- [ ] Document all current CLI commands and their exact behavior
+- [x] Audit current qa.py dependencies (typer, rich, subprocess, pathlib)
+- [x] Research uv tool best practices and distribution methods
+- [x] Plan configuration file schema using SAVT as baseline (documented in config-schema.md)
+- [x] Document all current CLI commands and their exact behavior (documented in cli-commands.md)
 
 #### 3. SAVT Integration Analysis
 - [ ] Document current usage patterns (how `./qa` script works, nox integration)
