@@ -78,3 +78,14 @@ After EVERY change:
 - `src/infrastructure/database/models.py` - SQLModel persistence models
 - `templates/macros.html` - Jinja2 macros for veto/unveto functionality
 - `.djlintrc` - HTML formatter config
+
+## Git Workflow
+
+CRITICAL: NO AUTOMATIC GIT OPERATIONS
+
+- NEVER execute `git add` - Only the user stages files for commit
+- NEVER execute `git commit` - Only the user creates commits
+- NEVER execute `git push` - Only the user pushes to remote repositories
+- NEVER execute any git command unless explicitly requested by the user
+- When user says "cm" or "commit": Only provide a suggested commit message. IMPORTANT: `git diff` is authoritative - only describe changes that actually exist in the git diff, not what you think you changed during the session.
+- All git workflow steps (add → commit → push) are exclusively user actions
