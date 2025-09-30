@@ -1,203 +1,219 @@
 # SAVT
 
-Pure Python Suggestion And Veto Tool
+**Pure Python Suggestion And Veto Tool** - A collaborative decision-making platform built with modern Python tooling and clean architecture.
 
-> **Experimental AI-Assisted Development**: This project serves as an experiment in AI-assisted coding, exploring deliberate architectural choices like pure Python (no JS/TS), server-side HTML but with HTMX for dynamic interactions, modern tooling (uv, type hints), and comprehensive requirement tracing. Many decisions were made intentionally to test specific approaches and patterns.
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
+[![uv](https://img.shields.io/badge/uv-package%20manager-orange.svg)](https://github.com/astral-sh/uv)
 
-Built with **uv** - the modern, fast Python package manager that's significantly faster than pip with better dependency resolution and built-in virtual environment management. uv replaces pip, pip-tools, virtualenv, and pyenv in one tool.
+> **Note**: This project serves as an experiment in AI-assisted development, exploring deliberate architectural choices including pure Python with no JavaScript/TypeScript, server-side HTML with HTMX for dynamic interactions, modern tooling (uv, type hints), and comprehensive requirements traceability.
 
 ## Overview
 
-SAVT is a collaborative decision-making platform designed for any group decision - from simple social choices to complex business workflows. The system enables democratic consensus-building through a suggestion and veto model:
+SAVT is a collaborative decision-making platform that enables democratic consensus-building through a suggestion and veto model. Perfect for any group decision scenario—from social planning to business workflows.
 
-- **Create decision items** (projects, events, purchases, policies, etc.)
-- **Democratic suggestions** - Anyone can propose options or features
+**Core Features:**
+- **Democratic suggestions** - Anyone can propose options
 - **Veto-based consensus** - Participants can block options they strongly oppose
-- **Flexible data model** - Works for any type of group decision
+- **Flexible data model** - Configurable terminology for any use case
+- **Real-time updates** - HTMX-powered interactions without JavaScript
+- **Requirements traceability** - Novel system linking tests to functional requirements
 
 **Use Cases:**
-- **Business decisions:** vendor selection, budget allocation, policy changes
-- **Development workflows:** code reviews, deployments, architecture choices
-- **Team coordination:** meeting scheduling, project priorities, resource allocation
-- **Social planning:** restaurant choices, event planning, group activities
+- Business decisions (vendor selection, budget allocation, policy changes)
+- Development workflows (code reviews, deployments, architecture choices)
+- Team coordination (meeting scheduling, project priorities, resource allocation)
+- Social planning (restaurant choices, event planning, group activities)
 
-The pizza ordering example demonstrates the concept, but SAVT's flexible architecture supports any collaborative decision-making scenario.
+## Architecture Highlights
 
-## Technical Approach
+**Clean Architecture with Domain-Driven Design:**
+- **Domain Layer** (`src/domain/`) - Pure business entities with zero dependencies
+- **Application Layer** (`src/application/`) - Business logic and service orchestration
+- **Infrastructure Layer** (`src/infrastructure/`) - Database persistence with SQLModel
+- **Presentation Layer** (`src/presentation/`) - FastAPI routes (HTML + JSON API)
 
-SAVT is built with pure Python to avoid JavaScript/TypeScript complexity, using server-side HTML generation with HTMX for dynamic interactions. This means all HTML is generated on the server using Jinja2 templates, while HTMX enables partial page updates and interactive features without writing JavaScript.
+**Technical Stack:**
+- **FastAPI + SQLModel** - Modern async Python with type-safe ORM
+- **Jinja2 + HTMX** - Server-side rendering with SPA-like interactions (zero JavaScript)
+- **PostgreSQL/SQLite** - Dual database support (SQLite for dev, PostgreSQL for production)
+- **pytest + structlog** - Comprehensive testing with structured logging
+- **uv** - Lightning-fast package management (replaces pip, virtualenv, pyenv)
 
-**Key Architecture:**
+**Key Design Decisions:**
+- Feature IDs for unique identification (allows duplicate names)
+- Independent veto/unveto operations per user per feature
+- No JavaScript - all interactivity via HTMX + server-side logic
+- API versioning (`/api/v1/`) for forward compatibility
+- Comprehensive OpenAPI documentation
 
-- Feature IDs: Uses `feature.id` for unique identification (allows duplicate feature names)
-- Veto System: Users can independently veto/unveto features using unique IDs
-- No-JavaScript Architecture: HTMX provides SPA-like interactions (partial updates, form submissions) while keeping all logic in Python
-
-## Development
+## Quick Start
 
 ### Prerequisites
 
-**System Requirements:**
+- **Python 3.13+** (pinned via `.python-version`)
+- **uv** - Install: `pip install uv` or `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
-- Python 3.13+ (pinned via `.python-version`)
-- uv - Install with: `pip install uv`
-
-**Key Technologies:**
-
-- FastAPI + SQLModel - Modern Python web framework with type-safe database
-- Jinja2 + HTMX - Server-side templating with dynamic interactions
-- pytest + structlog - Testing and structured logging
-- PostgreSQL + SQLite - Configurable database backend (SQLite default, PostgreSQL for production)
-
-Dependencies are managed via `pyproject.toml` with exact version pinning for reproducibility.
-
-### Development Setup
+### Installation
 
 ```bash
-# Install dependencies and sync environment
+# Clone and setup
+git clone <repository-url>
+cd SAVT
+
+# Install dependencies
 uv sync
 
-# Install development tools
-uv tool install ruff mypy
+# Start development server
+uv run uvicorn src.main:app --reload --host 0.0.0.0
 ```
 
-### Development Commands
+Access at: http://localhost:8000
 
-- Start server: `uv run uvicorn src.main:app --reload --host 0.0.0.0`
-- Run tests: `uv run pytest`
-- Test with docstrings: `uv run pytest --show-docstrings` (displays test requirements during execution)
-- Requirements coverage: `uv run pytest -v` (shows FR/BR coverage in verbose mode)
-- Requirements only: `uv run pytest --requirements-report -q` (coverage without running tests)
-- All checks: `uv run qa check` (interactive menu with rerun options)
-- Auto-fix all: `uv run qa check --fix-all`
-- Individual commands: `uv run qa format`, `uv run qa lint`, `uv run qa typecheck`, `uv run qa newlines`
-- Raw tools: `uv tool run ruff check src/`, `uv tool run mypy src/`
+### Configuration
 
-**QA Tool Features:**
-- **Interactive rerun options**: After checks complete, rerun individual tools (formatter, linter, etc.) from test selection menu
-- **Template formatting**: Unified code + template formatting with `uv run qa format` (ruff + djlint)
-- **ESC key support**: Press ESC to quit from any menu quickly
-- **Smart workflow**: Shows results first, then asks for fixes (no more blind fix prompts)
-
-### Testing
-
-**Fast Tests (Default - In-Memory SQLite):**
-```bash
-# Run all tests with in-memory SQLite (fast)
-uv run pytest
-
-# Run tests in parallel
-uv run pytest -n10
-
-# Run all tests simultaneously (proves concurrency design)
-uv run pytest -n72
-```
-
-**Integration Tests (PostgreSQL):**
-```bash
-# Set up PostgreSQL test database first
-createdb savt_test  # or use your PostgreSQL setup
-
-# Run tests against PostgreSQL
-TEST_DATABASE=postgresql DATABASE_URL=postgresql://user:password@localhost:5432/savt uv run pytest
-
-# Run PostgreSQL tests in parallel (tests real concurrency)
-TEST_DATABASE=postgresql DATABASE_URL=postgresql://user:password@localhost:5432/savt uv run pytest -n10
-```
-
-**Test Types Explained:**
-
-- **Unit Tests (SQLite)**: Fast, isolated, CI-friendly, perfect for development
-- **Integration Tests (PostgreSQL)**: Realistic, tests actual concurrency and connection pooling
-
-**Environment Variables:**
-- `TEST_DATABASE=postgresql` - Use PostgreSQL for tests instead of SQLite
-- `DATABASE_URL` - PostgreSQL connection string (tests use `*_test` suffix automatically)
-
-**Code Style:** 88-character lines, Python 3.13+ modern typing (`dict[str, int]` not `Dict[str, int]`)
-
-### Configurable Terminology
-
-The app terminology is fully configurable for different use cases. **Plural forms are automatically generated** by adding "s" to singular forms, so you usually only need to set the singular terms:
-
-**Pizza Ordering Example:**
+Configure terminology for your use case:
 
 ```bash
-cp .env.pizza .env  # Use pizza/toppings terminology
-```
+# Pizza ordering example
+cp .env.pizza .env
 
-**Simple Configuration (Auto-Pluralization):**
-
-```bash
-# In your .env file:
+# Or customize in .env:
 APP_NAME="My Voting Tool"
-OBJECT_NAME_SINGULAR="item"        # Automatically becomes "items"
-PROPERTY_NAME_SINGULAR="feature"   # Automatically becomes "features"
+OBJECT_NAME_SINGULAR="item"        # Auto-pluralizes to "items"
+PROPERTY_NAME_SINGULAR="feature"   # Auto-pluralizes to "features"
 ```
 
-**Override for Irregular Plurals:**
-
+Override for irregular plurals:
 ```bash
-# When the simple "add s" rule doesn't work:
 OBJECT_NAME_SINGULAR="category"
-OBJECT_NAME_PLURAL="categories"    # Override automatic "categorys"
-PROPERTY_NAME_SINGULAR="child"
-PROPERTY_NAME_PLURAL="children"    # Override automatic "childs"
+OBJECT_NAME_PLURAL="categories"    # Override "categorys"
 ```
 
-**Example Configurations:**
+## Development
 
-- **Pizza ordering**: `pizza` → `pizzas`, `topping` → `toppings`
-- **Feature voting**: `feature` → `features`, `aspect` → `aspects`
-- **Event planning**: `event` → `events`, `option` → `options`
-- **Product design**: `product` → `products`, `component` → `components`
-- **Library system**: `book` → `books`, `category` → `categories` (override needed)
+### Commands
+
+**Quality Assurance:**
+```bash
+uv run qa check              # Interactive QA with rerun options
+uv run qa check --fix-all    # Auto-fix all issues
+uv run qa format             # Format code + templates (ruff + djlint)
+uv run qa lint               # Lint code
+uv run qa typecheck          # Type checking (mypy)
+uv run qa newlines           # Check file endings
+```
+
+**Testing:**
+```bash
+# Fast tests (in-memory SQLite)
+uv run pytest                # Run all tests
+uv run pytest -n10           # Parallel execution
+uv run pytest -v             # Verbose with requirements coverage
+
+# PostgreSQL integration tests
+TEST_DATABASE=postgresql DATABASE_URL=postgresql://user:pass@localhost:5432/savt uv run pytest
+
+# Requirements traceability
+uv run pytest --show-docstrings      # Display requirements during execution
+uv run pytest --requirements-report  # Coverage report without running tests
+```
+
+**Server:**
+```bash
+uv run uvicorn src.main:app --reload --host 0.0.0.0
+```
+
+### Database Setup
+
+**SQLite (Default)** - Zero configuration, works out of the box.
+
+**PostgreSQL (Production):**
+```bash
+# Quick setup with Docker
+./scripts/postgres.sh setup
+
+# Management commands
+./scripts/postgres.sh start      # Start container
+./scripts/postgres.sh status     # Check health
+./scripts/postgres.sh shell      # psql console
+./scripts/postgres.sh reset      # Reset database (DELETES DATA)
+```
+
+See [POSTGRESQL.md](./POSTGRESQL.md) for detailed setup.
+
+### Project Structure
+
+```
+src/
+├── domain/              # Pure business entities (zero dependencies)
+│   ├── entities.py      # Domain models (dataclasses)
+│   ├── constants.py     # Business constants
+│   └── exceptions.py    # Domain exceptions
+├── application/         # Business logic layer
+│   ├── item_service.py              # Item CRUD
+│   ├── feature_service.py           # Feature + veto logic
+│   └── item_operations_service.py   # Complex operations (merge/split)
+├── infrastructure/      # External concerns
+│   └── database/
+│       ├── models.py    # SQLModel persistence
+│       └── db.py        # Connection management
+├── presentation/        # API layer
+│   ├── routes.py        # HTML routes
+│   └── api_routes.py    # JSON API (OpenAPI docs)
+└── main.py              # FastAPI application
+
+templates/               # Jinja2 templates
+├── *.html               # Page templates
+├── fragments/           # HTMX partial updates
+└── macros.html          # Reusable components
+
+tests/                   # Comprehensive test suite
+├── test_api.py          # API endpoint tests
+├── test_service.py      # Business logic tests
+└── conftest.py          # pytest fixtures
+```
 
 ## Requirements Traceability System
 
-SAVT includes a **novel requirements traceability system** that automatically extracts functional requirements (FR) and business rules (BR) from test docstrings and generates coverage reports. This bridges the gap between formal requirements management and agile development.
+**Novel approach** to linking tests with functional requirements—practical for everyday development without heavy enterprise tools.
 
 ### How It Works
 
-Tests reference requirements in their docstrings using a simple pattern:
+Tests reference requirements in docstrings:
 
 ```python
-def test_create_property_conflict(session: Session, timestamp_str: str):
+def test_create_property_conflict(session: Session):
     """Test property name uniqueness enforcement.
 
     Covers:
     - FR-2.3: Property names must be unique within their scope
-    - FR-2.4: System prevents duplicate property creation (returns 409 error)
+    - FR-2.4: System prevents duplicate property creation (409 error)
     """
     # Test implementation...
 ```
 
-### Coverage Features
+### Features
 
-- Automatic extraction from docstrings using regex patterns (`FR-X.Y`, `BR-X.Y`)
-- Real-time reporting during test execution
-- Coverage analysis showing which requirements are tested
-- Git-friendly - no external databases, all embedded in code
-- Developer-friendly - integrates seamlessly with existing pytest workflows
+- Automatic extraction from docstrings (`FR-X.Y`, `BR-X.Y` patterns)
+- Real-time coverage reporting during test execution
+- Git-friendly (embedded in code, no external databases)
+- Seamless pytest integration
 
-### Usage Examples
+### Usage
 
 ```bash
-# Show test docstrings with requirements during execution
+# Show requirements during test run
 uv run pytest --show-docstrings
 
-# Generate requirements coverage report
+# Generate coverage report
 uv run pytest -v
 
 # Coverage analysis without running tests
 uv run pytest --requirements-report -q
-
-# Requirements-only mode (skip test execution)
-uv run pytest --requirements-only
 ```
 
 **Sample Output:**
-
 ```
 Requirements Coverage
   FR-1.1:
@@ -213,116 +229,106 @@ Requirements Coverage Summary:
   Requirements covered: 15
 ```
 
-This system makes requirements traceability practical for everyday development, unlike heavy enterprise tools or manual spreadsheets that teams typically abandon.
-
-### Project Structure
-
-```
-src/
-├── main.py          # FastAPI app entry point
-├── routes.py        # Web routes (HTML responses)
-├── api_routes.py    # API routes (JSON responses)
-├── models.py        # SQLModel database models
-├── service.py       # Business logic
-├── database.py      # Database connection
-└── utils.py         # Utilities
-
-templates/
-├── properties.html           # Main page template
-└── fragments/               # HTMX partial templates
-
-tests/                       # Test files with requirements traceability
-├── pytest_requirements.py  # Custom pytest plugin for FR/BR extraction
-└── test_*.py               # Test files with FR/BR references in docstrings
-```
-
-### Database Configuration
-
-SAVT supports both SQLite and PostgreSQL databases:
-
-**SQLite (Default)**
-```bash
-# Uses SQLite by default (no setup required)
-uv run uvicorn src.main:app --reload
-```
-
-**PostgreSQL (Production Ready)**
-```bash
-# Quick setup with Docker
-./scripts/postgres.sh setup
-
-# Or manually
-docker compose up -d postgres
-cp .env.postgres .env
-uv run uvicorn src.main:app --reload
-```
-
-**PostgreSQL Management**
-```bash
-./scripts/postgres.sh start      # Start PostgreSQL container
-./scripts/postgres.sh status     # Check status and health
-./scripts/postgres.sh shell      # Connect to database shell
-./scripts/postgres.sh logs       # View container logs
-./scripts/postgres.sh reset      # Reset database (DELETE ALL DATA)
-```
-
-See [POSTGRESQL.md](./POSTGRESQL.md) for complete setup guide and troubleshooting.
-
-### Deployment
-
-- Docker build: `docker build -t savt .`
-- Docker run: `docker run -p 8000:8000 --env-file .env savt`
-- Docker Compose: `docker compose up --build`
-
 ## Logging System
 
-SAVT includes a comprehensive structured logging system with different loggers for different concerns:
+Structured logging with `structlog` for development and production:
+
+**Development** - Rich console output with syntax highlighting
+**Production** - JSON logs to `logs/savt.log` + console
 
 ### Log Types
 
-- API Requests: `GET /api/endpoint - 200 (15.2ms)`
-- User Actions: `User action: veto_property by anonymous`
-- Database Operations: `Database create on SVObject succeeded`
-- System Events: `Application startup` with hostname/IP
-- Validation Errors: `Validation failed for field 'name': too short`
+- **API Requests:** `GET /api/endpoint - 200 (15.2ms)`
+- **User Actions:** `User action: veto_property by anonymous`
+- **Database Operations:** `Database create on SVObject succeeded`
+- **System Events:** `Application startup` with hostname/IP
+- **Validation Errors:** `Validation failed for field 'name'`
 
-### Configuration
-
-- Development: Rich console output with syntax highlighting
-- Production: File logging to `logs/savt.log` + console
-- Security: Sensitive fields (passwords, tokens) automatically redacted as `[REDACTED]`
-- Performance: Third-party loggers (SQLAlchemy, Uvicorn) are filtered to reduce noise
-
-### Usage in Code
+### Usage
 
 ```python
 from src.logging_config import get_logger
-from src.logging_utils import log_user_action, log_database_operation
 
 logger = get_logger(__name__)
 
-# Structured logging with key-value pairs (NEW with structlog)
+# Structured logging with key-value pairs
 logger.info("Object created", object_name="Pizza", object_id=123, user="anonymous")
-logger.warning("Validation failed", field="name", value="", error="cannot be empty")
-logger.debug("Processing request", method="POST", path="/veto", user="anonymous")
-
-# Legacy specialized loggers (still available)
-log_user_action("create_property", user="anonymous", object_name="Pizza")
-log_database_operation("create", "SVObject", success=True, object_id=123)
+logger.warning("Validation failed", field="name", error="cannot be empty")
 ```
 
-**Development output:**
+**Security:** Sensitive fields (passwords, tokens) automatically redacted.
 
+## Deployment
+
+### Docker
+
+```bash
+# Build image
+docker build -t savt .
+
+# Run container
+docker run -p 8000:8000 --env-file .env savt
+
+# Docker Compose (includes PostgreSQL)
+docker compose up --build
 ```
-2024-01-01T10:00:00 [info     ] Object created                 object_name=Pizza object_id=123 user=anonymous
-```
 
-**Production output (JSON):**
+### Production Considerations
 
-```json
-{"timestamp": "2024-01-01T10:00:00.123Z", "level": "info", "event": "Object created", "object_name": "Pizza", "object_id": 123, "user": "anonymous", "logger": "src.routes"}
-```
+- Use PostgreSQL for production (not SQLite)
+- Configure `DATABASE_URL` environment variable
+- Set `LOG_LEVEL=INFO` for production logging
+- Enable HTTPS via reverse proxy (nginx, Caddy)
+- Review security settings in `.env`
 
-## Development Details
+## API Documentation
 
-For comprehensive development guidance, configuration details, and project history, see [CLAUDE.md](./CLAUDE.md).
+Interactive API documentation available at:
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
+
+All endpoints use `/api/v1/` prefix for versioning.
+
+## Code Quality Standards
+
+- **Python 3.13+** with modern type hints (`list[str]`, `int | None`)
+- **88-character line limit** (Black/Ruff default)
+- **4 spaces** for Python (PEP 8)
+- **2 spaces** for HTML/CSS/JS (web standard)
+- **All files end with newline** (enforced by QA)
+- **Pinned dependencies** (`==` in `pyproject.toml`)
+
+### QA Tools
+
+- **ruff** - Ultra-fast linting + formatting
+- **mypy** - Static type checking
+- **djlint** - HTML/Jinja2 template formatting
+- **pytest** - Testing framework with parallel execution
+- **Custom QA tool** - Unified interface (`uv run qa check`)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make changes following code quality standards
+4. Run QA: `uv run qa check`
+5. Run tests: `uv run pytest`
+6. Commit changes (`git commit -m 'Add amazing feature'`)
+7. Push to branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+## License
+
+[Add your license here]
+
+## Acknowledgments
+
+Built with modern Python tooling:
+- [uv](https://github.com/astral-sh/uv) - Fast Python package manager
+- [FastAPI](https://fastapi.tiangolo.com/) - High-performance web framework
+- [HTMX](https://htmx.org/) - HTML-over-the-wire interactivity
+- [SQLModel](https://sqlmodel.tiangolo.com/) - Type-safe SQL ORM
+
+---
+
+**For detailed development guidance**, see [CLAUDE.md](./CLAUDE.md)
