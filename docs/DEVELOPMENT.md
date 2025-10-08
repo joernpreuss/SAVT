@@ -83,6 +83,23 @@ Extended development guidance for the SAVT project.
 
 ## Recent Enhancements
 
+### User System (2025-10-08)
+- **Lightweight Username System**: Trust-based user identification without authentication (like a board game)
+  - Cookie-based username persistence
+  - Auto-generated sequential usernames (`User-1`, `User-2`, ...) if not set
+  - Username generation scans existing users to find next available number
+  - In-header username display with inline edit functionality
+  - `/set-username` route with validation (same rules as entity names)
+- **Transparent Veto Tracking**: Veto displays now show who vetoed, not just counts
+  - Changed from `(2 vetoes)` to `(vetoed by: Alice, Bob)`
+  - Per-user veto/unveto operations
+  - Username passed through all veto routes and templates
+- **UI Enhancements**:
+  - Username display in header with edit button
+  - HTMX-powered username form (no page reload)
+  - CSS styling for username UI components
+- **Philosophy**: Designed for co-located teams where trust is assumed and quick identity switching enables flexible collaboration
+
 ### Testing Infrastructure
 - **Performance Tests**: Added simple performance test suite to identify bottlenecks in individual operations and concurrent load handling
 - **Character Validation Tests**: Created comprehensive tests to ensure problematic characters (control chars, newlines) are rejected while valid Unicode characters are accepted

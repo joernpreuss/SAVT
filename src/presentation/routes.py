@@ -1,4 +1,6 @@
 import asyncio
+import re
+import time
 from typing import Final
 
 from fastapi import APIRouter, Cookie, Depends, Form, Query, Request, Response, status
@@ -26,7 +28,8 @@ from ..application.item_service import (
     restore_item,
 )
 from ..config import settings
-from ..domain.exceptions import DomainError
+from ..domain.entities import validate_entity_name
+from ..domain.exceptions import DomainError, ItemAlreadyExistsError
 from ..infrastructure.database.database import get_async_engine, get_session
 from ..infrastructure.database.database import get_async_session as get_async_session
 from ..infrastructure.database.models import Feature, Item
@@ -55,12 +58,22 @@ def _filter_standalone_features(features):
     return [feature for feature in features if feature.item_id is None]
 
 
-def _get_next_default_item_name(session: Session) -> str:
-    """Get the next available {object_name}-N name."""
-    counter = 1
+def _get_next_default_item_name(session: Session, username: str = "anonymous") -> str:
+    """Get the next available {object_name}-{user#}-{N} name."""
     base_name = settings.object_name_singular.title()
+
+    # Extract user number from username (e.g., "User-1" -> "1")
+    user_match = re.match(r"^User-(\d+)$", username)
+    if user_match:
+        user_identifier = user_match.group(1)
+    else:
+        # For custom usernames, use first 5 chars as identifier
+        user_identifier = username[:5]
+
+    # Count how many items this user has created
+    counter = 1
     while True:
-        candidate_name = f"{base_name}-{counter}"
+        candidate_name = f"{base_name}-{user_identifier}-{counter}"
         if get_item(session, candidate_name) is None:
             return candidate_name
         counter += 1
@@ -68,11 +81,48 @@ def _get_next_default_item_name(session: Session) -> str:
 
 def _get_next_default_item_name_simple() -> str:
     """Get a default item name without database lookup for faster async rendering."""
-    import time
-
     base_name = settings.object_name_singular.title()
     timestamp = int(time.time() * 1000) % 100000  # Last 5 digits for uniqueness
     return f"{base_name}-{timestamp}"
+
+
+def _get_next_username_number(session: Session) -> int:
+    """Find the next available User-N number by checking existing users."""
+    # Get all features to find usernames in vetoed_by and created_by
+    features = get_features(session)
+    items = get_items(session)
+
+    # Collect all usernames
+    usernames = set()
+    for feature in features:
+        if feature.vetoed_by:
+            usernames.update(feature.vetoed_by)
+        if feature.created_by:
+            usernames.add(feature.created_by)
+    for item in items:
+        if item.created_by:
+            usernames.add(item.created_by)
+
+    # Find all "User-N" patterns and extract numbers
+    user_numbers = []
+    pattern = re.compile(r"^User-(\d+)$")
+    for username in usernames:
+        match = pattern.match(username)
+        if match:
+            user_numbers.append(int(match.group(1)))
+
+    # Return next number (max + 1, or 1 if none found)
+    return max(user_numbers, default=0) + 1
+
+
+def _get_username_from_cookie(username_cookie: str | None, session: Session) -> str:
+    """Get username from cookie or generate default."""
+    if username_cookie:
+        return username_cookie
+
+    # Generate sequential username
+    next_number = _get_next_username_number(session)
+    return f"User-{next_number}"
 
 
 def render_full_page_response(
@@ -80,14 +130,19 @@ def render_full_page_response(
     session: Session,
     item_id: str | int | None = None,
     message: str | None = None,
+    username: str | None = None,
 ):
     """Render the full features page with both items and standalone features."""
     features: Final = get_features(session)
     items: Final = get_items(session)
     standalone_features = _filter_standalone_features(features)
 
-    # Get the next available default name for the item name field
-    next_default_name = _get_next_default_item_name(session)
+    # Get username from parameter or cookie first
+    if username is None:
+        username = _get_username_from_cookie(request.cookies.get("username"), session)
+
+    # Get the next default name for the item name field (personalized per user)
+    next_default_name = _get_next_default_item_name(session, username)
 
     return templates.TemplateResponse(
         request,
@@ -99,6 +154,7 @@ def render_full_page_response(
             "settings": settings,
             "message": message,
             "item_name": next_default_name,  # Pre-populate the item name field only
+            "username": username,
         },
     )
 
@@ -108,6 +164,7 @@ async def render_full_page_response_async(
     session: AsyncSession,
     item_id: str | int | None = None,
     message: str | None = None,
+    username: str | None = None,
 ):
     """Render the full features page with concurrent database operations for better
     performance."""
@@ -132,6 +189,33 @@ async def render_full_page_response_async(
     # Using simple version to avoid additional database query for better performance
     next_default_name = _get_next_default_item_name_simple()
 
+    # Get username from parameter or cookie
+    if username is None:
+        username_cookie = request.cookies.get("username")
+        if username_cookie:
+            username = username_cookie
+        else:
+            # Generate sequential username using already loaded features/items
+            usernames = set()
+            for feature in features:
+                if feature.vetoed_by:
+                    usernames.update(feature.vetoed_by)
+                if feature.created_by:
+                    usernames.add(feature.created_by)
+            for item in items:
+                if item.created_by:
+                    usernames.add(item.created_by)
+
+            user_numbers = []
+            pattern = re.compile(r"^User-(\d+)$")
+            for uname in usernames:
+                match = pattern.match(uname)
+                if match:
+                    user_numbers.append(int(match.group(1)))
+
+            next_number = max(user_numbers, default=0) + 1
+            username = f"User-{next_number}"
+
     return templates.TemplateResponse(
         request,
         "properties.html",
@@ -142,14 +226,21 @@ async def render_full_page_response_async(
             "settings": settings,
             "message": message,
             "item_name": next_default_name,  # Pre-populate the item name field only
+            "username": username,
         },
     )
 
 
-def _render_fragment_response(request: Request, session: Session, item: str | None):
+def _render_fragment_response(
+    request: Request, session: Session, item: str | None, username: str | None = None
+):
     """Render appropriate fragment based on item feature vs standalone feature."""
     features: Final = get_features(session)
     items: Final = get_items(session)
+
+    # Get username from parameter or cookie
+    if username is None:
+        username = _get_username_from_cookie(request.cookies.get("username"), session)
 
     if item:  # Item feature
         return templates.TemplateResponse(
@@ -158,6 +249,7 @@ def _render_fragment_response(request: Request, session: Session, item: str | No
             {
                 "items": list(items),
                 "settings": settings,
+                "username": username,
             },
         )
     else:  # Standalone feature
@@ -169,6 +261,7 @@ def _render_fragment_response(request: Request, session: Session, item: str | No
                 "features": standalone_features,
                 "items": list(items),
                 "settings": settings,
+                "username": username,
             },
         )
 
@@ -179,9 +272,74 @@ def list_features(
     session: Session = Depends(get_session),
     request: Request,
     item_id: str | None = Cookie(default=None),
+    username: str | None = Cookie(default=None),
 ):
-    logger.info("Debug item_id", item_id=item_id)
-    return render_full_page_response(request, session, item_id)
+    logger.info(
+        "Debug username cookie", username=username, has_cookie=username is not None
+    )
+
+    # Generate username if it doesn't exist
+    if not username:
+        username = _get_username_from_cookie(None, session)
+        logger.info("Generated new username", username=username)
+
+    # Render response
+    response = render_full_page_response(request, session, item_id, username=username)
+
+    # Set username cookie on the response we're actually returning
+    response.set_cookie(
+        key="username",
+        value=username,
+        path="/",
+        samesite="lax",
+        httponly=False,
+        max_age=31536000,  # 1 year
+    )
+
+    return response
+
+
+@router.post("/set-username")
+async def set_username(
+    *,
+    session: Session = Depends(get_session),
+    request: Request,
+    new_username: str = Form(...),
+):
+    """Set or change the current user's username."""
+    # Validate username using the same validation as entity names
+    try:
+        validate_entity_name(new_username, "username")
+    except Exception as e:
+        logger.warning("Username validation failed", error=str(e))
+        return render_full_page_response(
+            request, session, message=f"Invalid username: {e}"
+        )
+
+    logger.info("Username changed", new_username=new_username)
+
+    # Return full page with success message
+    if is_htmx_request(request):
+        response = render_full_page_response(
+            request,
+            session,
+            message=f"Username changed to {new_username}",
+            username=new_username,
+        )
+    else:
+        response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+    # Set cookie on the response
+    response.set_cookie(
+        key="username",
+        value=new_username,
+        path="/",
+        samesite="lax",
+        httponly=False,
+        max_age=31536000,  # 1 year
+    )
+
+    return response
 
 
 @router.post("/create/item/")
@@ -213,20 +371,103 @@ async def route_create_item(
         create_item(session, item)
         logger.info("Item created successfully via web form", item_name=item.name)
     except DomainError as e:
-        logger.warning(
-            "Item creation failed - domain error",
-            item_name=item.name,
-            error=str(e),
-            error_type=type(e).__name__,
-        )
-        return handle_domain_error(e, request)
+        # If duplicate name, auto-increment and retry
+        if isinstance(e, ItemAlreadyExistsError):
+            logger.info(
+                "Duplicate item name, auto-incrementing", original_name=item.name
+            )
+            # Extract base name and number if it matches Pattern-N format
+            match = re.match(r"^(.+?)-(\d+)$", item.name)
+            if match:
+                base_name = match.group(1)
+                start_counter = int(match.group(2)) + 1
+            else:
+                base_name = item.name
+                start_counter = 2
+
+            # Find next available name
+            counter = start_counter
+            while True:
+                candidate_name = f"{base_name}-{counter}"
+                if get_item(session, candidate_name) is None:
+                    item.name = candidate_name
+                    break
+                counter += 1
+
+            # Retry creation with new name
+            try:
+                create_item(session, item)
+                logger.info(
+                    "Item created with auto-incremented name", item_name=item.name
+                )
+            except DomainError as retry_error:
+                logger.warning(
+                    "Item creation failed after auto-increment",
+                    item_name=item.name,
+                    error=str(retry_error),
+                    error_type=type(retry_error).__name__,
+                )
+                return handle_domain_error(retry_error, request)
+        else:
+            # Non-duplicate error, handle normally
+            logger.warning(
+                "Item creation failed - domain error",
+                item_name=item.name,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            return handle_domain_error(e, request)
     except ValueError as e:
-        logger.warning(
-            "Item creation failed - validation error",
-            item_name=item.name,
-            error=str(e),
-        )
-        return handle_validation_error(e, request)
+        # Also handle duplicates caught as ValueError (shouldn't happen but defensive)
+        if "already exists" in str(e).lower():
+            logger.info(
+                "Duplicate item name (ValueError), auto-incrementing",
+                original_name=item.name,
+            )
+            # Extract base name and number if it matches Pattern-N format
+            match = re.match(r"^(.+?)-(\d+)$", item.name)
+            if match:
+                base_name = match.group(1)
+                start_counter = int(match.group(2)) + 1
+            else:
+                base_name = item.name
+                start_counter = 2
+
+            # Find next available name
+            counter = start_counter
+            while True:
+                candidate_name = f"{base_name}-{counter}"
+                if get_item(session, candidate_name) is None:
+                    item.name = candidate_name
+                    break
+                counter += 1
+
+            # Retry creation with new name
+            try:
+                create_item(session, item)
+                logger.info(
+                    "Item created with auto-incremented name (from ValueError)",
+                    item_name=item.name,
+                )
+            except (DomainError, ValueError) as retry_error:
+                logger.warning(
+                    "Item creation failed after auto-increment (ValueError path)",
+                    item_name=item.name,
+                    error=str(retry_error),
+                    error_type=type(retry_error).__name__,
+                )
+                # Handle based on error type
+                if isinstance(retry_error, ValueError):
+                    return handle_validation_error(retry_error, request)
+                else:
+                    return handle_domain_error(retry_error, request)
+        else:
+            logger.warning(
+                "Item creation failed - validation error",
+                item_name=item.name,
+                error=str(e),
+            )
+            return handle_validation_error(e, request)
 
     # If HTMX request, return full page
     if is_htmx_request(request):
@@ -320,9 +561,9 @@ async def route_veto_item_feature(
             item_name=item,
         )
 
-    # If HTMX request, return updated fragment
+    # If HTMX request, return fragment with username from path
     if is_htmx_request(request):
-        return _render_fragment_response(request, session, item)
+        return _render_fragment_response(request, session, item, username=user)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -365,9 +606,9 @@ async def route_unveto_item_feature(
             "Feature unveto failed via web form - not found", feature_name=name
         )
 
-    # If HTMX request, return updated fragment
+    # If HTMX request, return fragment with username from path
     if is_htmx_request(request):
-        return _render_fragment_response(request, session, item)
+        return _render_fragment_response(request, session, item, username=user)
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 

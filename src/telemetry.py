@@ -20,6 +20,10 @@ logger = get_logger(__name__)
 def setup_telemetry(app):
     """Configure OpenTelemetry tracing and metrics for the FastAPI application."""
     try:
+        # Skip telemetry setup by default (enable with ENABLE_TELEMETRY=1)
+        if not os.getenv("ENABLE_TELEMETRY"):
+            return
+
         # Skip telemetry setup during tests to avoid I/O issues
         if "pytest" in sys.modules or os.getenv("TESTING"):
             logger.info("Skipping OpenTelemetry setup during tests")

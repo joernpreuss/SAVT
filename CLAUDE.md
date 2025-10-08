@@ -13,6 +13,8 @@ AI assistant development guidance for the SAVT project. See [README.md](./README
 - Jinja2 + HTMX - Server-side templates with dynamic interactions (no JS)
 - Feature IDs: Use `feature.id` for unique identification, not `feature.name` (allows duplicate names)
 - Veto system: Users can veto/unveto features independently using feature IDs
+- User system: Lightweight, trust-based (no auth) - cookie-based usernames, auto-generated if missing
+- Veto transparency: Veto displays show who vetoed (not just count)
 - API versioning: All API endpoints use `/api/v1/` prefix for future compatibility
 - HTTP status codes: 201 for creation (POST new resources), 200 for actions/updates
 
@@ -72,10 +74,11 @@ After EVERY change:
 - `src/application/item_service.py` - Item CRUD operations
 - `src/application/feature_service.py` - Feature CRUD and veto operations
 - `src/application/item_operations_service.py` - Complex operations (merge/split/move)
-- `src/presentation/routes.py` - HTML routes
+- `src/presentation/routes.py` - HTML routes (including username management, see `docs/USER-SYSTEM-DESIGN.MD`)
 - `src/presentation/api_routes.py` - JSON API with comprehensive OpenAPI documentation
 - `src/domain/entities.py` - Pure domain entities (dataclasses)
 - `src/infrastructure/database/models.py` - SQLModel persistence models
+- `templates/properties.html` - Main page template
 - `templates/macros.html` - Jinja2 macros for veto/unveto functionality
 - `.djlintrc` - HTML formatter config
 

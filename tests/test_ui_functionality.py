@@ -94,6 +94,8 @@ def client_fixture(session: Session) -> Generator[TestClient]:
     routes.get_async_session = get_async_session_override
 
     client = TestClient(app)
+    # Set username cookie to "anonymous" for consistent test behavior
+    client.cookies.set("username", "anonymous")
     yield client
 
     app.dependency_overrides.clear()

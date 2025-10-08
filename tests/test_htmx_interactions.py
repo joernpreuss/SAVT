@@ -270,6 +270,9 @@ class TestDynamicContentUpdates:
         self, client: TestClient, sample_data: SampleData
     ) -> None:
         """Test vetoing updates feature visual state."""
+        # Set username cookie to match the user who vetoes
+        client.cookies.set("username", "anonymous")
+
         # Get initial state
         initial_response = client.get(
             "/user/anonymous/veto/item/Pizza/feature/Pepperoni"

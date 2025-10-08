@@ -40,6 +40,9 @@ def test_vetoed_properties_visual_distinction(client: TestClient, timestamp_str:
     r2 = client.post(f"/api/v1/users/alice/properties/{prop_name}/veto")
     assert r2.status_code == 200
 
+    # Set username cookie to match the user who vetoed
+    client.cookies.set("username", "alice")
+
     # Check main page rendering
     r3 = client.get("/")
     assert r3.status_code == 200

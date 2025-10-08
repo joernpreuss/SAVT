@@ -64,6 +64,31 @@ standalone_feature_item %}
     <div class="container">
       <header>
         <h1>{{ settings.app_name }}</h1>
+        <div class="username-display">
+          <span class="username-label">You:</span>
+          <span class="username-value">{{ username }}</span>
+          <button class="username-edit-button"
+                  onclick="document.getElementById('username-form').classList.toggle('hidden')"
+                  aria-label="Change username">✎</button>
+        </div>
+        <form id="username-form"
+              class="username-form hidden"
+              method="post"
+              action="/set-username"
+              hx-post="/set-username"
+              hx-target="body"
+              hx-swap="outerHTML">
+          <input type="text"
+                 name="new_username"
+                 placeholder="Enter username"
+                 value="{{ username }}"
+                 maxlength="100"
+                 required
+                 aria-label="New username">
+          <button type="submit">Save</button>
+          <button type="button"
+                  onclick="document.getElementById('username-form').classList.add('hidden')">Cancel</button>
+        </form>
       </header>
       <main id="main-content">
         {% if message %}<div class="message">{{ message | safe }}</div>{% endif %}
@@ -112,7 +137,7 @@ standalone_feature_item %}
                   </div>
                 </div>
                 <ul>
-                  {% for feature in item.features %}{{ item_feature_item_with_move(feature, item.name, items) }}{% endfor %}
+                  {% for feature in item.features %}{{ item_feature_item_with_move(feature, item.name, items, username) }}{% endfor %}
                 </ul>
               </li>
             {% endfor %}
@@ -125,7 +150,7 @@ standalone_feature_item %}
             <span class="standalone-indicator">(Free)</span>
           </h4>
           <ul id="standalone-properties">
-            {% for feature in features %}{{ standalone_feature_item(feature, items) }}{% endfor %}
+            {% for feature in features %}{{ standalone_feature_item(feature, items, username) }}{% endfor %}
           </ul>
         </div>
         <h2>Create</h2>

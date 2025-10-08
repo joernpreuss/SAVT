@@ -89,17 +89,16 @@ def test_html_request_still_returns_html_error(client):
     )
     assert response1.status_code == 200  # First should succeed
 
-    # Try to create duplicate
+    # Try to create duplicate - should auto-increment and succeed
     response2 = client.post(
         "/create/item/",
         data={"name": unique_name, "kind": "test"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
 
-    # Should return an error response
-    assert response2.status_code in [400, 409, 422]
-    # Note: With global error handlers, HTML routes might return JSON for errors
-    # This is OK as handlers are designed to work for both HTML and API requests
+    # Should succeed with auto-incremented name (new behavior)
+    assert response2.status_code == 200
+    # Note: The duplicate was auto-incremented to {original}-2, so creation succeeds
 
 
 def test_api_internal_error_returns_problem_details(client):

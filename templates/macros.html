@@ -4,18 +4,16 @@
       {{ feature.name }}
       {% if feature.amount > 1 %}({{ feature.amount }}x){% endif %}
     </s>
-    <span class="veto-count">
-      ({{ feature.vetoed_by|length }} veto
-      {% if feature.vetoed_by|length != 1 %}s{% endif %}
-      )
+    <span class="veto-users">
+      (vetoed by: {{ feature.vetoed_by|join(', ') }})
     </span>
   {% else %}
     {{ feature.name }}
     {% if feature.amount > 1 %}({{ feature.amount }}x){% endif %}
   {% endif %}
 {% endmacro %}
-{% macro veto_link(feature, unveto_url, veto_url, target_id, extra_attrs="") %}
-  {% if feature.vetoed_by|length > 0 %}
+{% macro veto_link(feature, unveto_url, veto_url, target_id, username="anonymous", extra_attrs="") %}
+  {% if username in (feature.vetoed_by or []) %}
     <a class="unveto-link"
        href="{{ unveto_url }}"
        hx-get="{{ unveto_url }}"
@@ -39,14 +37,15 @@
        {{ extra_attrs|safe }}>veto</a>
   {% endif %}
 {% endmacro %}
-{% macro standalone_feature_item(feature, items=None) %}
+{% macro standalone_feature_item(feature, items=None, username="anonymous") %}
   <li class="feature-item">
     <div class="feature-content">
       {{ veto_display(feature) }}
       {{ veto_link(feature,
-            "/user/anonymous/unveto/feature/" + feature.name + "?feature_id=" + feature.id|string,
-            "/user/anonymous/veto/feature/" + feature.name + "?feature_id=" + feature.id|string,
-            "#standalone-properties") }}
+            "/user/" + username + "/unveto/feature/" + feature.name + "?feature_id=" + feature.id|string,
+            "/user/" + username + "/veto/feature/" + feature.name + "?feature_id=" + feature.id|string,
+            "#standalone-properties",
+            username) }}
     </div>
     <div class="feature-actions">
       {% if items %}
@@ -74,14 +73,15 @@
     </div>
   </li>
 {% endmacro %}
-{% macro item_feature_item_with_move(feature, item_name, items=None) %}
+{% macro item_feature_item_with_move(feature, item_name, items=None, username="anonymous") %}
   <li id="feature-{{ feature.id }}" class="feature-item">
     <div class="feature-content">
       {{ veto_display(feature) }}
       {{ veto_link(feature,
-            "/user/anonymous/unveto/item/" + item_name + "/feature/" + feature.name + "?feature_id=" + feature.id|string,
-            "/user/anonymous/veto/item/" + item_name + "/feature/" + feature.name + "?feature_id=" + feature.id|string,
+            "/user/" + username + "/unveto/item/" + item_name + "/feature/" + feature.name + "?feature_id=" + feature.id|string,
+            "/user/" + username + "/veto/item/" + item_name + "/feature/" + feature.name + "?feature_id=" + feature.id|string,
             "#objects-list",
+            username,
             'data-feature-id="' + feature.id|string + '"') }}
     </div>
     <div class="feature-actions">

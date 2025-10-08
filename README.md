@@ -15,6 +15,8 @@ SAVT is a collaborative decision-making platform that enables democratic consens
 **Core Features:**
 - **Democratic suggestions** - Anyone can propose options
 - **Veto-based consensus** - Participants can block options they strongly oppose
+- **Lightweight user system** - Trust-based, game-style usernames (no passwords)
+- **Transparent veto tracking** - See who vetoed what, not just counts
 - **Flexible data model** - Configurable terminology for any use case
 - **Real-time updates** - HTMX-powered interactions without JavaScript
 - **Requirements traceability** - Novel system linking tests to functional requirements
@@ -43,6 +45,9 @@ SAVT is a collaborative decision-making platform that enables democratic consens
 **Key Design Decisions:**
 - Feature IDs for unique identification (allows duplicate names)
 - Independent veto/unveto operations per user per feature
+- Trust-based user system - no authentication, just identity (like a board game)
+- Cookie-based username persistence (auto-generated if missing)
+- Transparent veto tracking - shows who vetoed, not just counts
 - No JavaScript - all interactivity via HTMX + server-side logic
 - API versioning (`/api/v1/`) for forward compatibility
 - Comprehensive OpenAPI documentation

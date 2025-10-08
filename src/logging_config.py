@@ -69,6 +69,10 @@ def _configure_third_party_loggers() -> None:
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.dialects").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
+
+    # aiosqlite can be very verbose
+    logging.getLogger("aiosqlite").setLevel(logging.WARNING)
 
     # Uvicorn access logs (let FastAPI handle request logging)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
