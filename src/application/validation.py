@@ -4,6 +4,8 @@ This module provides common validation functions used across different services
 to ensure consistent business rule enforcement and eliminate code duplication.
 """
 
+from typing import TypeVar
+
 from sqlmodel import Session, SQLModel
 
 from ..domain.entities import validate_entity_name
@@ -11,6 +13,8 @@ from ..domain.exceptions import ValidationError
 from ..logging_config import get_logger
 
 logger = get_logger(__name__)
+
+T = TypeVar("T", bound=SQLModel)
 
 
 def validate_entity_name_with_logging(name: str, entity_type: str = "entity") -> None:
@@ -51,7 +55,7 @@ def validate_entity_name_with_logging(name: str, entity_type: str = "entity") ->
         raise ValueError(str(e)) from e
 
 
-def commit_and_refresh_entity[T: SQLModel](session: Session, entity: T) -> T:
+def commit_and_refresh_entity(session: Session, entity: T) -> T:
     """Common pattern for committing and refreshing entities.
 
     Args:

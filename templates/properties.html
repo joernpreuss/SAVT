@@ -8,6 +8,7 @@ standalone_feature_item %}
     <meta name="keywords"
           content="group decisions, voting, veto, {{ settings.property_name_plural_computed }}">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://unpkg.com/htmx-ext-sse@2.2.1/sse.js"></script>
     <script>
       // Configure HTMX to preserve scroll position on swaps
       htmx.config.defaultSwapStyle = 'outerHTML swap:0s settle:0s';
@@ -59,7 +60,7 @@ standalone_feature_item %}
     </script>
     <link rel="stylesheet" href="/static/css/styles.css">
   </head>
-  <body>
+  <body hx-ext="sse" sse-connect="/api/v1/events">
     <a href="#main-content" class="skip-link">Skip to main content</a>
     <div class="container">
       <header>

@@ -38,7 +38,7 @@
   {% endif %}
 {% endmacro %}
 {% macro standalone_feature_item(feature, items=None, username="anonymous") %}
-  <li class="feature-item">
+  <li id="feature-{{ feature.id }}" class="feature-item">
     <div class="feature-content">
       {{ veto_display(feature) }}
       {{ veto_link(feature,

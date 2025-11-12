@@ -1,9 +1,11 @@
 from typing import Final, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session
+from sse_starlette.sse import EventSourceResponse
 
+from ..application.event_broadcaster import broadcaster
 from ..application.feature_service import (
     create_feature,
     get_features,
@@ -858,3 +860,77 @@ async def api_restore_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Deleted item "{item_name}" not found',
         )
+
+
+# SSE Endpoints for Real-Time Updates
+
+
+@api_router.get(
+    "/events",
+    tags=["realtime"],
+    summary="Server-Sent Events stream for real-time updates",
+    description="""
+    Subscribe to real-time feature updates via Server-Sent Events (SSE).
+
+    **Real-Time Collaboration**: When any user performs an action (veto, unveto,
+    create, delete feature), all connected clients receive instant updates.
+
+    **Event Types**:
+    - `feature-updated`: Feature was vetoed/unvetoed/modified
+    - `feature-created`: New feature was added
+    - `feature-deleted`: Feature was removed
+
+    **Connection**: This endpoint returns an event stream (text/event-stream).
+    Browsers automatically reconnect if the connection drops.
+
+    **HTMX Integration**: Use with `hx-sse="connect:/api/v1/events"` to
+    automatically update the DOM when events arrive.
+
+    **Example Event**:
+    ```
+    event: feature-updated
+    id: 123-1731445123.456
+    data: <div id="feature-123">...[HTML fragment]...</div>
+    ```
+
+    **Use Case**: Real-time multiplayer collaboration where all users see
+    changes immediately without manual page refresh.
+    """,
+    responses={
+        200: {
+            "description": "SSE event stream established",
+            "content": {
+                "text/event-stream": {
+                    "example": (
+                        "event: feature-updated\n"
+                        "id: 42-1731445123.456\n"
+                        "data: <div>...</div>\n\n"
+                    )
+                }
+            },
+        }
+    },
+)
+async def sse_events(request: Request) -> EventSourceResponse:
+    """
+    Server-Sent Events endpoint for real-time feature updates.
+
+    Streams events to connected clients when features change.
+    Each event includes an HTML fragment for HTMX to swap into the DOM.
+    """
+
+    async def event_generator():
+        async for event in broadcaster.subscribe():
+            # Check if client disconnected
+            if await request.is_disconnected():
+                break
+
+            # For now, send a simple event with feature_id
+            # TODO: Render HTML fragment for HTMX swap
+            yield {
+                "event": event.event_type,
+                "id": f"{event.feature_id}-{event.timestamp}",
+                "data": f"Feature {event.feature_id} updated (item_id={event.item_id})",
+            }
+
+    return EventSourceResponse(event_generator())
